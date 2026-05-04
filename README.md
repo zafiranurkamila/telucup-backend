@@ -1,58 +1,79 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🏆 Tel-U Cup Backend System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Selamat datang di repository backend **Tel-U Cup**, sistem manajemen turnamen olahraga terbesar di Telkom University. Sistem ini dibangun menggunakan **Laravel** dengan arsitektur modular untuk mendukung berbagai kebutuhan operasional, mulai dari kesehatan pemain hingga manajemen bagan pertandingan.
 
-## About Laravel
+## 🚀 Fitur Utama
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 1. 🏥 Modul Self-Assessment & AI Risk Filtering (FR-01)
+Sistem penyaringan kesehatan otomatis untuk memastikan keselamatan pemain.
+- Form kesehatan detail (Skala nyeri, riwayat cedera, kondisi fisik).
+- **Smarter AI Logic**: Klasifikasi risiko otomatis (Low/Moderate/High) berdasarkan kata kunci medis dan skala nyeri.
+- **Rekomendasi Red Flag**: Memberikan saran medis otomatis bagi pemain berisiko tinggi.
+- **Panel Peninjauan Medis**: Dashboard khusus dokter/fisioterapis untuk memberikan izin bertanding.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 2. 📊 Sistem Bagan Otomatis / Auto-Bracket (FR-02)
+Manajemen turnamen yang efisien dan real-time.
+- **Auto-Generate Bracket**: Membuat bagan pertandingan secara otomatis dari daftar peserta.
+- **Auto-Advance Winner**: Pemenang pertandingan otomatis masuk ke slot babak berikutnya.
+- **Detail Match Info**: Mencatat skor, wasit, lokasi (Sport Center), hingga statistik pemain terbaik.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 3. 🛡️ Dashboard Admin SDM (Super Admin)
+Pusat kendali seluruh data master kompetisi.
+- **Manajemen Template**: Pengaturan tahun kompetisi aktif (2025/2026).
+- **Manajemen Registrasi**: Verifikasi pendaftaran kontingen (Bulutangkis, Futsal, dll) secara masal.
+- **Data Pegawai**: Integrasi NIP dan Lokasi Kerja untuk verifikasi identitas resmi.
 
-## Learning Laravel
+### 4. 📢 Kampanye Budaya HEI & Safety (FR-03)
+Modul edukasi otomatis bagi seluruh peserta.
+- Pop-up kampanye nilai **Harmony, Excellence, Integrity**.
+- Checkpoint keselamatan (Fair Play, Lapor Cedera).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 5. 🤖 Smart Assistant & Gallery AI
+- **Smart Assistant**: Chatbot helpdesk berbasis menu untuk menjawab pertanyaan seputar jadwal, aturan, dan medis.
+- **Smart Gallery**: Infrastruktur database untuk integrasi Face Recognition pada foto pertandingan.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## 🛠️ Instalasi & Persiapan
 
-## Agentic Development
+Ikuti langkah berikut untuk menjalankan sistem di komputer lokal Anda:
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+1. **Clone Repository**
+2. **Instal Dependensi**
+   ```powershell
+   composer install
+   ```
+3. **Konfigurasi Database**
+   Edit file `.env`, sesuaikan dengan database MySQL Anda:
+   ```env
+   DB_DATABASE=telucup
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
+4. **Migrasi & Seeding Data (Sangat Direkomendasikan)**
+   Jalankan perintah ini untuk mendapatkan semua data demo (Pemain, Cabang Olahraga, Bagan):
+   ```powershell
+   php artisan migrate:fresh --seed
+   ```
+5. **Jalankan Server**
+   ```powershell
+   php artisan serve
+   ```
 
-```bash
-composer require laravel/boost --dev
+---
 
-php artisan boost:install
-```
+## 🔑 Akun Demo (Gunakan untuk Login)
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Super Admin** | `arief@telucup.com` | `password` |
+| **Admin Medis** | `medis@telucup.com` | `password` |
+| **PIC Kontingen** | `pic@telucup.com` (Gunakan Registrasi) | `password` |
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 📡 Perintah Artisan Khusus
+- `php artisan sync:contingents`: Menarik data kontingen resmi dari server Telkom University.
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+*© 2024 Telkom University - Advanced Agentic Coding Project*
