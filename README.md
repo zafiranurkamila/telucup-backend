@@ -62,13 +62,8 @@ Ikuti langkah berikut untuk menjalankan sistem di komputer lokal Anda:
 
 ---
 
-## 🔑 Akun Demo (Gunakan untuk Login)
-
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Super Admin** | `arief@telucup.com` | `password` |
-| **Admin Medis** | `medis@telucup.com` | `password` |
-| **PIC Kontingen** | `pic@telucup.com` (Gunakan Registrasi) | `password` |
+## 🔑 Akun Demo
+Data akun untuk keperluan testing dan demo dapat dilihat langsung di dalam file `database/seeders/DatabaseSeeder.php`. Harap segera ubah password default setelah melakukan instalasi di lingkungan produksi.
 
 ---
 
