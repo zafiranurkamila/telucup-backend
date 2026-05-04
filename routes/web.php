@@ -1,0 +1,40 @@
+<?php
+
+use App\Http\Controllers\SelfAssessmentController;
+use App\Http\Controllers\PlayerController;
+use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\GameController;
+
+// FR-03: Campaign Routes
+Route::get('/campaign', [CampaignController::class, 'show'])->name('campaign.show');
+Route::post('/campaign/confirm', [CampaignController::class, 'confirm'])->name('campaign.confirm');
+
+Route::middleware(['auth'])->group(function () {
+    // PIC Kontingen
+    Route::middleware(['role:pic_kontingen'])->group(function () {
+        Route::post('/players', [PlayerController::class, 'store'])->name('players.store');
+        Route::post('/self-assessment', [SelfAssessmentController::class, 'store'])->name('self-assessment.store');
+    });
+
+    // Panitia Lapangan
+    Route::middleware(['role:panitia'])->group(function () {
+        Route::get('/field/verification', [VerificationController::class, 'index'])->name('field.index');
+        Route::post('/field/checkin/{id}', [VerificationController::class, 'checkIn'])->name('field.checkin');
+    });
+
+    // Admin
+    Route::middleware(['role:admin'])->group(function () {
+        Route::post('/bracket/generate', [GameController::class, 'generateBracket'])->name('bracket.generate');
+        Route::post('/bracket/update-score/{id}', [GameController::class, 'updateScore'])->name('bracket.update');
+    });
+});
+
+// Publik / Semua User yang Login
+Route::get('/summary/contingent', [PlayerController::class, 'contingentSummary'])->name('summary.contingent');
+Route::get('/campaign', [CampaignController::class, 'show'])->name('campaign.show');
+Route::post('/campaign/confirm', [CampaignController::class, 'confirm'])->name('campaign.confirm');
+Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
+Route::post('/chatbot/ask', [ChatbotController::class, 'ask'])->name('chatbot.ask');
+
+require __DIR__.'/auth.php';
