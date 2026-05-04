@@ -14,9 +14,15 @@ return new class extends Migration
     Schema::create('self_assessments', function (Blueprint $table) {
         $table->id();
         $table->foreignId('player_id')->constrained()->onDelete('cascade');
-        $table->text('injury_history');      // Riwayat Cedera
-        $table->string('injury_location');   // Lokasi Cedera
-        $table->text('current_condition');   // Kondisi Terkini
+        $table->text('injury_history')->nullable(); 
+        $table->string('injury_location')->nullable();
+        $table->text('current_condition')->nullable();
+        $table->integer('pain_score')->default(0); // Bagian C (0-10)
+        $table->json('form_responses')->nullable(); 
+        $table->float('confidence_score')->default(0); // Skor 0-100%
+        $table->text('medical_notes')->nullable();     // Catatan Dokter/Fisio
+        $table->boolean('is_allowed_to_play')->default(false); // Toggle Izin
+        $table->timestamp('reviewed_at')->nullable();  // Waktu Review
         $table->enum('risk_label', ['low', 'moderate', 'high'])->default('low');
         $table->text('recommendation')->nullable(); // FR-01.5
         $table->boolean('pic_confirmed')->default(false); // FR-01.6

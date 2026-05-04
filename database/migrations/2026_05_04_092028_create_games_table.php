@@ -14,13 +14,19 @@ return new class extends Migration
         Schema::create('games', function (Blueprint $table) {
             $table->id();
             $table->string('sport_branch');
+            $table->string('round_name')->nullable(); // Quarter Finals, Semi Finals, etc.
             $table->string('team_a')->nullable();
             $table->string('team_b')->nullable();
             $table->integer('score_a')->default(0);
             $table->integer('score_b')->default(0);
             $table->string('winner')->nullable();
+            $table->enum('status', ['scheduled', 'live', 'finished'])->default('scheduled');
+            $table->date('match_date')->nullable();
+            $table->string('match_time')->nullable();
+            $table->string('referee_name')->nullable();
+            $table->json('stats')->nullable(); // Untuk Top Performer
             $table->integer('round')->default(1);
-            $table->integer('match_number'); // Tetap match_number tidak apa-apa
+            $table->integer('match_number');
             $table->timestamps();
         });
 

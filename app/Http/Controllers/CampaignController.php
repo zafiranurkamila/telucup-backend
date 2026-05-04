@@ -13,24 +13,32 @@ class CampaignController extends Controller
     public function show()
     {
         return response()->json([
-            'title' => 'Kampanye Safety Sport & Budaya HEI',
-            'content' => [
-                'safety' => 'Selalu gunakan perlengkapan pelindung dan lakukan pemanasan.',
-                'fairness' => 'Junjung tinggi sportivitas dan kejujuran dalam pertandingan.',
-                'hei_values' => 'Harmony, Excellence, Integrity (HEI) adalah jiwa dari Tel-U Cup.',
+            'title' => 'Utamakan Keselamatan & Sportivitas',
+            'subtitle' => 'Kampanye Budaya & Keselamatan',
+            'values' => [
+                'harmony' => [
+                    'title' => 'HARMONY: KOLABORASI TANPA BATAS',
+                    'description' => 'Membangun lingkungan yang inklusif dan saling menghargai untuk mencapai tujuan bersama.'
+                ],
             ],
-            'action' => 'User wajib menekan tombol konfirmasi untuk melanjutkan.'
+            'checkpoints' => [
+                ['icon' => 'medical', 'text' => 'Cek Kesiapan Medis'],
+                ['icon' => 'sports', 'text' => 'Prioritaskan Sportivitas'],
+                ['icon' => 'injury', 'text' => 'Laporkan Cedera'],
+            ],
+            'show_again_option' => true
         ]);
     }
 
     /**
-     * FR-03.3: Konfirmasi baca kampanye
+     * FR-03.3: Konfirmasi baca kampanye & Sesi
      */
     public function confirm(Request $request)
     {
-        // Logika sederhana: simpan ke session atau database bahwa user sudah baca
-        session(['campaign_read' => true]);
+        if ($request->dont_show_again) {
+            session(['hide_campaign' => true]);
+        }
 
-        return response()->json(['message' => 'Terima kasih telah membaca kampanye keselamatan!']);
+        return response()->json(['message' => 'Konfirmasi diterima, lanjut ke dashboard.']);
     }
 }

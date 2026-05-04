@@ -24,6 +24,8 @@ class GameController extends Controller
                 'team_a' => $contingents[$i * 2],
                 'team_b' => $contingents[($i * 2) + 1],
                 'round' => 1,
+                'round_name' => 'Round 1',
+                'status' => 'scheduled',
                 'match_number' => $i + 1,
             ]);
         }
@@ -44,25 +46,32 @@ class GameController extends Controller
         $game->update([
             'score_a' => $request->score_a,
             'score_b' => $request->score_b,
-            'winner' => $winner
+            'winner' => $winner,
+            'status' => 'finished' // Otomatis selesai jika skor diisi
         ]);
 
         // LOGIKA AUTO-ADVANCE:
-        // Cari posisi di babak berikutnya (Round + 1)
         $nextMatchNumber = ceil($game->match_number / 2);
         $nextRound = $game->round + 1;
 
-        // Cari apakah pertandingan babak berikutnya sudah ada, jika belum buat baru
+        // Tentukan Nama Babak
+        $roundNames = [2 => 'Quarter Finals', 3 => 'Semi Finals', 4 => 'Grand Finals'];
+
         $nextGame = Game::firstOrCreate(
             [
                 'round' => $nextRound, 
                 'match_number' => $nextMatchNumber, 
                 'sport_branch' => $game->sport_branch
             ],
-            ['team_a' => null, 'team_b' => null]
+            [
+                'team_a' => null, 
+                'team_b' => null,
+                'round_name' => $roundNames[$nextRound] ?? "Round $nextRound",
+                'status' => 'scheduled'
+            ]
         );
 
-        // Jika nomor pertandingan ganjil, masuk ke Team A. Jika genap, masuk ke Team B.
+        // Update Team di babak berikutnya
         if ($game->match_number % 2 != 0) {
             $nextGame->update(['team_a' => $winner]);
         } else {
@@ -70,9 +79,18 @@ class GameController extends Controller
         }
 
         return response()->json([
-            'message' => 'Skor diupdate dan pemenang otomatis lanjut!',
+            'message' => 'Skor diupdate, pertandingan selesai, dan pemenang lanjut!',
             'winner' => $winner,
-            'next_round_info' => "Lolos ke Babak {$nextRound}"
+            'next_round' => $nextGame->round_name
         ]);
+    }
+
+    /**
+     * Detail Pertandingan untuk Modal (Tampilan Gambar 2)
+     */
+    public function show($id)
+    {
+        $game = Game::findOrFail($id);
+        return response()->json($game);
     }
 }

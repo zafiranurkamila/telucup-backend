@@ -12,20 +12,27 @@ class ChatbotController extends Controller
     public function ask(Request $request)
     {
         $question = strtolower($request->question);
-        $answer = "Maaf, saya belum mengerti pertanyaan Anda. Silakan hubungi panitia di sekretariat.";
+        $risk = $request->user_risk ?? 'low'; // Konteks risiko user
+        $answer = "Halo! Saya Smart Assistant Tel-U Cup. Ada yang bisa saya bantu?";
 
-        // Simulasi basis data tata tertib (Knowledge Base)
-        if (str_contains($question, 'syarat') || str_contains($question, 'daftar')) {
-            $answer = "Syarat pendaftaran adalah mahasiswa/pegawai aktif Telkom University dan mengisi form self-assessment kesehatan.";
-        } elseif (str_contains($question, 'jadwal') || str_contains($question, 'kapan')) {
-            $answer = "Jadwal pertandingan dapat Anda lihat pada menu 'Bracket' di halaman utama.";
-        } elseif (str_contains($question, 'lokasi') || str_contains($question, 'tempat')) {
-            $answer = "Pertandingan dilaksanakan di Gedung Olahraga (GOR) dan Lapangan Tenis Telkom University.";
+        // Logika Berdasarkan Menu di Gambar
+        if (str_contains($question, 'hasil')) {
+            $answer = "Hasil assessment Anda menunjukkan risiko $risk. Silakan cek menu 'Langkah Selanjutnya' di dashboard.";
+        } elseif (str_contains($question, 'aturan') || str_contains($question, 'jadwal')) {
+            $answer = "Aturan resmi dan jadwal pertandingan dapat diakses di menu 'Bagan'. Pastikan Anda hadir 30 menit sebelum jadwal.";
+        } elseif (str_contains($question, 'medis') || str_contains($question, 'konsultasi')) {
+            $answer = "Anda dapat melakukan konsultasi medis di booth kesehatan GOR Tel-U setiap jam operasional pertandingan.";
+        } elseif (str_contains($question, 'teknis')) {
+            $answer = "Untuk kendala teknis aplikasi, silakan hubungi tim PUTI melalui extension 1234.";
         }
 
         return response()->json([
-            'question' => $request->question,
-            'answer' => $answer
+            'assistant_name' => 'Smart Assistant',
+            'support_type' => 'Tel-U Cup Dashboard Support',
+            'answer' => $answer,
+            'options' => [
+                'Penjelasan hasil', 'Bantuan Form', 'Jadwal & Aturan', 'Pendaftaran', 'Dukungan Teknis', 'Konsultasi Medis', 'FAQ'
+            ]
         ]);
     }
 }

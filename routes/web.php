@@ -17,6 +17,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/self-assessment', [SelfAssessmentController::class, 'store'])->name('self-assessment.store');
     });
 
+    // Fitur Peninjauan Medis (Bisa diakses Admin/Panitia Medis)
+    Route::post('/self-assessment/review/{id}', [SelfAssessmentController::class, 'submitReview'])->name('self-assessment.review');
+
     // Panitia Lapangan
     Route::middleware(['role:panitia'])->group(function () {
         Route::get('/field/verification', [VerificationController::class, 'index'])->name('field.index');
@@ -29,6 +32,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/bracket/update-score/{id}', [GameController::class, 'updateScore'])->name('bracket.update');
     });
 });
+
+Route::get('/bracket/detail/{id}', [GameController::class, 'show'])->name('bracket.detail');
 
 // Publik / Semua User yang Login
 Route::get('/summary/contingent', [PlayerController::class, 'contingentSummary'])->name('summary.contingent');

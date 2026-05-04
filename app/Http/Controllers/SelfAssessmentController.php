@@ -11,34 +11,64 @@ class SelfAssessmentController extends Controller
     {
         $validated = $request->validate([
             'player_id' => 'required|exists:players,id',
-            'injury_history' => 'required|string',
-            'injury_location' => 'required|string',
-            'current_condition' => 'required|string',
+            'injury_history' => 'nullable|string',
+            'injury_location' => 'nullable|string',
+            'current_condition' => 'nullable|string',
+            'pain_score' => 'required|integer|min:0|max:10',
+            'form_responses' => 'required|array', // Data dari Bagian A-E
         ]);
 
-        // Logika AI sederhana (FR-01.3)
+        // LOGIKA AI SMART UPGRADE (FR-01.3)
         $risk = 'low';
         $recommendation = 'Pemain fit untuk bertanding.';
-        $history = strtolower($request->injury_history);
         
-        if (str_contains($history, 'acl') || str_contains($history, 'patah') || str_contains($history, 'operasi')) {
+        // 1. Cek Skala Nyeri (Bagian C)
+        if ($request->pain_score >= 7) {
             $risk = 'high';
-            $recommendation = 'REKOMENDASI RED FLAG: Pemain sangat disarankan untuk penggantian atau pengawasan medis ketat! (FR-01.5)';
-        } elseif (str_contains($history, 'keseleo') || str_contains($history, 'memar')) {
+            $recommendation = 'REKOMENDASI: Skala nyeri tinggi! Pemain dilarang bertanding sebelum verifikasi tim medis.';
+        } elseif ($request->pain_score >= 4) {
             $risk = 'moderate';
-            $recommendation = 'Pemain butuh pengawasan fisioterapi ringan.';
+            $recommendation = 'Pemain butuh pengawasan khusus saat pemanasan.';
         }
 
-        SelfAssessment::create(array_merge($validated, [
+        // 2. Cek Riwayat Cedera (Kata Kunci)
+        $history = strtolower($request->injury_history);
+        if (str_contains($history, 'acl') || str_contains($history, 'patah')) {
+            $risk = 'high';
+            $recommendation = 'REKOMENDASI RED FLAG: Riwayat cedera berat terdeteksi. Hubungi tim medis segera.';
+        }
+
+        $game = SelfAssessment::create(array_merge($validated, [
             'risk_label' => $risk,
-            'recommendation' => $recommendation // Pastikan kolom ini ada di migrasi
+            'recommendation' => $recommendation,
+            'confidence_score' => $risk === 'high' ? 87.4 : 95.0 // Simulasi skor keyakinan AI
         ]));
 
         return response()->json([
             'status' => 'success',
             'risk' => $risk,
+            'confidence' => $game->confidence_score,
             'recommendation' => $recommendation,
-            'message' => 'Assessment berhasil disimpan.'
+            'message' => 'Self-Assessment Detail Berhasil Disimpan!'
+        ]);
+    }
+
+    /**
+     * Fitur Panel Peninjauan Medis (Untuk Dokter/Fisioterapis)
+     */
+    public function submitReview(Request $request, $id)
+    {
+        $assessment = SelfAssessment::findOrFail($id);
+        
+        $assessment->update([
+            'medical_notes' => $request->medical_notes,
+            'is_allowed_to_play' => $request->is_allowed_to_play,
+            'reviewed_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Review medis berhasil disimpan!',
+            'status' => $assessment->is_allowed_to_play ? 'Diizinkan Bermain' : 'Istirahat'
         ]);
     }
 }
