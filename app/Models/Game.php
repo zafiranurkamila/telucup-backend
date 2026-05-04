@@ -10,7 +10,7 @@ class Game extends Model
         'sport_branch', 'round_name', 'team_a', 'team_b', 
         'score_a', 'score_b', 'winner', 'status', 
         'match_date', 'match_time', 'referee_name', 'stats',
-        'round', 'match_number'
+        'round', 'match_number', 'location'
     ];
 
     protected $casts = [

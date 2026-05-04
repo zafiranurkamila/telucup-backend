@@ -26,8 +26,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/field/checkin/{id}', [VerificationController::class, 'checkIn'])->name('field.checkin');
     });
 
-    // Admin
+    // Admin SDM (Super Admin)
     Route::middleware(['role:admin'])->group(function () {
+        Route::get('/admin/templates', [\App\Http\Controllers\AdminController::class, 'templates']);
+        Route::get('/admin/registrations', [\App\Http\Controllers\AdminController::class, 'registrations']);
+        Route::post('/admin/registrations/{id}/verify', [\App\Http\Controllers\AdminController::class, 'verifyRegistration']);
+        Route::get('/admin/schedules', [\App\Http\Controllers\AdminController::class, 'schedules']);
+        
         Route::post('/bracket/generate', [GameController::class, 'generateBracket'])->name('bracket.generate');
         Route::post('/bracket/update-score/{id}', [GameController::class, 'updateScore'])->name('bracket.update');
     });

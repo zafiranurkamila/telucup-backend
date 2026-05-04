@@ -4,6 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\Player;
+use App\Models\Sport;
+use App\Models\Template;
+use App\Models\Registration;
 use App\Models\SelfAssessment;
 use App\Models\Game;
 use Illuminate\Support\Facades\Hash;
@@ -16,89 +19,89 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Buat User (Roles)
+        // 1. Buat 28 Cabang Olahraga (Lengkap)
+        $sports = [
+            ['name' => 'Basket Putra', 'categories' => ['Reguler']],
+            ['name' => 'Basket Putri', 'categories' => ['Reguler']],
+            ['name' => 'Futsal Putra', 'categories' => ['Reguler']],
+            ['name' => 'Futsal Putri', 'categories' => ['Reguler']],
+            ['name' => 'Voli Putra', 'categories' => ['Reguler']],
+            ['name' => 'Voli Putri', 'categories' => ['Reguler']],
+            ['name' => 'Bulu Tangkis Tunggal Putra', 'categories' => ['Reguler']],
+            ['name' => 'Bulu Tangkis Tunggal Putri', 'categories' => ['Reguler']],
+            ['name' => 'Bulu Tangkis Ganda Putra', 'categories' => ['Reguler']],
+            ['name' => 'Bulu Tangkis Ganda Putri', 'categories' => ['Reguler']],
+            ['name' => 'Bulu Tangkis Ganda Campuran', 'categories' => ['Reguler']],
+            ['name' => 'Tenis Meja Tunggal Putra', 'categories' => ['Reguler']],
+            ['name' => 'Tenis Meja Tunggal Putri', 'categories' => ['Reguler']],
+            ['name' => 'Tenis Meja Ganda Putra', 'categories' => ['Reguler']],
+            ['name' => 'Tenis Meja Ganda Putri', 'categories' => ['Reguler']],
+            ['name' => 'Tenis Meja Ganda Campuran', 'categories' => ['Reguler']],
+            ['name' => 'Tenis Lapangan Putra', 'categories' => ['Reguler']],
+            ['name' => 'Tenis Lapangan Putri', 'categories' => ['Reguler']],
+            ['name' => 'Catur', 'categories' => ['Putra', 'Putri']],
+            ['name' => 'E-Sport (Mobile Legends)', 'categories' => ['Team']],
+            ['name' => 'E-Sport (PUBG Mobile)', 'categories' => ['Team']],
+            ['name' => 'E-Sport (Valorant)', 'categories' => ['Team']],
+            ['name' => 'E-Sport (FC 24 / FIFA)', 'categories' => ['Individu']],
+            ['name' => 'Atletik (Lari 100m)', 'categories' => ['Putra', 'Putri']],
+            ['name' => 'Atletik (Lari 400m)', 'categories' => ['Putra', 'Putri']],
+            ['name' => 'Renang', 'categories' => ['Putra', 'Putri']],
+            ['name' => 'Panahan', 'categories' => ['Putra', 'Putri']],
+            ['name' => 'Bridge', 'categories' => ['Reguler']],
+        ];
+
+        foreach ($sports as $s) {
+            Sport::create($s);
+        }
+
+        // 2. Buat Template Tahun (Gambar 1)
+        Template::create(['year' => '2026', 'is_active' => true]);
+        Template::create(['year' => '2025', 'is_active' => false]);
+
+        // 2. Buat User (Roles)
         User::create([
-            'name' => 'Admin Tel-U Cup',
-            'email' => 'admin@telucup.com',
+            'name' => 'Arief Kurniawan',
+            'email' => 'arief@telucup.com',
             'password' => Hash::make('password'),
-            'role' => 'admin'
+            'role' => 'admin' // Super Admin sesuai gambar
         ]);
 
-        User::create([
-            'name' => 'Dr. Andi (Medis)',
-            'email' => 'medis@telucup.com',
-            'password' => Hash::make('password'),
-            'role' => 'panitia'
+        // 3. Buat Registrasi (Gambar 2)
+        Registration::create([
+            'sport_branch' => 'Bulutangkis Ganda Putra',
+            'contingent' => 'Bidang 2',
+            'pic_name' => 'HALIDA NURUL ASNIA',
+            'pic_email' => 'halidanrl@gmail.com',
+            'pic_whatsapp' => '08123456789',
+            'status' => 'verified'
         ]);
 
-        // 2. Buat Pemain (Contoh: Bagus Setiawan dari UI)
+        // 4. Buat Pemain (Gambar 3 - Detail Lengkap)
         $bagus = Player::create([
             'name' => 'Bagus Setiawan',
             'nim_nip' => '1201210088',
             'sport_branch' => 'Futsal',
             'contingent' => 'Fakultas Industri Kreatif',
-            'checked_in_at' => now(),
+            'employee_status' => 'TPA PEGAWAI TETAP',
+            'work_location' => 'URUSAN PENCATATAN DAN PENGELOLAAN ASET',
             'verification_status' => 'verified'
         ]);
 
-        // 3. Buat Assessment untuk Bagus (High Risk sesuai UI)
-        SelfAssessment::create([
-            'player_id' => $bagus->id,
-            'injury_history' => 'ACL (2023), Lutut Kiri Operasi',
-            'injury_location' => 'Lutut Kiri',
-            'current_condition' => 'Nyeri saat ditekuk, mobilitas terbatas.',
-            'pain_score' => 7,
-            'form_responses' => ['nyeri' => 'Ya', 'keterbatasan_gerak' => 'Ya', 'pernah_acl' => 'Ya'],
-            'risk_label' => 'high',
-            'confidence_score' => 87.4,
-            'recommendation' => 'Pemain tidak direkomendasikan untuk aktivitas intensitas tinggi.',
-            'medical_notes' => 'Menunggu observasi klinis lanjutan.',
-            'is_allowed_to_play' => false
-        ]);
-
-        // 4. Buat Pertandingan (Bagan sesuai UI)
+        // 5. Buat Pertandingan (Gambar 4 & 5 - Dengan Lokasi)
         Game::create([
-            'sport_branch' => 'Bola Basket (Putra)',
-            'round_name' => 'Round 1',
-            'team_a' => 'FIT Warrior',
-            'team_b' => 'FRI Titans',
-            'score_a' => 78,
-            'score_b' => 62,
-            'winner' => 'FIT Warrior',
-            'status' => 'finished',
-            'match_date' => '2024-10-23',
-            'match_time' => '10:00',
-            'referee_name' => 'Andi Wijaya',
-            'round' => 1,
-            'match_number' => 1
-        ]);
-
-        Game::create([
-            'sport_branch' => 'Bola Basket (Putra)',
-            'round_name' => 'Round 1',
-            'team_a' => 'FEB Eagles',
-            'team_b' => 'Bidang II',
-            'score_a' => 82,
-            'score_b' => 80,
-            'winner' => 'FEB Eagles',
-            'status' => 'finished',
-            'match_date' => '2024-10-23',
-            'match_time' => '13:00',
-            'round' => 1,
-            'match_number' => 2
-        ]);
-
-        // Match di Quarter Finals (Lanjutan dari UI)
-        Game::create([
-            'sport_branch' => 'Bola Basket (Putra)',
+            'sport_branch' => 'Basket Putra',
             'round_name' => 'Quarter Finals',
-            'team_a' => 'FIT Warrior',
-            'team_b' => 'FEB Eagles',
-            'status' => 'scheduled',
-            'match_date' => '2024-10-25',
-            'match_time' => '10:00',
+            'team_a' => 'Bidang 2',
+            'team_b' => 'Bidang 1',
+            'score_a' => 2,
+            'score_b' => 3,
+            'status' => 'finished',
+            'match_date' => '2026-04-07',
+            'match_time' => '02:30',
+            'location' => 'Sport Center',
             'round' => 2,
-            'match_number' => 1
+            'match_number' => 104
         ]);
     }
 }
