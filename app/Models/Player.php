@@ -17,4 +17,14 @@ class Player extends Model
     {
         return $this->hasOne(SelfAssessment::class);
     }
+
+    public function faceEmbedding(): HasOne
+    {
+        return $this->hasOne(FaceEmbedding::class);
+    }
+
+    public function photoFaces(): HasMany
+    {
+        return $this->hasMany(PhotoFace::class, 'matched_player_id');
+    }
 }
