@@ -1,0 +1,470 @@
+openapi: 3.0.0
+info:
+  title: TelU Cup Backend API
+  description: API documentation for TelU Cup event management system, including player registration, self-assessment scoring, match verification, and chatbot interactions.
+  version: 1.0.0
+  contact:
+    email: admin@telucup.com
+servers:
+  - url: http://localhost:8000
+    description: Local Development Server
+tags:
+  - name: Authentication
+    description: Login and Registration for API testing
+  - name: Campaign
+    description: Endpoints for safety and culture campaigns
+  - name: Players
+    description: Player registration and management
+  - name: Self Assessment
+    description: Injury risk assessments and medical reviews
+  - name: Field Verification
+    description: Match check-in and player verifications
+  - name: Admin & Brackets
+    description: Match generation and score updates
+  - name: General
+    description: Public utilities and AI chatbot
+
+paths:
+  /campaign:
+    get:
+      tags:
+        - Campaign
+      summary: Get campaign content
+      description: Retrieve the safety and culture campaign content to display to users.
+      operationId: getCampaign
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  subtitle:
+                    type: string
+                  values:
+                    type: object
+                  checkpoints:
+                    type: array
+                    items:
+                      type: object
+                  show_again_option:
+                    type: boolean
+
+  /campaign/confirm:
+    post:
+      tags:
+        - Campaign
+      summary: Confirm campaign read
+      description: Confirm that the user has read the campaign and optionally choose not to show it again.
+      operationId: confirmCampaign
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dont_show_again:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Confirmation accepted
+
+  /players:
+    post:
+      tags:
+        - Players
+      summary: Register a new player
+      description: Adds a new player to a contingent. Requires `pic_kontingen` role.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerInput'
+      responses:
+        '200':
+          description: Player created successfully
+        '422':
+          description: Validation errors
+        '401':
+          description: Unauthorized
+
+  /summary/contingent:
+    get:
+      tags:
+        - Players
+      summary: Get contingent risk summary
+      description: Returns the count of players with high, moderate, and low risk per contingent.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContingentSummary'
+
+  /self-assessment:
+    post:
+      tags:
+        - Self Assessment
+      summary: Submit self assessment
+      description: Submit player injury assessment to be evaluated by the AI scoring system.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfAssessmentInput'
+      responses:
+        '200':
+          description: Assessment saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  risk:
+                    type: string
+                  confidence:
+                    type: number
+                  recommendation:
+                    type: string
+                  message:
+                    type: string
+
+  /self-assessment/review/{id}:
+    post:
+      tags:
+        - Self Assessment
+      summary: Submit medical review
+      description: Update the assessment with a professional medical review (allowed to play or not). Requires Admin/Panitia Medis role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - is_allowed_to_play
+              properties:
+                medical_notes:
+                  type: string
+                  example: "Requires 2 days rest"
+                is_allowed_to_play:
+                  type: boolean
+                  example: false
+      responses:
+        '200':
+          description: Review saved successfully
+
+  /field/verification:
+    get:
+      tags:
+        - Field Verification
+      summary: Get verified players
+      description: Retrieve the list of players ready for field verification. Requires `panitia` role.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of players
+
+  /field/checkin/{id}:
+    post:
+      tags:
+        - Field Verification
+      summary: Player check-in
+      description: Check a player into the match. Requires `panitia` role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Check-in successful
+
+  /bracket/generate:
+    post:
+      tags:
+        - Admin & Brackets
+      summary: Generate match brackets
+      description: Auto-generates match brackets for the tournament. Requires `admin` role.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Brackets generated
+
+  /bracket/update-score/{id}:
+    post:
+      tags:
+        - Admin & Brackets
+      summary: Update match score
+      description: Update the score of a specific match. Requires `admin` role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                score_team_1:
+                  type: integer
+                score_team_2:
+                  type: integer
+      responses:
+        '200':
+          description: Score updated successfully
+
+  /bracket/detail/{id}:
+    get:
+      tags:
+        - Admin & Brackets
+      summary: Get match details
+      description: Get public details and score of a specific match.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Match details
+
+  /gallery:
+    get:
+      tags:
+        - General
+      summary: Get gallery images
+      description: Retrieve list of gallery images/photos from the event.
+      responses:
+        '200':
+          description: Successful response
+
+  /event-photos:
+    post:
+      tags:
+        - General
+      summary: Upload event photo
+      description: Upload and store an event photo.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Photo uploaded successfully
+
+  /chatbot/ask:
+    post:
+      tags:
+        - General
+      summary: Ask AI Chatbot
+      description: Send a prompt to the AI chatbot for automated assistance.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  example: "Bagaimana cara melakukan registrasi?"
+      responses:
+        '200':
+          description: Chatbot response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+
+  /register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new system user (Panitia/Admin) and get an API token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  example: "Panitia Baru"
+                email:
+                  type: string
+                  example: "panitia@telucup.com"
+                password:
+                  type: string
+                  example: "password123"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                  token:
+                    type: string
+
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: Login to get API token
+      description: Authenticate with email and password to receive a Bearer token for protected endpoints.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: "panitia@telucup.com"
+                password:
+                  type: string
+                  example: "password123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                  token:
+                    type: string
+        '422':
+          description: Invalid credentials
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    PlayerInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "John Doe"
+        nim_nip:
+          type: string
+          example: "1301234567"
+        sport_branch:
+          type: string
+          example: "Basket"
+        contingent:
+          type: string
+          example: "Fakultas Informatika"
+    ContingentSummary:
+      type: object
+      properties:
+        contingent:
+          type: string
+          example: "Fakultas Informatika"
+        high_risk_count:
+          type: integer
+          example: 2
+        moderate_risk_count:
+          type: integer
+          example: 5
+        low_risk_count:
+          type: integer
+          example: 15
+        total_players:
+          type: integer
+          example: 22
+    SelfAssessmentInput:
+      type: object
+      properties:
+        player_id:
+          type: integer
+          example: 1
+        injury_history:
+          type: string
+          example: "Cedera lutut ringan"
+        injury_location:
+          type: string
+          example: "Lutut kanan"
+        current_condition:
+          type: string
+          example: "Nyeri saat ditekuk"
+        pain_score:
+          type: integer
+          example: 4
+        form_responses:
+          type: array
+          items:
+            type: string
+          example: ["Pernah pingsan saat olahraga: Tidak"]

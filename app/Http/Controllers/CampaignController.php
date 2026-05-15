@@ -8,6 +8,17 @@ use Illuminate\Http\Request;
 class CampaignController extends Controller
 {
     /**
+     * @OA\Get(
+     *      path="/campaign",
+     *      operationId="getCampaign",
+     *      tags={"Campaign"},
+     *      summary="Menampilkan konten kampanye Safety & HEI",
+     *      description="Mengambil konten kampanye terkait budaya dan keselamatan.",
+     *      @OA\Response(
+     *          response=200,
+     *          description="Sukses mengambil data kampanye"
+     *      )
+     * )
      * FR-03.1 & FR-03.2: Menampilkan konten kampanye Safety & HEI
      */
     public function show()
@@ -31,6 +42,23 @@ class CampaignController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *      path="/campaign/confirm",
+     *      operationId="confirmCampaign",
+     *      tags={"Campaign"},
+     *      summary="Konfirmasi baca kampanye & Sesi",
+     *      description="Menyimpan konfirmasi bahwa pengguna telah membaca kampanye.",
+     *      @OA\RequestBody(
+     *          required=false,
+     *          @OA\JsonContent(
+     *              @OA\Property(property="dont_show_again", type="boolean", example=true)
+     *          )
+     *      ),
+     *      @OA\Response(
+     *          response=200,
+     *          description="Konfirmasi diterima"
+     *      )
+     * )
      * FR-03.3: Konfirmasi baca kampanye & Sesi
      */
     public function confirm(Request $request)
