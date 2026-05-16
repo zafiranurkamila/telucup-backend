@@ -19,8 +19,8 @@ tags:
     description: Injury risk assessments and medical reviews
   - name: Field Verification
     description: Match check-in and player verifications
-  - name: Admin & Brackets
-    description: Match generation and score updates
+  - name: Panitia & Brackets
+    description: Match generation, verification, and score updates
   - name: General
     description: Public utilities and AI chatbot
 
@@ -155,7 +155,7 @@ paths:
       tags:
         - Self Assessment
       summary: Submit medical review
-      description: Update the assessment with a professional medical review (allowed to play or not). Requires Admin/Panitia Medis role.
+      description: Update the assessment with a professional medical review (allowed to play or not). Requires `panitia` role.
       security:
         - bearerAuth: []
       parameters:
@@ -216,9 +216,9 @@ paths:
   /bracket/generate:
     post:
       tags:
-        - Admin & Brackets
+        - Panitia & Brackets
       summary: Generate match brackets
-      description: Auto-generates match brackets for the tournament. Requires `admin` role.
+      description: Auto-generates match brackets for the tournament. Requires `panitia` role.
       security:
         - bearerAuth: []
       responses:
@@ -228,9 +228,9 @@ paths:
   /bracket/update-score/{id}:
     post:
       tags:
-        - Admin & Brackets
+        - Panitia & Brackets
       summary: Update match score
-      description: Update the score of a specific match. Requires `admin` role.
+      description: Update the score of a specific match. Requires `panitia` role.
       security:
         - bearerAuth: []
       parameters:
@@ -257,7 +257,7 @@ paths:
   /bracket/detail/{id}:
     get:
       tags:
-        - Admin & Brackets
+        - Panitia & Brackets
       summary: Get match details
       description: Get public details and score of a specific match.
       parameters:
@@ -355,6 +355,11 @@ paths:
                 password:
                   type: string
                   example: "password123"
+                role:
+                  type: string
+                  enum: [panitia, pic_kontingen, player]
+                  example: "player"
+                  description: "Optional. Role of the user. Defaults to player if not provided."
       responses:
         '201':
           description: User registered successfully
@@ -367,6 +372,99 @@ paths:
                     type: object
                   token:
                     type: string
+
+  /admin/users/{id}/promote-to-pic:
+    put:
+      tags:
+        - Panitia & Brackets
+      summary: Promote player to PIC Kontingen
+      description: Update a player's role to PIC Kontingen so they can manage their contingent. Requires `panitia` role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User promoted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    type: object
+
+  /admin/templates:
+    get:
+      tags:
+        - Panitia & Brackets
+      summary: Get document templates
+      description: Retrieve document templates for registration. Requires `panitia` role.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of templates
+
+  /admin/registrations:
+    get:
+      tags:
+        - Panitia & Brackets
+      summary: Get list of registrations
+      description: Retrieve all team registrations for verification. Requires `panitia` role.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Paginated list of registrations
+
+  /admin/registrations/{id}/verify:
+    post:
+      tags:
+        - Panitia & Brackets
+      summary: Verify team registration
+      description: Approve or reject a team's registration. Requires `panitia` role.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [verified, rejected]
+      responses:
+        '200':
+          description: Registration status updated
+
+  /admin/schedules:
+    get:
+      tags:
+        - Panitia & Brackets
+      summary: Get match schedules
+      description: Retrieve all match schedules. Requires `panitia` role.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of schedules
 
   /login:
     post:

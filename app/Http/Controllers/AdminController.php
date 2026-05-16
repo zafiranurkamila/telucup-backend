@@ -71,4 +71,23 @@ class AdminController extends Controller
 
         return response()->json($query->get());
     }
+
+    /**
+     * Promote Player to PIC Kontingen
+     */
+    public function promoteToPic(Request $request, $id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        
+        if ($user->role === 'panitia') {
+            return response()->json(['message' => 'Tidak dapat mengubah role panitia!'], 400);
+        }
+
+        $user->update(['role' => 'pic_kontingen']);
+
+        return response()->json([
+            'message' => 'User berhasil dipromosikan menjadi PIC Kontingen',
+            'user' => $user
+        ]);
+    }
 }

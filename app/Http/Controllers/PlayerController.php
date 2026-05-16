@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Player;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Cloudinary\Cloudinary;
 
 class PlayerController extends Controller
 {
@@ -96,5 +99,114 @@ class PlayerController extends Controller
         $player = Player::create($validated);
 
         return response()->json(['message' => 'Player created', 'player' => $player]);
+    }
+
+    /**
+     * @OA\Post(
+     *      path="/players/enroll-face",
+     *      operationId="enrollFace",
+     *      tags={"Players", "Face Recognition"},
+     *      summary="Enroll foto profil pemain untuk face recognition",
+     *      description="Upload foto profil pemain ke Cloudinary, lalu kirim ke FastAPI untuk ekstraksi vektor wajah 512D AdaFace dan simpan ke tabel face_embeddings.",
+     *      security={{"bearerAuth":{}}},
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\MediaType(
+     *              mediaType="multipart/form-data",
+     *              @OA\Schema(
+     *                  required={"photo"},
+     *                  @OA\Property(property="photo", type="string", format="binary", description="Foto profil pemain (max 5MB)")
+     *              )
+     *          )
+     *      ),
+     *      @OA\Response(response=200, description="Face enrollment berhasil"),
+     *      @OA\Response(response=403, description="Profil pemain tidak ditemukan"),
+     *      @OA\Response(response=422, description="Validasi gagal atau wajah tidak terdeteksi"),
+     *      @OA\Response(response=502, description="Gagal berkomunikasi dengan AI Engine")
+     * )
+     * Phase 1: Real Face Enrollment (Ground Truth Registration)
+     */
+    public function enrollFace(Request $request)
+    {
+        // 1. Validasi file upload
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120', // Max 5MB
+        ]);
+
+        $user = $request->user();
+
+        // 2. Cari player yang terkait dengan user yang login
+        $player = Player::where('nim_nip', $user->email)->first();
+
+        if (!$player) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Profil pemain tidak ditemukan untuk akun ini. Pastikan data pemain sudah didaftarkan.'
+            ], 403);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // 3. Upload foto ke Cloudinary
+            $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
+            $uploadResult = $cloudinary->uploadApi()->upload($request->file('photo')->getRealPath(), [
+                'folder' => 'telucup/player_profiles',
+                'public_id' => 'player_' . $player->id,
+                'overwrite' => true, // Timpa jika sudah ada foto sebelumnya
+            ]);
+
+            $imageUrl = $uploadResult['secure_url'];
+
+            // 4. Update photo_path di tabel players
+            $player->update(['photo_path' => $imageUrl]);
+
+            // 5. Kirim request SINKRON ke FastAPI /api/register-face
+            $fastApiBaseUrl = rtrim(str_replace('/api/process-photo', '', env('FASTAPI_URL', 'http://127.0.0.1:8001')), '/');
+            $registerUrl = $fastApiBaseUrl . '/api/register-face';
+
+            Log::info("Mengirim face enrollment untuk Player ID {$player->id} ke {$registerUrl}");
+
+            $aiResponse = Http::timeout(30)->post($registerUrl, [
+                'player_id' => $player->id,
+                'image_url' => $imageUrl,
+            ]);
+
+            if (!$aiResponse->successful()) {
+                $errorDetail = $aiResponse->json('detail') ?? 'AI Engine tidak merespon dengan benar.';
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Face enrollment gagal: ' . $errorDetail,
+                ], 422);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Foto profil berhasil diunggah dan vektor wajah berhasil diregistrasi.',
+                'data' => [
+                    'player_id' => $player->id,
+                    'photo_url' => $imageUrl,
+                    'ai_result' => $aiResponse->json(),
+                ]
+            ]);
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            DB::rollBack();
+            Log::error("Koneksi ke AI Engine gagal: " . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal terhubung ke AI Engine. Pastikan service berjalan.',
+            ], 502);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Face enrollment error: " . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memproses face enrollment: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
