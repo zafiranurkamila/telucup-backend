@@ -41,7 +41,8 @@ class GameController extends Controller
         $game = Game::findOrFail($id);
         
         // Tentukan pemenang berdasarkan skor
-        $winner = $request->score_a > $request->score_b ? $game->team_a : $game->team_b;
+        // Tentukan pemenang berdasarkan skor (Jika seri, Team A menang default/asumsi adu penalti)
+        $winner = $request->score_a >= $request->score_b ? $game->team_a : $game->team_b;
 
         $game->update([
             'score_a' => $request->score_a,

@@ -23,7 +23,7 @@ class AdminController extends Controller
      */
     public function registrations(Request $request)
     {
-        $query = Registration::query();
+        $query = Registration::with('players');
 
         if ($request->sport_branch) {
             $query->where('sport_branch', $request->sport_branch);
