@@ -45,7 +45,7 @@ class SyncContingents extends Command
                     );
                 }
 
-                $this->success('Sync complete! Database updated.');
+                $this->info('Sync complete! Database updated.');
             } else {
                 $this->error('Failed to fetch data from API.');
             }
