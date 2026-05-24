@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SelfAssessment;
 use Illuminate\Http\Request;
+use OpenApi\Annotations as OA;
 
 class CampaignController extends Controller
 {
@@ -19,7 +20,6 @@ class CampaignController extends Controller
      *          description="Sukses mengambil data kampanye"
      *      )
      * )
-     * FR-03.1 & FR-03.2: Menampilkan konten kampanye Safety & HEI
      */
     public function show()
     {
@@ -59,7 +59,6 @@ class CampaignController extends Controller
      *          description="Konfirmasi diterima"
      *      )
      * )
-     * FR-03.3: Konfirmasi baca kampanye & Sesi
      */
     public function confirm(Request $request)
     {

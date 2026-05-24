@@ -3,12 +3,39 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class ChatbotController extends Controller
 {
-    /**
-     * Endpoint untuk tanya jawab otomatis (Chatbot Helpdesk)
-     */
+    #[OA\Post(
+        path: "/chatbot/ask",
+        operationId: "chatbotAsk",
+        tags: ["Chatbot"],
+        summary: "Chatbot Helpdesk",
+        description: "Endpoint untuk tanya jawab otomatis terkait Tel-U Cup."
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["question"],
+            properties: [
+                new OA\Property(property: "question", type: "string", example: "bagaimana aturan pertandingan?"),
+                new OA\Property(property: "user_risk", type: "string", example: "low")
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil mendapatkan jawaban",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "assistant_name", type: "string"),
+                new OA\Property(property: "support_type", type: "string"),
+                new OA\Property(property: "answer", type: "string"),
+                new OA\Property(property: "options", type: "array", items: new OA\Items(type: "string"))
+            ]
+        )
+    )]
     public function ask(Request $request)
     {
         $question = strtolower($request->question);

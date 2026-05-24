@@ -77,8 +77,8 @@ paths:
     post:
       tags:
         - Players
-      summary: Register a new player
-      description: Adds a new player to a contingent. Requires `pic_kontingen` role.
+      summary: Register a new player and User account
+      description: Adds a new player to a contingent and creates a login account. Requires `pic_kontingen`, `admin`, or `panitia` role.
       security:
         - bearerAuth: []
       requestBody:
@@ -333,8 +333,8 @@ paths:
     post:
       tags:
         - Authentication
-      summary: Register a new user
-      description: Create a new system user (Panitia/Admin) and get an API token.
+      summary: Register a new Panitia
+      description: Create a new Panitia user and get an API token.
       requestBody:
         required: true
         content:
@@ -355,11 +355,6 @@ paths:
                 password:
                   type: string
                   example: "password123"
-                role:
-                  type: string
-                  enum: [panitia, pic_kontingen, player]
-                  example: "player"
-                  description: "Optional. Role of the user. Defaults to player if not provided."
       responses:
         '201':
           description: User registered successfully

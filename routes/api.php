@@ -26,7 +26,7 @@ Route::post('/campaign/confirm', [CampaignController::class, 'confirm'])->name('
 
 Route::middleware(['auth:sanctum'])->group(function () {
     // PIC Kontingen
-    Route::middleware(['role:pic_kontingen'])->group(function () {
+    Route::middleware(['role:pic_kontingen,admin,panitia'])->group(function () {
         Route::post('/players', [PlayerController::class, 'store'])->name('players.store');
         Route::post('/self-assessment', [SelfAssessmentController::class, 'store'])->name('self-assessment.store');
     });

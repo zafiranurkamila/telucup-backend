@@ -63,8 +63,8 @@ class PlayerController extends Controller
      *      path="/players",
      *      operationId="storePlayer",
      *      tags={"Players"},
-     *      summary="Menambah data pemain baru",
-     *      description="Menyimpan data pemain baru ke database.",
+     *      summary="Menambah data pemain baru dan akun User",
+     *      description="Menyimpan data pemain baru ke database dan membuat akun User terkait (diperuntukkan bagi Admin/Panitia atau PIC Kontingen).",
      *      security={{"bearerAuth":{}}},
      *      @OA\RequestBody(
      *          required=true,
@@ -96,9 +96,34 @@ class PlayerController extends Controller
             'contingent' => 'required|string',
         ]);
 
-        $player = Player::create($validated);
+        DB::beginTransaction();
+        try {
+            $player = Player::create($validated);
 
-        return response()->json(['message' => 'Player created', 'player' => $player]);
+            // Create user account for the player, using nim_nip as email so enrollFace can map it
+            $user = \App\Models\User::firstOrCreate(
+                ['email' => $request->nim_nip],
+                [
+                    'name' => $request->name,
+                    'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                    'role' => 'player'
+                ]
+            );
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Player and user account created successfully',
+                'player' => $player,
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to create player',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
