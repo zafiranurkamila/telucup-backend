@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use OpenApi\Attributes as OA;
+
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -9,33 +11,35 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    /**
-     * @OA\Post(
-     *      path="/register",
-     *      operationId="registerUser",
-     *      tags={"Auth"},
-     *      summary="Register a new user",
-     *      description="Registers a new user and returns a token.",
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              required={"name","email","password"},
-     *              @OA\Property(property="name", type="string", example="John Doe"),
-     *              @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *              @OA\Property(property="password", type="string", format="password", example="password123")
-     *          )
-     *      ),
-     *      @OA\Response(
-     *          response=201,
-     *          description="User successfully registered",
-     *          @OA\JsonContent(
-     *              @OA\Property(property="user", type="object"),
-     *              @OA\Property(property="token", type="string")
-     *          )
-     *      ),
-     *      @OA\Response(response=422, description="Validation errors")
-     * )
-     */
+    #[OA\Post(
+        path: "/register",
+        operationId: "registerUser",
+        tags: ["Authentication"],
+        summary: "Register a new user",
+        description: "Registers a new user and returns a token."
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["name", "email", "password"],
+            properties: [
+                new OA\Property(property: "name", type: "string", example: "John Doe"),
+                new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com"),
+                new OA\Property(property: "password", type: "string", format: "password", example: "password123")
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: "User successfully registered",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "user", type: "object"),
+                new OA\Property(property: "token", type: "string")
+            ]
+        )
+    )]
+    #[OA\Response(response: 422, description: "Validation errors")]
     public function register(Request $request)
     {
         $request->validate([
@@ -57,28 +61,25 @@ class AuthController extends Controller
         ], 201);
     }
 
-    /**
-     * @OA\Post(
-     *      path="/login",
-     *      operationId="loginUser",
-     *      tags={"Auth"},
-     *      summary="Login a user",
-     *      description="Logs in a user and returns a token.",
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              required={"email","password"},
-     *              @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *              @OA\Property(property="password", type="string", format="password", example="password123")
-     *          )
-     *      ),
-     *      @OA\Response(
-     *          response=200,
-     *          description="User successfully logged in"
-     *      ),
-     *      @OA\Response(response=422, description="Validation errors")
-     * )
-     */
+    #[OA\Post(
+        path: "/login",
+        operationId: "loginUser",
+        tags: ["Authentication"],
+        summary: "Login a user",
+        description: "Logs in a user and returns a token."
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["email", "password"],
+            properties: [
+                new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com"),
+                new OA\Property(property: "password", type: "string", format: "password", example: "password123")
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "User successfully logged in")]
+    #[OA\Response(response: 422, description: "Validation errors")]
     public function login(Request $request)
     {
         $request->validate([

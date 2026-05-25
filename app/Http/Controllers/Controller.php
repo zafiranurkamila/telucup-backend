@@ -19,6 +19,10 @@ use OpenApi\Attributes as OA;
     scheme: "bearer",
     bearerFormat: "JWT"
 )]
+#[OA\Tag(
+    name: "Self Assessment",
+    description: "Endpoints for player self-assessment and risk classification"
+)]
 abstract class Controller
 {
     //

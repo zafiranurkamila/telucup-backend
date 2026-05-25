@@ -25,25 +25,69 @@ Route::get('/campaign', [CampaignController::class, 'show'])->name('campaign.sho
 Route::post('/campaign/confirm', [CampaignController::class, 'confirm'])->name('campaign.confirm');
 
 Route::middleware(['auth:sanctum'])->group(function () {
-    // PIC Kontingen
-    Route::middleware(['role:pic_kontingen,admin,panitia'])->group(function () {
-        Route::post('/players', [PlayerController::class, 'store'])->name('players.store');
-        Route::post('/self-assessment', [SelfAssessmentController::class, 'store'])->name('self-assessment.store');
+
+    // ====================================================================
+    // SELF-ASSESSMENT — Fitur deteksi risiko peserta
+    // ====================================================================
+    //
+    // Akses:
+    //   - Semua user login: ambil struktur kuesioner & submit untuk dirinya
+    //   - Player & pic_kontingen: submit jawaban
+    //   - Panitia & admin: list, summary, review medis
+    //
+    Route::prefix('self-assessment')->group(function () {
+        // GET kuesioner — semua user login bisa akses
+        Route::get('/questionnaire', [SelfAssessmentController::class, 'questionnaire'])
+            ->name('self-assessment.questionnaire');
+
+        // GET assessment terakhir milik user yang login
+        Route::get('/me', [SelfAssessmentController::class, 'myLatest'])
+            ->name('self-assessment.me');
+
+        // Submit assessment — player atau pic_kontingen
+        Route::middleware(['role:pic_kontingen,player,admin,panitia'])->group(function () {
+            Route::post('/', [SelfAssessmentController::class, 'store'])
+                ->name('self-assessment.store');
+        });
+
+        // Panitia & admin: list, detail, summary
+        Route::middleware(['role:admin,panitia'])->group(function () {
+            Route::get('/', [SelfAssessmentController::class, 'index'])
+                ->name('self-assessment.index');
+            Route::get('/summary/contingent', [SelfAssessmentController::class, 'summaryByContingent'])
+                ->name('self-assessment.summary.contingent');
+            Route::get('/summary/sport', [SelfAssessmentController::class, 'summaryBySport'])
+                ->name('self-assessment.summary.sport');
+            Route::post('/review/{id}', [SelfAssessmentController::class, 'submitReview'])
+                ->name('self-assessment.review');
+        });
+
+        // Detail (boleh diakses peserta untuk lihat hasilnya sendiri,
+        // authorization lebih lanjut di-handle di controller).
+        Route::get('/{id}', [SelfAssessmentController::class, 'show'])
+            ->whereNumber('id')
+            ->name('self-assessment.show');
     });
 
-    // Fitur Peninjauan Medis (Bisa diakses Admin/Panitia Medis)
-    Route::post('/self-assessment/review/{id}', [SelfAssessmentController::class, 'submitReview'])->name('self-assessment.review');
+    // ====================================================================
+    // PIC Kontingen / Panitia
+    // ====================================================================
+    Route::middleware(['role:pic_kontingen,admin,panitia'])->group(function () {
+        Route::post('/players', [PlayerController::class, 'store'])->name('players.store');
+    });
 
+    // ====================================================================
     // Panitia (Gabungan Admin & Panitia Lapangan/Medis)
+    // ====================================================================
     Route::middleware(['role:panitia'])->group(function () {
         Route::get('/field/verification', [VerificationController::class, 'index'])->name('field.index');
         Route::post('/field/checkin/{id}', [VerificationController::class, 'checkIn'])->name('field.checkin');
-        
+
         Route::get('/admin/templates', [\App\Http\Controllers\AdminController::class, 'templates']);
         Route::get('/admin/registrations', [\App\Http\Controllers\AdminController::class, 'registrations']);
         Route::post('/admin/registrations/{id}/verify', [\App\Http\Controllers\AdminController::class, 'verifyRegistration']);
         Route::get('/admin/schedules', [\App\Http\Controllers\AdminController::class, 'schedules']);
-        
+
         Route::post('/bracket/generate', [GameController::class, 'generateBracket'])->name('bracket.generate');
         Route::post('/bracket/update-score/{id}', [GameController::class, 'updateScore'])->name('bracket.update');
 

@@ -12,6 +12,331 @@
         }
     ],
     "paths": {
+        "/admin/templates": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Manajemen Template",
+                "description": "Mengambil daftar template yang tersedia.",
+                "operationId": "getTemplates",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil data template"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/registrations": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Verifikasi Pemain (List Registrasi)",
+                "description": "Mengambil daftar registrasi pemain dengan filter cabang olahraga, kontingen, dan pencarian.",
+                "operationId": "getRegistrations",
+                "parameters": [
+                    {
+                        "name": "sport_branch",
+                        "in": "query",
+                        "required": false
+                    },
+                    {
+                        "name": "contingent",
+                        "in": "query",
+                        "required": false
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil data registrasi"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/registrations/{id}/verify": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Detail Registrasi & Verifikasi",
+                "description": "Memperbarui status verifikasi dari sebuah registrasi (verified / rejected).",
+                "operationId": "verifyRegistration",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "verified",
+                                            "rejected"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status registrasi berhasil diperbarui!"
+                    },
+                    "404": {
+                        "description": "Registration not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/schedules": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Jadwal Pertandingan",
+                "description": "Mengambil daftar jadwal pertandingan berdasarkan tanggal dan cabang olahraga.",
+                "operationId": "getAdminSchedules",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false
+                    },
+                    {
+                        "name": "sport_branch",
+                        "in": "query",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil data jadwal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{id}/promote-to-pic": {
+            "put": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Promote Player to PIC Kontingen",
+                "description": "Mengubah peran pengguna menjadi PIC Kontingen.",
+                "operationId": "promoteToPic",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User berhasil dipromosikan menjadi PIC Kontingen"
+                    },
+                    "400": {
+                        "description": "Tidak dapat mengubah role panitia"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Register a new user",
+                "description": "Registers a new user and returns a token.",
+                "operationId": "registerUser",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User successfully registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "type": "object"
+                                        },
+                                        "token": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation errors"
+                    }
+                }
+            }
+        },
+        "/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Login a user",
+                "description": "Logs in a user and returns a token.",
+                "operationId": "loginUser",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User successfully logged in"
+                    },
+                    "422": {
+                        "description": "Validation errors"
+                    }
+                }
+            }
+        },
+        "/campaign": {
+            "get": {
+                "tags": [
+                    "Campaign"
+                ],
+                "summary": "Menampilkan konten kampanye Safety & HEI",
+                "description": "Mengambil konten kampanye terkait budaya dan keselamatan.",
+                "operationId": "getCampaign",
+                "responses": {
+                    "200": {
+                        "description": "Sukses mengambil data kampanye"
+                    }
+                }
+            }
+        },
+        "/campaign/confirm": {
+            "post": {
+                "tags": [
+                    "Campaign"
+                ],
+                "summary": "Konfirmasi baca kampanye & Sesi",
+                "description": "Menyimpan konfirmasi bahwa pengguna telah membaca kampanye.",
+                "operationId": "confirmCampaign",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "dont_show_again": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Konfirmasi diterima"
+                    }
+                }
+            }
+        },
         "/chatbot/ask": {
             "post": {
                 "tags": [
@@ -73,9 +398,1162 @@
                     }
                 }
             }
+        },
+        "/event-photos": {
+            "post": {
+                "tags": [
+                    "Event Photo"
+                ],
+                "summary": "Upload foto event untuk AI processing",
+                "description": "Mengunggah foto event ke Cloudinary dan memicu job background untuk pengenalan wajah oleh AI.",
+                "operationId": "storeEventPhoto",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "image"
+                                ],
+                                "properties": {
+                                    "image": {
+                                        "description": "Foto event (max 5MB)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Foto berhasil diunggah dan sedang diproses oleh AI",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/my-gallery": {
+            "get": {
+                "tags": [
+                    "Gallery"
+                ],
+                "summary": "Galeri foto pemain yang terdeteksi oleh AI",
+                "description": "Mengambil daftar photo_faces yang cocok dengan authenticated player, beserta data event_photo (URL Cloudinary). Mendukung filter ?status=pending|accepted|rejected.",
+                "operationId": "myGallery",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter berdasarkan validation_status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "accepted",
+                                "rejected"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil galeri"
+                    },
+                    "404": {
+                        "description": "Profil player belum tersedia untuk akun ini"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/my-gallery/{photo_face_id}/validate": {
+            "patch": {
+                "tags": [
+                    "Gallery"
+                ],
+                "summary": "Validasi/tolak hasil deteksi wajah",
+                "description": "Pemain dapat meng-accept atau me-reject deteksi wajah yang dilakukan AI.",
+                "operationId": "validatePhotoFace",
+                "parameters": [
+                    {
+                        "name": "photo_face_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "example": "accepted",
+                                        "enum": [
+                                            "accepted",
+                                            "rejected"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status berhasil diperbarui"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki akses ke record ini"
+                    },
+                    "404": {
+                        "description": "Profil player belum tersedia untuk akun ini atau Photo face tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/bracket/generate": {
+            "post": {
+                "tags": [
+                    "Bracket"
+                ],
+                "summary": "Generate Bracket Otomatis dari list kontingen",
+                "description": "Membuat bagan pertandingan babak 1 secara otomatis berdasarkan list kontingen.",
+                "operationId": "generateBracket",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contingents",
+                                    "sport"
+                                ],
+                                "properties": {
+                                    "contingents": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "Informatika",
+                                            "Elektro",
+                                            "MBTI",
+                                            "DKV"
+                                        ]
+                                    },
+                                    "sport": {
+                                        "type": "string",
+                                        "example": "Basket"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Bagan Babak 1 Berhasil Dibuat"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/bracket/update-score/{id}": {
+            "post": {
+                "tags": [
+                    "Bracket"
+                ],
+                "summary": "Update Skor & Pemenang Lanjut Otomatis",
+                "description": "Memperbarui skor pertandingan, menentukan pemenang, dan memajukannya ke babak selanjutnya secara otomatis.",
+                "operationId": "updateScore",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "score_a",
+                                    "score_b"
+                                ],
+                                "properties": {
+                                    "score_a": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "score_b": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Skor diupdate, pertandingan selesai, dan pemenang lanjut"
+                    },
+                    "404": {
+                        "description": "Game not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/bracket/detail/{id}": {
+            "get": {
+                "tags": [
+                    "Bracket"
+                ],
+                "summary": "Detail Pertandingan untuk Modal",
+                "description": "Mengambil detail informasi dari sebuah pertandingan berdasarkan ID.",
+                "operationId": "getGameDetail",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil detail pertandingan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Game not found"
+                    }
+                }
+            }
+        },
+        "/summary/contingent": {
+            "get": {
+                "tags": [
+                    "Players"
+                ],
+                "summary": "Rangkuman tingkat risiko per kontingen",
+                "description": "Menghasilkan data summary jumlah pemain dengan status high, moderate, dan low risk berdasarkan kontingen.",
+                "operationId": "contingentSummary",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "contingent": {
+                                                        "type": "string"
+                                                    },
+                                                    "high_risk_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "moderate_risk_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "low_risk_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "total_players": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/players": {
+            "post": {
+                "tags": [
+                    "Players"
+                ],
+                "summary": "Menambah data pemain baru dan akun User",
+                "description": "Menyimpan data pemain baru ke database dan membuat akun User terkait (diperuntukkan bagi Admin/Panitia atau PIC Kontingen).",
+                "operationId": "storePlayer",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Player created"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/player/profile": {
+            "patch": {
+                "tags": [
+                    "Players"
+                ],
+                "summary": "Melengkapi profil pemain",
+                "description": "Melengkapi data profil pemain seperti nim_nip, sport_branch, dan contingent.",
+                "operationId": "updateProfile",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nim_nip": {
+                                        "type": "string",
+                                        "example": "1301234567"
+                                    },
+                                    "sport_branch": {
+                                        "type": "string",
+                                        "example": "Basket"
+                                    },
+                                    "contingent": {
+                                        "type": "string",
+                                        "example": "Fakultas Informatika"
+                                    },
+                                    "is_kacamata": {
+                                        "description": "Penanda pengguna kacamata (flag mitra untuk pemantauan ekstra)",
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/players/enroll-face": {
+            "post": {
+                "tags": [
+                    "Players",
+                    "Face Recognition"
+                ],
+                "summary": "Enroll foto profil pemain untuk face recognition",
+                "description": "Upload foto profil pemain ke Cloudinary, lalu kirim ke FastAPI untuk ekstraksi vektor wajah 512D AdaFace dan simpan ke tabel face_embeddings.",
+                "operationId": "enrollFace",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "photo"
+                                ],
+                                "properties": {
+                                    "photo": {
+                                        "description": "Foto profil pemain (max 5MB)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Face enrollment berhasil"
+                    },
+                    "404": {
+                        "description": "Profil player belum tersedia untuk akun ini"
+                    },
+                    "422": {
+                        "description": "Validasi gagal atau wajah tidak terdeteksi"
+                    },
+                    "502": {
+                        "description": "Gagal berkomunikasi dengan AI Engine"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/self-assessment/questionnaire": {
+            "get": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "Mendapatkan struktur kuesioner self-assessment",
+                "description": "Mengembalikan daftar pertanyaan terstruktur dalam 4 domain yang harus dirender oleh frontend. Response berisi version, sections (array berisi section DEMO, A, B, C, D), dan masing-masing section berisi questions dengan field code, type, text, options, is_red_flag, weight, required.",
+                "operationId": "getSelfAssessmentQuestionnaire",
+                "responses": {
+                    "200": {
+                        "description": "Struktur kuesioner lengkap"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/self-assessment": {
+            "get": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "List semua self-assessment dengan filter (khusus panitia/admin)",
+                "operationId": "listSelfAssessments",
+                "parameters": [
+                    {
+                        "name": "risk_label",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sport_branch",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "contingent",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "requires_clearance",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "is_kacamata",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list assessment"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "Submit jawaban self-assessment dan dapatkan klasifikasi risiko",
+                "description": "Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening.",
+                "operationId": "storeSelfAssessment",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "answers"
+                                ],
+                                "properties": {
+                                    "player_id": {
+                                        "description": "Optional ID player, jika diisi panitia atau jika user mensubmit untuk dirinya",
+                                        "type": "integer"
+                                    },
+                                    "answers": {
+                                        "description": "key adalah question code, value adalah jawaban",
+                                        "type": "object",
+                                        "example": {
+                                            "demo_age": 21,
+                                            "demo_height_cm": 170,
+                                            "demo_weight_kg": 65,
+                                            "demo_activity_level": "moderate",
+                                            "A1_heart_condition_diagnosed": false,
+                                            "A2_chest_pain_during_exercise": false,
+                                            "A3_unexplained_fainting": false,
+                                            "A4_serious_medical_condition": false,
+                                            "A5_family_cardiac_death": false,
+                                            "B1_currently_recovering": false,
+                                            "B2_current_pain_worsens": false,
+                                            "B3_pain_score": 2
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Assessment berhasil disimpan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SelfAssessmentResult"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "User mencoba submit atas nama player lain"
+                    },
+                    "404": {
+                        "description": "Profil player tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/self-assessment/me": {
+            "get": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "Mendapatkan hasil self-assessment terakhir milik user yang sedang login",
+                "operationId": "getMySelfAssessment",
+                "responses": {
+                    "200": {
+                        "description": "Data assessment terakhir, atau data: null jika belum pernah mengisi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SelfAssessmentResult"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Profil player tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/self-assessment/{id}": {
+            "get": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "Detail satu self-assessment berdasarkan ID",
+                "description": "Jika diakses oleh admin/panitia, response menyertakan score_breakdown (detail skor per pertanyaan) dan form_responses (jawaban mentah). Jika diakses peserta sendiri, dua field tersebut disembunyikan.",
+                "operationId": "showSelfAssessment",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail assessment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SelfAssessmentResult"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Peserta mencoba mengakses data milik orang lain"
+                    },
+                    "404": {
+                        "description": "Assessment tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/self-assessment/review/{id}": {
+            "post": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "Submit review medis — izinkan atau larang peserta bertanding",
+                "operationId": "reviewSelfAssessment",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "is_allowed_to_play"
+                                ],
+                                "properties": {
+                                    "is_allowed_to_play": {
+                                        "description": "true = diizinkan, false = tidak diizinkan",
+                                        "type": "boolean"
+                                    },
+                                    "medical_notes": {
+                                        "description": "catatan dokter/fisioterapis (max 2000 karakter)",
+                                        "type": "string"
+                                    },
+                                    "pic_confirmed": {
+                                        "description": "konfirmasi PIC kontingen sudah diinformasikan",
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Review tersimpan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "is_allowed_to_play": {
+                                            "type": "boolean"
+                                        },
+                                        "status_label": {
+                                            "type": "string",
+                                            "example": "Diizinkan Bermain"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Assessment tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/self-assessment/summary/contingent": {
+            "get": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "Ringkasan jumlah risiko per kontingen/fakultas",
+                "description": "Hanya menghitung assessment terbaru per player (tidak double-count). Berguna untuk dashboard panitia.",
+                "operationId": "summaryByContingent",
+                "responses": {
+                    "200": {
+                        "description": "Array of object",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "contingent": {
+                                                "type": "string"
+                                            },
+                                            "high_risk_count": {
+                                                "type": "integer"
+                                            },
+                                            "medium_risk_count": {
+                                                "type": "integer"
+                                            },
+                                            "low_risk_count": {
+                                                "type": "integer"
+                                            },
+                                            "kacamata_count": {
+                                                "type": "integer"
+                                            },
+                                            "total_assessed": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/self-assessment/summary/sport": {
+            "get": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "Ringkasan jumlah risiko per cabang olahraga",
+                "description": "Struktur response sama dengan summary/contingent, tapi dikelompokkan berdasarkan sport_branch.",
+                "operationId": "summaryBySport",
+                "responses": {
+                    "200": {
+                        "description": "Array of object",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "sport_branch": {
+                                                "type": "string"
+                                            },
+                                            "high_risk_count": {
+                                                "type": "integer"
+                                            },
+                                            "medium_risk_count": {
+                                                "type": "integer"
+                                            },
+                                            "low_risk_count": {
+                                                "type": "integer"
+                                            },
+                                            "kacamata_count": {
+                                                "type": "integer"
+                                            },
+                                            "total_assessed": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/field/verification": {
+            "get": {
+                "tags": [
+                    "Verification"
+                ],
+                "summary": "Menampilkan daftar pemain dengan indikator warna",
+                "description": "Mengambil daftar pemain beserta status self-assessment mereka untuk diverifikasi di lapangan.",
+                "operationId": "getVerifications",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil data pemain",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "panitia_note": {
+                                            "type": "string"
+                                        },
+                                        "players": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/field/checkin/{id}": {
+            "post": {
+                "tags": [
+                    "Verification"
+                ],
+                "summary": "Melakukan check-in pemain di lapangan",
+                "description": "Menandai pemain sebagai sudah check-in dan terverifikasi di lapangan.",
+                "operationId": "checkInPlayer",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pemain berhasil check-in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Player not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
+        "schemas": {
+            "SelfAssessmentResult": {
+                "title": "Self Assessment Result",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "player_id": {
+                        "type": "integer"
+                    },
+                    "player_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "sport_branch": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "contingent": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "snapshot": {
+                        "properties": {
+                            "age": {
+                                "type": "integer"
+                            },
+                            "bmi": {
+                                "type": "number",
+                                "format": "float"
+                            },
+                            "is_kacamata": {
+                                "type": "boolean"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "risk_label": {
+                        "type": "string",
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high"
+                        ]
+                    },
+                    "total_score": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "confidence_score": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "requires_clearance": {
+                        "type": "boolean"
+                    },
+                    "domain_scores": {
+                        "properties": {
+                            "cardiovascular": {
+                                "type": "number",
+                                "format": "float"
+                            },
+                            "musculoskeletal": {
+                                "type": "number",
+                                "format": "float"
+                            },
+                            "acute_readiness": {
+                                "type": "number",
+                                "format": "float"
+                            },
+                            "psychosocial": {
+                                "type": "number",
+                                "format": "float"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "red_flags": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "text": {
+                                    "type": "string"
+                                },
+                                "reason": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "yellow_flags": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "text": {
+                                    "type": "string"
+                                },
+                                "reason": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "recommendation": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "panitia_summary": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "questionnaire_version": {
+                        "type": "string"
+                    },
+                    "algorithm_version": {
+                        "type": "string"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "is_valid": {
+                        "type": "boolean"
+                    },
+                    "medical_review": {
+                        "properties": {
+                            "medical_notes": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "is_allowed_to_play": {
+                                "type": "boolean",
+                                "nullable": true
+                            },
+                            "pic_confirmed": {
+                                "type": "boolean"
+                            },
+                            "reviewed_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            }
+        },
         "securitySchemes": {
             "bearerAuth": {
                 "type": "http",
@@ -86,8 +1564,48 @@
     },
     "tags": [
         {
+            "name": "Self Assessment",
+            "description": "Endpoints for player self-assessment and risk classification"
+        },
+        {
+            "name": "Admin",
+            "description": "Admin"
+        },
+        {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Campaign",
+            "description": "Campaign"
+        },
+        {
             "name": "Chatbot",
             "description": "Chatbot"
+        },
+        {
+            "name": "Event Photo",
+            "description": "Event Photo"
+        },
+        {
+            "name": "Gallery",
+            "description": "Gallery"
+        },
+        {
+            "name": "Bracket",
+            "description": "Bracket"
+        },
+        {
+            "name": "Players",
+            "description": "Players"
+        },
+        {
+            "name": "Face Recognition",
+            "description": "Face Recognition"
+        },
+        {
+            "name": "Verification",
+            "description": "Verification"
         }
     ]
 }

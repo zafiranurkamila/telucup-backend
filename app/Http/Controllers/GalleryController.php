@@ -2,41 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use OpenApi\Attributes as OA;
+
 use App\Models\PhotoFace;
 use Illuminate\Http\Request;
 
 class GalleryController extends Controller
 {
-    /**
-     * GET /api/my-gallery
-     * 
-     * Menampilkan galeri foto event di mana wajah pemain yang login terdeteksi.
-     * Mendukung filter berdasarkan validation_status via query param ?status=
-     * 
-     * @OA\Get(
-     *      path="/my-gallery",
-     *      operationId="myGallery",
-     *      tags={"Gallery"},
-     *      summary="Galeri foto pemain yang terdeteksi oleh AI",
-     *      description="Mengambil daftar photo_faces yang cocok dengan authenticated player, beserta data event_photo (URL Cloudinary). Mendukung filter ?status=pending|accepted|rejected.",
-     *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(
-     *          name="status",
-     *          in="query",
-     *          required=false,
-     *          description="Filter berdasarkan validation_status",
-     *          @OA\Schema(type="string", enum={"pending","accepted","rejected"})
-     *      ),
-     *      @OA\Response(
-     *          response=200,
-     *          description="Berhasil mengambil galeri"
-     *      ),
-     *      @OA\Response(
-     *          response=404,
-     *          description="Profil player belum tersedia untuk akun ini"
-     *      )
-     * )
-     */
+    #[OA\Get(
+        path: "/my-gallery",
+        operationId: "myGallery",
+        tags: ["Gallery"],
+        summary: "Galeri foto pemain yang terdeteksi oleh AI",
+        description: "Mengambil daftar photo_faces yang cocok dengan authenticated player, beserta data event_photo (URL Cloudinary). Mendukung filter ?status=pending|accepted|rejected.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(
+        name: "status",
+        in: "query",
+        required: false,
+        description: "Filter berdasarkan validation_status",
+        schema: new OA\Schema(type: "string", enum: ["pending", "accepted", "rejected"])
+    )]
+    #[OA\Response(response: 200, description: "Berhasil mengambil galeri")]
+    #[OA\Response(response: 404, description: "Profil player belum tersedia untuk akun ini")]
     public function index(Request $request)
     {
         $user = $request->user();
@@ -69,36 +58,32 @@ class GalleryController extends Controller
         ]);
     }
 
-    /**
-     * PATCH /api/my-gallery/{photo_face_id}/validate
-     * 
-     * Pemain memvalidasi (accept/reject) apakah wajah yang terdeteksi memang dirinya.
-     * 
-     * @OA\Patch(
-     *      path="/my-gallery/{photo_face_id}/validate",
-     *      operationId="validatePhotoFace",
-     *      tags={"Gallery"},
-     *      summary="Validasi/tolak hasil deteksi wajah",
-     *      description="Pemain dapat meng-accept atau me-reject deteksi wajah yang dilakukan AI.",
-     *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(
-     *          name="photo_face_id",
-     *          in="path",
-     *          required=true,
-     *          @OA\Schema(type="integer")
-     *      ),
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              required={"status"},
-     *              @OA\Property(property="status", type="string", enum={"accepted","rejected"}, example="accepted")
-     *          )
-     *      ),
-     *      @OA\Response(response=200, description="Status berhasil diperbarui"),
-     *      @OA\Response(response=403, description="Tidak memiliki akses ke record ini"),
-     *      @OA\Response(response=404, description="Profil player belum tersedia untuk akun ini atau Photo face tidak ditemukan")
-     * )
-     */
+    #[OA\Patch(
+        path: "/my-gallery/{photo_face_id}/validate",
+        operationId: "validatePhotoFace",
+        tags: ["Gallery"],
+        summary: "Validasi/tolak hasil deteksi wajah",
+        description: "Pemain dapat meng-accept atau me-reject deteksi wajah yang dilakukan AI.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(
+        name: "photo_face_id",
+        in: "path",
+        required: true,
+        schema: new OA\Schema(type: "integer")
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["status"],
+            properties: [
+                new OA\Property(property: "status", type: "string", enum: ["accepted", "rejected"], example: "accepted")
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "Status berhasil diperbarui")]
+    #[OA\Response(response: 403, description: "Tidak memiliki akses ke record ini")]
+    #[OA\Response(response: 404, description: "Profil player belum tersedia untuk akun ini atau Photo face tidak ditemukan")]
     public function validate(Request $request, int $photoFaceId)
     {
         $request->validate([

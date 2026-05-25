@@ -2,34 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use OpenApi\Attributes as OA;
+
 use App\Models\Game;
 use Illuminate\Http\Request;
 
 class GameController extends Controller
 {
-    /**
-     * @OA\Post(
-     *      path="/bracket/generate",
-     *      operationId="generateBracket",
-     *      tags={"Bracket"},
-     *      summary="Generate Bracket Otomatis dari list kontingen",
-     *      description="Membuat bagan pertandingan babak 1 secara otomatis berdasarkan list kontingen.",
-     *      security={{"bearerAuth":{}}},
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              required={"contingents", "sport"},
-     *              @OA\Property(property="contingents", type="array", @OA\Items(type="string"), example={"Informatika", "Elektro", "MBTI", "DKV"}),
-     *              @OA\Property(property="sport", type="string", example="Basket")
-     *          )
-     *      ),
-     *      @OA\Response(
-     *          response=200,
-     *          description="Bagan Babak 1 Berhasil Dibuat"
-     *      )
-     * )
-     * FR-02.1: Generate Bracket Otomatis dari list kontingen
-     */
+    #[OA\Post(
+        path: "/bracket/generate",
+        operationId: "generateBracket",
+        tags: ["Bracket"],
+        summary: "Generate Bracket Otomatis dari list kontingen",
+        description: "Membuat bagan pertandingan babak 1 secara otomatis berdasarkan list kontingen.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["contingents", "sport"],
+            properties: [
+                new OA\Property(property: "contingents", type: "array", items: new OA\Items(type: "string"), example: ["Informatika", "Elektro", "MBTI", "DKV"]),
+                new OA\Property(property: "sport", type: "string", example: "Basket")
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "Bagan Babak 1 Berhasil Dibuat")]
     public function generateBracket(Request $request)
     {
         $contingents = $request->contingents; // Contoh: ['Informatika', 'Elektro', 'MBTI', 'DKV']
@@ -53,36 +51,32 @@ class GameController extends Controller
         return response()->json(['message' => 'Bagan Babak 1 Berhasil Dibuat Secara Otomatis!']);
     }
 
-    /**
-     * @OA\Post(
-     *      path="/bracket/update-score/{id}",
-     *      operationId="updateScore",
-     *      tags={"Bracket"},
-     *      summary="Update Skor & Pemenang Lanjut Otomatis",
-     *      description="Memperbarui skor pertandingan, menentukan pemenang, dan memajukannya ke babak selanjutnya secara otomatis.",
-     *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(
-     *          name="id",
-     *          in="path",
-     *          required=true,
-     *          @OA\Schema(type="integer")
-     *      ),
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              required={"score_a", "score_b"},
-     *              @OA\Property(property="score_a", type="integer", example=2),
-     *              @OA\Property(property="score_b", type="integer", example=1)
-     *          )
-     *      ),
-     *      @OA\Response(
-     *          response=200,
-     *          description="Skor diupdate, pertandingan selesai, dan pemenang lanjut"
-     *      ),
-     *      @OA\Response(response=404, description="Game not found")
-     * )
-     * FR-02.2 & FR-02.3: Update Skor & Pemenang Lanjut Otomatis
-     */
+    #[OA\Post(
+        path: "/bracket/update-score/{id}",
+        operationId: "updateScore",
+        tags: ["Bracket"],
+        summary: "Update Skor & Pemenang Lanjut Otomatis",
+        description: "Memperbarui skor pertandingan, menentukan pemenang, dan memajukannya ke babak selanjutnya secara otomatis.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(
+        name: "id",
+        in: "path",
+        required: true,
+        schema: new OA\Schema(type: "integer")
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["score_a", "score_b"],
+            properties: [
+                new OA\Property(property: "score_a", type: "integer", example: 2),
+                new OA\Property(property: "score_b", type: "integer", example: 1)
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "Skor diupdate, pertandingan selesai, dan pemenang lanjut")]
+    #[OA\Response(response: 404, description: "Game not found")]
     public function updateScore(Request $request, $id)
     {
         $game = Game::findOrFail($id);
@@ -133,28 +127,25 @@ class GameController extends Controller
         ]);
     }
 
-    /**
-     * @OA\Get(
-     *      path="/bracket/detail/{id}",
-     *      operationId="getGameDetail",
-     *      tags={"Bracket"},
-     *      summary="Detail Pertandingan untuk Modal",
-     *      description="Mengambil detail informasi dari sebuah pertandingan berdasarkan ID.",
-     *      @OA\Parameter(
-     *          name="id",
-     *          in="path",
-     *          required=true,
-     *          @OA\Schema(type="integer")
-     *      ),
-     *      @OA\Response(
-     *          response=200,
-     *          description="Berhasil mengambil detail pertandingan",
-     *          @OA\JsonContent(type="object")
-     *      ),
-     *      @OA\Response(response=404, description="Game not found")
-     * )
-     * Detail Pertandingan untuk Modal (Tampilan Gambar 2)
-     */
+    #[OA\Get(
+        path: "/bracket/detail/{id}",
+        operationId: "getGameDetail",
+        tags: ["Bracket"],
+        summary: "Detail Pertandingan untuk Modal",
+        description: "Mengambil detail informasi dari sebuah pertandingan berdasarkan ID."
+    )]
+    #[OA\Parameter(
+        name: "id",
+        in: "path",
+        required: true,
+        schema: new OA\Schema(type: "integer")
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil mengambil detail pertandingan",
+        content: new OA\JsonContent(type: "object")
+    )]
+    #[OA\Response(response: 404, description: "Game not found")]
     public function show($id)
     {
         $game = Game::findOrFail($id);

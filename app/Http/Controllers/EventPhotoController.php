@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use OpenApi\Attributes as OA;
+
 use Illuminate\Http\Request;
 use App\Models\EventPhoto;
 use App\Jobs\ProcessEventPhoto;
@@ -10,33 +12,33 @@ use Illuminate\Support\Facades\DB;
 
 class EventPhotoController extends Controller
 {
-    /**
-     * @OA\Post(
-     *      path="/event-photos",
-     *      operationId="storeEventPhoto",
-     *      tags={"Event Photo"},
-     *      summary="Upload foto event untuk AI processing",
-     *      description="Mengunggah foto event ke Cloudinary dan memicu job background untuk pengenalan wajah oleh AI.",
-     *      security={{"bearerAuth":{}}},
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\MediaType(
-     *              mediaType="multipart/form-data",
-     *              @OA\Schema(
-     *                  required={"image"},
-     *                  @OA\Property(property="image", type="string", format="binary", description="Foto event (max 5MB)")
-     *              )
-     *          )
-     *      ),
-     *      @OA\Response(
-     *          response=201,
-     *          description="Foto berhasil diunggah dan sedang diproses oleh AI",
-     *          @OA\JsonContent(type="object")
-     *      ),
-     *      @OA\Response(response=422, description="Validation error"),
-     *      @OA\Response(response=500, description="Server error")
-     * )
-     */
+    #[OA\Post(
+        path: "/event-photos",
+        operationId: "storeEventPhoto",
+        tags: ["Event Photo"],
+        summary: "Upload foto event untuk AI processing",
+        description: "Mengunggah foto event ke Cloudinary dan memicu job background untuk pengenalan wajah oleh AI.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\MediaType(
+            mediaType: "multipart/form-data",
+            schema: new OA\Schema(
+                required: ["image"],
+                properties: [
+                    new OA\Property(property: "image", type: "string", format: "binary", description: "Foto event (max 5MB)")
+                ]
+            )
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: "Foto berhasil diunggah dan sedang diproses oleh AI",
+        content: new OA\JsonContent(type: "object")
+    )]
+    #[OA\Response(response: 422, description: "Validation error")]
+    #[OA\Response(response: 500, description: "Server error")]
     public function store(Request $request)
     {
         // 1. Validasi input

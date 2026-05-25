@@ -4,23 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\SelfAssessment;
 use Illuminate\Http\Request;
-use OpenApi\Annotations as OA;
+use OpenApi\Attributes as OA;
 
 class CampaignController extends Controller
 {
-    /**
-     * @OA\Get(
-     *      path="/campaign",
-     *      operationId="getCampaign",
-     *      tags={"Campaign"},
-     *      summary="Menampilkan konten kampanye Safety & HEI",
-     *      description="Mengambil konten kampanye terkait budaya dan keselamatan.",
-     *      @OA\Response(
-     *          response=200,
-     *          description="Sukses mengambil data kampanye"
-     *      )
-     * )
-     */
+    #[OA\Get(
+        path: "/campaign",
+        operationId: "getCampaign",
+        tags: ["Campaign"],
+        summary: "Menampilkan konten kampanye Safety & HEI",
+        description: "Mengambil konten kampanye terkait budaya dan keselamatan."
+    )]
+    #[OA\Response(response: 200, description: "Sukses mengambil data kampanye")]
     public function show()
     {
         return response()->json([
@@ -41,25 +36,22 @@ class CampaignController extends Controller
         ]);
     }
 
-    /**
-     * @OA\Post(
-     *      path="/campaign/confirm",
-     *      operationId="confirmCampaign",
-     *      tags={"Campaign"},
-     *      summary="Konfirmasi baca kampanye & Sesi",
-     *      description="Menyimpan konfirmasi bahwa pengguna telah membaca kampanye.",
-     *      @OA\RequestBody(
-     *          required=false,
-     *          @OA\JsonContent(
-     *              @OA\Property(property="dont_show_again", type="boolean", example=true)
-     *          )
-     *      ),
-     *      @OA\Response(
-     *          response=200,
-     *          description="Konfirmasi diterima"
-     *      )
-     * )
-     */
+    #[OA\Post(
+        path: "/campaign/confirm",
+        operationId: "confirmCampaign",
+        tags: ["Campaign"],
+        summary: "Konfirmasi baca kampanye & Sesi",
+        description: "Menyimpan konfirmasi bahwa pengguna telah membaca kampanye."
+    )]
+    #[OA\RequestBody(
+        required: false,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "dont_show_again", type: "boolean", example: true)
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: "Konfirmasi diterima")]
     public function confirm(Request $request)
     {
         if ($request->dont_show_again) {
