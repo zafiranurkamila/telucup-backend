@@ -95,6 +95,124 @@ paths:
         '401':
           description: Unauthorized
 
+  /player/profile:
+    patch:
+      tags:
+        - Players
+      summary: Update player profile
+      description: Completes or updates the player's profile (nim_nip, sport_branch, contingent).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nim_nip:
+                  type: string
+                  example: "1301234567"
+                sport_branch:
+                  type: string
+                  example: "Basket"
+                contingent:
+                  type: string
+                  example: "Fakultas Informatika"
+      responses:
+        '200':
+          description: Profile updated successfully
+        '404':
+          description: Player profile not found
+
+  /players/enroll-face:
+    post:
+      tags:
+        - Face Recognition
+      summary: Enroll foto profil pemain untuk face recognition
+      description: Upload foto profil pemain ke Cloudinary, lalu kirim ke AI Engine untuk registrasi wajah.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - photo
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: Foto profil pemain (max 5MB)
+      responses:
+        '200':
+          description: Face enrollment berhasil
+        '404':
+          description: Profil player belum tersedia untuk akun ini
+        '422':
+          description: Validasi gagal atau wajah tidak terdeteksi
+        '502':
+          description: Gagal berkomunikasi dengan AI Engine
+
+  /my-gallery:
+    get:
+      tags:
+        - Gallery
+      summary: Galeri foto pemain yang terdeteksi oleh AI
+      description: Mengambil daftar foto wajah yang cocok dengan authenticated player, beserta URL foto acara. Mendukung filter status validasi.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [pending, accepted, rejected]
+          description: Filter berdasarkan validation_status
+      responses:
+        '200':
+          description: Berhasil mengambil galeri
+        '404':
+          description: Profil player belum tersedia untuk akun ini
+
+  /my-gallery/{photo_face_id}/validate:
+    patch:
+      tags:
+        - Gallery
+      summary: Validasi/tolak hasil deteksi wajah
+      description: Pemain dapat meng-accept atau me-reject deteksi wajah yang dilakukan AI.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: photo_face_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [accepted, rejected]
+                  example: accepted
+      responses:
+        '200':
+          description: Status berhasil diperbarui
+        '403':
+          description: Tidak memiliki akses ke record ini
+        '404':
+          description: Profil player belum tersedia untuk akun ini atau Photo face tidak ditemukan
+
   /summary/contingent:
     get:
       tags:
@@ -507,19 +625,20 @@ components:
   schemas:
     PlayerInput:
       type: object
+      required:
+        - name
+        - email
+        - password
       properties:
         name:
           type: string
           example: "John Doe"
-        nim_nip:
+        email:
           type: string
-          example: "1301234567"
-        sport_branch:
+          example: "john@example.com"
+        password:
           type: string
-          example: "Basket"
-        contingent:
-          type: string
-          example: "Fakultas Informatika"
+          example: "password123"
     ContingentSummary:
       type: object
       properties:

@@ -57,6 +57,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ====================================================================
     // Phase 1: Face Enrollment (Pemain mengunggah foto profil untuk AI)
     // ====================================================================
+    Route::patch('/player/profile', [PlayerController::class, 'updateProfile'])->name('player.profile.update');
     Route::post('/players/enroll-face', [PlayerController::class, 'enrollFace'])->name('players.enroll-face');
 
     // ====================================================================

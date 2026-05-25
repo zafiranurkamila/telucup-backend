@@ -32,8 +32,8 @@ class GalleryController extends Controller
      *          description="Berhasil mengambil galeri"
      *      ),
      *      @OA\Response(
-     *          response=403,
-     *          description="User bukan player atau tidak memiliki player_id"
+     *          response=404,
+     *          description="Profil player belum tersedia untuk akun ini"
      *      )
      * )
      */
@@ -42,18 +42,15 @@ class GalleryController extends Controller
         $user = $request->user();
 
         // Ambil player_id dari user yang login
-        // Asumsi: relasi User -> Player melalui field yang bisa di-lookup
-        // Jika User model punya relasi player, gunakan itu.
-        // Untuk fleksibilitas, kita cari player berdasarkan user terkait.
-        $player = \App\Models\Player::where('nim_nip', $user->email)->first();
+        $player = $user->player;
 
         if (!$player) {
             // Fallback: coba cari berdasarkan nama atau ID langsung
             // Dalam setup produksi, User harus punya foreign key ke player
             return response()->json([
                 'status' => 'error',
-                'message' => 'Profil pemain tidak ditemukan untuk akun ini. Pastikan data pemain sudah didaftarkan.'
-            ], 403);
+                'message' => 'Profil player belum tersedia untuk akun ini.'
+            ], 404);
         }
 
         $query = PhotoFace::where('matched_player_id', $player->id)
@@ -99,7 +96,7 @@ class GalleryController extends Controller
      *      ),
      *      @OA\Response(response=200, description="Status berhasil diperbarui"),
      *      @OA\Response(response=403, description="Tidak memiliki akses ke record ini"),
-     *      @OA\Response(response=404, description="Photo face tidak ditemukan")
+     *      @OA\Response(response=404, description="Profil player belum tersedia untuk akun ini atau Photo face tidak ditemukan")
      * )
      */
     public function validate(Request $request, int $photoFaceId)
@@ -111,13 +108,13 @@ class GalleryController extends Controller
         $user = $request->user();
 
         // Cari player terkait user
-        $player = \App\Models\Player::where('nim_nip', $user->email)->first();
+        $player = $user->player;
 
         if (!$player) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Profil pemain tidak ditemukan untuk akun ini.'
-            ], 403);
+                'message' => 'Profil player belum tersedia untuk akun ini.'
+            ], 404);
         }
 
         // Cari photo_face record

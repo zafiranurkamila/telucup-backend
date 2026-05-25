@@ -9,10 +9,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Player extends Model
 {
     protected $fillable = [
-        'name', 'nim_nip', 'sport_branch', 'contingent', 
+        'user_id', 'name', 'nim_nip', 'sport_branch', 'contingent', 
         'checked_in_at', 'verification_status',
         'photo_path', 'employee_status', 'work_location'
     ];
+
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function selfAssessment(): HasOne
     {

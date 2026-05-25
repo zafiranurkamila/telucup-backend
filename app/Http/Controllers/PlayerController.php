@@ -69,11 +69,10 @@ class PlayerController extends Controller
      *      @OA\RequestBody(
      *          required=true,
      *          @OA\JsonContent(
-     *              required={"name","nim_nip","sport_branch","contingent"},
+     *              required={"name","email","password"},
      *              @OA\Property(property="name", type="string", example="John Doe"),
-     *              @OA\Property(property="nim_nip", type="string", example="1301234567"),
-     *              @OA\Property(property="sport_branch", type="string", example="Basket"),
-     *              @OA\Property(property="contingent", type="string", example="Fakultas Informatika")
+     *              @OA\Property(property="email", type="string", example="john@example.com"),
+     *              @OA\Property(property="password", type="string", example="password123")
      *          )
      *      ),
      *      @OA\Response(
@@ -91,24 +90,26 @@ class PlayerController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string',
-            'nim_nip' => 'required|string|unique:players',
-            'sport_branch' => 'required|string',
-            'contingent' => 'required|string',
+            'email' => 'required|string|email|unique:users',
+            'password' => 'required|string|min:8',
         ]);
 
         DB::beginTransaction();
         try {
-            $player = Player::create($validated);
+            // Create user account for the player
+            $user = \App\Models\User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'role' => 'player'
+            ]);
 
-            // Create user account for the player, using nim_nip as email so enrollFace can map it
-            $user = \App\Models\User::firstOrCreate(
-                ['email' => $request->nim_nip],
-                [
-                    'name' => $request->name,
-                    'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                    'role' => 'player'
-                ]
-            );
+            // Create player record associated with the user
+            $player = Player::create([
+                'user_id' => $user->id,
+                'name' => $user->name,
+                // nim_nip, sport_branch, contingent can be null initially
+            ]);
 
             DB::commit();
 
@@ -124,6 +125,63 @@ class PlayerController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * @OA\Patch(
+     *      path="/player/profile",
+     *      operationId="updateProfile",
+     *      tags={"Players"},
+     *      summary="Melengkapi profil pemain",
+     *      description="Melengkapi data profil pemain seperti nim_nip, sport_branch, dan contingent.",
+     *      security={{"bearerAuth":{}}},
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\JsonContent(
+     *              @OA\Property(property="nim_nip", type="string", example="1301234567"),
+     *              @OA\Property(property="sport_branch", type="string", example="Basket"),
+     *              @OA\Property(property="contingent", type="string", example="Fakultas Informatika")
+     *          )
+     *      ),
+     *      @OA\Response(
+     *          response=200,
+     *          description="Profile updated successfully"
+     *      )
+     * )
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        $player = $user->player;
+
+        if (!$player) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Profil player belum tersedia untuk akun ini.'
+            ], 404);
+        }
+
+        // Jika nim_nip berubah, pastikan unik di tabel players
+        $rules = [
+            'sport_branch' => 'nullable|string',
+            'contingent' => 'nullable|string',
+        ];
+
+        if ($request->has('nim_nip') && $request->nim_nip !== $player->nim_nip) {
+            $rules['nim_nip'] = 'required|string|unique:players,nim_nip';
+        } else {
+            $rules['nim_nip'] = 'nullable|string';
+        }
+
+        $validated = $request->validate($rules);
+
+        $player->update($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profil player berhasil diperbarui',
+            'data' => $player
+        ]);
     }
 
     /**
@@ -145,7 +203,7 @@ class PlayerController extends Controller
      *          )
      *      ),
      *      @OA\Response(response=200, description="Face enrollment berhasil"),
-     *      @OA\Response(response=403, description="Profil pemain tidak ditemukan"),
+     *      @OA\Response(response=404, description="Profil player belum tersedia untuk akun ini"),
      *      @OA\Response(response=422, description="Validasi gagal atau wajah tidak terdeteksi"),
      *      @OA\Response(response=502, description="Gagal berkomunikasi dengan AI Engine")
      * )
@@ -161,13 +219,13 @@ class PlayerController extends Controller
         $user = $request->user();
 
         // 2. Cari player yang terkait dengan user yang login
-        $player = Player::where('nim_nip', $user->email)->first();
+        $player = $user->player;
 
         if (!$player) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Profil pemain tidak ditemukan untuk akun ini. Pastikan data pemain sudah didaftarkan.'
-            ], 403);
+                'message' => 'Profil player belum tersedia untuk akun ini.'
+            ], 404);
         }
 
         try {
