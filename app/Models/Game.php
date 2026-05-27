@@ -3,18 +3,59 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Game extends Model
 {
     protected $fillable = [
-        'sport_branch', 'round_name', 'team_a', 'team_b', 
-        'score_a', 'score_b', 'winner', 'status', 
-        'match_date', 'match_time', 'referee_name', 'stats',
-        'round', 'match_number', 'location'
+        'sport_id', 'sport_category_id',
+        'registration_a_id', 'registration_b_id',
+        'winner_registration_id',
+        'next_match_id', 'next_match_slot',
+        'score_a', 'score_b',
+        'status', 'round', 'round_name', 'match_number',
+        'match_date', 'match_time', 'location',
+        'referee_name', 'notes', 'stats',
     ];
 
     protected $casts = [
-        'stats' => 'array',
-        'match_date' => 'date'
+        'stats'      => 'array',
+        'match_date' => 'date',
     ];
+
+    public function sport(): BelongsTo
+    {
+        return $this->belongsTo(Sport::class);
+    }
+
+    public function sportCategory(): BelongsTo
+    {
+        return $this->belongsTo(SportCategory::class);
+    }
+
+    public function registrationA(): BelongsTo
+    {
+        return $this->belongsTo(Registration::class, 'registration_a_id');
+    }
+
+    public function registrationB(): BelongsTo
+    {
+        return $this->belongsTo(Registration::class, 'registration_b_id');
+    }
+
+    public function winner(): BelongsTo
+    {
+        return $this->belongsTo(Registration::class, 'winner_registration_id');
+    }
+
+    public function nextMatch(): BelongsTo
+    {
+        return $this->belongsTo(Game::class, 'next_match_id');
+    }
+
+    public function playerCheckins(): HasMany
+    {
+        return $this->hasMany(GamePlayerCheckin::class);
+    }
 }

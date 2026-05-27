@@ -15,7 +15,35 @@ class CampaignController extends Controller
         summary: "Menampilkan konten kampanye Safety & HEI",
         description: "Mengambil konten kampanye terkait budaya dan keselamatan."
     )]
-    #[OA\Response(response: 200, description: "Sukses mengambil data kampanye")]
+    #[OA\Response(
+        response: 200,
+        description: "Sukses mengambil data kampanye",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "title",    type: "string", example: "Utamakan Keselamatan & Sportivitas"),
+                new OA\Property(property: "subtitle", type: "string", example: "Kampanye Budaya & Keselamatan"),
+                new OA\Property(property: "values",   type: "object",
+                    properties: [
+                        new OA\Property(property: "harmony", type: "object",
+                            properties: [
+                                new OA\Property(property: "title",       type: "string"),
+                                new OA\Property(property: "description", type: "string"),
+                            ]
+                        ),
+                    ]
+                ),
+                new OA\Property(property: "checkpoints", type: "array",
+                    items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: "icon", type: "string"),
+                            new OA\Property(property: "text", type: "string"),
+                        ]
+                    )
+                ),
+                new OA\Property(property: "show_again_option", type: "boolean", example: true),
+            ]
+        )
+    )]
     public function show()
     {
         return response()->json([
@@ -51,7 +79,15 @@ class CampaignController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 200, description: "Konfirmasi diterima")]
+    #[OA\Response(
+        response: 200,
+        description: "Konfirmasi diterima",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "message", type: "string", example: "Konfirmasi diterima, lanjut ke dashboard."),
+            ]
+        )
+    )]
     public function confirm(Request $request)
     {
         if ($request->dont_show_again) {

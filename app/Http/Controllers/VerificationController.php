@@ -10,75 +10,119 @@ use Illuminate\Http\Request;
 class VerificationController extends Controller
 {
     #[OA\Get(
-        path: "/field/verification",
+        path: "/api/field/verification",
         operationId: "getVerifications",
         tags: ["Verification"],
-        summary: "Menampilkan daftar pemain dengan indikator warna",
-        description: "Mengambil daftar pemain beserta status self-assessment mereka untuk diverifikasi di lapangan.",
+        summary: "Daftar pemain untuk check-in lapangan",
+        description: "Panitia lapangan mengambil daftar semua pemain beserta warna risiko kesehatan mereka untuk keperluan verifikasi fisik sebelum pertandingan. Warna Merah (high) wajib melapor ke tim medis terlebih dahulu.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Response(
         response: 200,
-        description: "Berhasil mengambil data pemain",
+        description: "Berhasil",
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: "panitia_note", type: "string"),
-                new OA\Property(property: "players", type: "array", items: new OA\Items(type: "object"))
+                new OA\Property(property: "panitia_note", type: "string",
+                    example: "Warna Merah (High) wajib cek tim medis!"),
+                new OA\Property(
+                    property: "players",
+                    type: "array",
+                    items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: "id",          type: "integer", example: 7),
+                            new OA\Property(property: "name",        type: "string",  example: "Ahmad Fauzi"),
+                            new OA\Property(property: "nim_nip",     type: "string",  nullable: true, example: "1301234567"),
+                            new OA\Property(property: "sport",       type: "string",  nullable: true, example: "Badminton"),
+                            new OA\Property(property: "risk_color",  type: "string",
+                                enum: ["high", "medium", "low", "grey"],
+                                example: "low",
+                                description: "grey = belum mengisi self-assessment"),
+                            new OA\Property(property: "status",      type: "string",  nullable: true, example: "verified"),
+                            new OA\Property(property: "checked_in",  type: "boolean", example: false),
+                        ]
+                    )
+                ),
             ]
         )
+    )]
+    #[OA\Response(
+        response: 401,
+        description: "Unauthenticated",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 403,
+        description: "Role tidak diizinkan",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
     )]
     public function index()
     {
         $players = Player::with('selfAssessment')->get()->map(function ($player) {
             return [
-                'id' => $player->id,
-                'name' => $player->name,
-                'nim_nip' => $player->nim_nip,
-                'sport' => $player->sport_branch,
-                'risk_color' => $player->selfAssessment->risk_label ?? 'grey', // Merah, Kuning, Hijau
-                'status' => $player->verification_status,
-                'checked_in' => $player->checked_in_at ? true : false,
+                'id'         => $player->id,
+                'name'       => $player->name,
+                'nim_nip'    => $player->nim_nip,
+                'sport'      => $player->sport_id,
+                'risk_color' => $player->selfAssessment->risk_label ?? 'grey',
+                'status'     => $player->verification_status,
+                'checked_in' => (bool) $player->checked_in_at,
             ];
         });
 
         return response()->json([
             'panitia_note' => 'Warna Merah (High) wajib cek tim medis!',
-            'players' => $players
+            'players'      => $players,
         ]);
     }
 
     #[OA\Post(
-        path: "/field/checkin/{id}",
+        path: "/api/field/checkin/{id}",
         operationId: "checkInPlayer",
         tags: ["Verification"],
-        summary: "Melakukan check-in pemain di lapangan",
-        description: "Menandai pemain sebagai sudah check-in dan terverifikasi di lapangan.",
+        summary: "Check-in pemain di lapangan",
+        description: "Menandai pemain sebagai sudah hadir dan terverifikasi secara fisik. Mengisi `checked_in_at` dengan timestamp saat ini dan mengubah `verification_status` menjadi `verified`.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(
         name: "id",
         in: "path",
         required: true,
-        schema: new OA\Schema(type: "integer")
+        description: "ID player yang akan di-check-in",
+        schema: new OA\Schema(type: "integer", example: 7)
     )]
     #[OA\Response(
         response: 200,
-        description: "Pemain berhasil check-in",
+        description: "Check-in berhasil",
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: "message", type: "string")
+                new OA\Property(property: "message",      type: "string",          example: "Pemain Ahmad Fauzi berhasil check-in!"),
+                new OA\Property(property: "player_id",    type: "integer",         example: 7),
+                new OA\Property(property: "checked_in_at",type: "string", format: "date-time", example: "2026-06-15T08:45:00Z"),
             ]
         )
     )]
-    #[OA\Response(response: 404, description: "Player not found")]
+    #[OA\Response(
+        response: 404,
+        description: "Player tidak ditemukan",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 403,
+        description: "Role tidak diizinkan",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
     public function checkIn($id)
     {
         $player = Player::findOrFail($id);
         $player->update([
-            'checked_in_at' => now(),
-            'verification_status' => 'verified'
+            'checked_in_at'       => now(),
+            'verification_status' => 'verified',
         ]);
 
-        return response()->json(['message' => "Pemain {$player->name} berhasil check-in!"]);
+        return response()->json([
+            'message'       => "Pemain {$player->name} berhasil check-in!",
+            'player_id'     => $player->id,
+            'checked_in_at' => $player->fresh()->checked_in_at,
+        ]);
     }
 }

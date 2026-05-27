@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use OpenApi\Attributes as OA;
+
 use App\Models\Sport;
 use App\Models\SportCategory;
 use Illuminate\Http\Request;
@@ -9,48 +11,105 @@ use Illuminate\Support\Facades\DB;
 
 class SportController extends Controller
 {
-    /**
-     * GET /sports — Daftar semua cabang olahraga beserta sub-kategorinya
-     */
+    #[OA\Get(
+        path: "/api/sports",
+        operationId: "listSports",
+        tags: ["Sports"],
+        summary: "Daftar semua cabang olahraga",
+        description: "Mengembalikan semua cabang olahraga beserta sub-kategori dan batas maksimal anggota tim. Dapat diakses publik."
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "data", type: "array", items: new OA\Items(
+                    properties: [
+                        new OA\Property(property: "id", type: "integer", example: 1),
+                        new OA\Property(property: "name", type: "string", example: "Badminton"),
+                        new OA\Property(property: "icon_path", type: "string", example: "icons/badminton.png"),
+                        new OA\Property(property: "max_members", type: "integer", example: null),
+                        new OA\Property(property: "categories", type: "array", items: new OA\Items(
+                            properties: [
+                                new OA\Property(property: "id", type: "integer", example: 1),
+                                new OA\Property(property: "name", type: "string", example: "Tunggal Putra"),
+                                new OA\Property(property: "max_members", type: "integer", example: 1),
+                            ]
+                        )),
+                    ]
+                )),
+            ]
+        )
+    )]
     public function index()
     {
         $sports = Sport::with('categories')->get();
-        return response()->json([
-            'status' => 'success',
-            'data'   => $sports,
-        ]);
+        return response()->json(['status' => 'success', 'data' => $sports]);
     }
 
-    /**
-     * GET /sports/{id} — Detail satu cabang olahraga beserta kategorinya
-     */
+    #[OA\Get(
+        path: "/api/sports/{id}",
+        operationId: "showSport",
+        tags: ["Sports"],
+        summary: "Detail satu cabang olahraga",
+        description: "Mengembalikan detail cabang olahraga termasuk semua sub-kategori dan batas anggota."
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "data",   ref: "#/components/schemas/SportObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function show($id)
     {
         $sport = Sport::with('categories')->findOrFail($id);
-        return response()->json([
-            'status' => 'success',
-            'data'   => $sport,
-        ]);
+        return response()->json(['status' => 'success', 'data' => $sport]);
     }
 
-    /**
-     * POST /sports — Buat cabang olahraga baru (admin/panitia only)
-     *
-     * Contoh body sport TANPA sub-kategori (Futsal, Basket):
-     * {
-     *   "name": "Futsal",
-     *   "max_members": 5
-     * }
-     *
-     * Contoh body sport DENGAN sub-kategori (Badminton):
-     * {
-     *   "name": "Badminton",
-     *   "categories": [
-     *     { "name": "Tunggal Putra", "max_members": 1 },
-     *     { "name": "Ganda Putri",   "max_members": 2 }
-     *   ]
-     * }
-     */
+    #[OA\Post(
+        path: "/api/sports",
+        operationId: "createSport",
+        tags: ["Sports"],
+        summary: "Buat cabang olahraga baru",
+        description: "Admin/panitia membuat cabang olahraga baru. Jika sport memiliki sub-kategori (misal Badminton Putra/Putri), sertakan array `categories`. Jika tidak, sertakan `max_members` langsung.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["name"],
+            properties: [
+                new OA\Property(property: "name", type: "string", example: "Futsal"),
+                new OA\Property(property: "icon_path", type: "string", example: "icons/futsal.png"),
+                new OA\Property(property: "max_members", type: "integer", example: 5, description: "Diisi jika sport TIDAK memiliki sub-kategori"),
+                new OA\Property(property: "categories", type: "array", description: "Diisi jika sport memiliki sub-kategori", items: new OA\Items(
+                    properties: [
+                        new OA\Property(property: "name", type: "string", example: "Tunggal Putra"),
+                        new OA\Property(property: "max_members", type: "integer", example: 1),
+                    ]
+                )),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: "Cabang olahraga berhasil dibuat",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Cabang olahraga berhasil dibuat."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/SportObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 422, description: "Validasi gagal", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -81,7 +140,6 @@ class SportController extends Controller
             }
 
             DB::commit();
-
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Cabang olahraga berhasil dibuat.',
@@ -89,18 +147,47 @@ class SportController extends Controller
             ], 201);
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal membuat cabang olahraga: ' . $e->getMessage(),
-            ], 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * PUT /sports/{id} — Update cabang olahraga (admin/panitia only)
-     *
-     * Jika field "categories" dikirim, seluruh kategori lama akan digantikan.
-     */
+    #[OA\Put(
+        path: "/api/sports/{id}",
+        operationId: "updateSport",
+        tags: ["Sports"],
+        summary: "Update cabang olahraga",
+        description: "Admin/panitia mengupdate data cabang olahraga. Jika `categories` dikirim, seluruh sub-kategori lama akan digantikan.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "name", type: "string", example: "Futsal"),
+                new OA\Property(property: "icon_path", type: "string", example: "icons/futsal.png"),
+                new OA\Property(property: "max_members", type: "integer", example: 5),
+                new OA\Property(property: "categories", type: "array", items: new OA\Items(
+                    properties: [
+                        new OA\Property(property: "name", type: "string", example: "Ganda Putra"),
+                        new OA\Property(property: "max_members", type: "integer", example: 2),
+                    ]
+                )),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil diperbarui",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Cabang olahraga berhasil diperbarui."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/SportObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function update(Request $request, $id)
     {
         $sport = Sport::findOrFail($id);
@@ -118,31 +205,22 @@ class SportController extends Controller
         try {
             $sport->update([
                 'name'        => $validated['name'] ?? $sport->name,
-                'icon_path'   => array_key_exists('icon_path', $validated)
-                                    ? $validated['icon_path']
-                                    : $sport->icon_path,
-                'max_members' => array_key_exists('max_members', $validated)
-                                    ? $validated['max_members']
-                                    : $sport->max_members,
+                'icon_path'   => array_key_exists('icon_path', $validated) ? $validated['icon_path'] : $sport->icon_path,
+                'max_members' => array_key_exists('max_members', $validated) ? $validated['max_members'] : $sport->max_members,
             ]);
 
-            // Jika categories dikirim, ganti seluruh kategori
             if (array_key_exists('categories', $validated)) {
                 $sport->categories()->delete();
-
-                if (!empty($validated['categories'])) {
-                    foreach ($validated['categories'] as $cat) {
-                        SportCategory::create([
-                            'sport_id'    => $sport->id,
-                            'name'        => $cat['name'],
-                            'max_members' => $cat['max_members'] ?? null,
-                        ]);
-                    }
+                foreach ($validated['categories'] ?? [] as $cat) {
+                    SportCategory::create([
+                        'sport_id'    => $sport->id,
+                        'name'        => $cat['name'],
+                        'max_members' => $cat['max_members'] ?? null,
+                    ]);
                 }
             }
 
             DB::commit();
-
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Cabang olahraga berhasil diperbarui.',
@@ -150,24 +228,25 @@ class SportController extends Controller
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal memperbarui cabang olahraga: ' . $e->getMessage(),
-            ], 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * DELETE /sports/{id} — Hapus cabang olahraga (admin/panitia only)
-     */
+    #[OA\Delete(
+        path: "/api/sports/{id}",
+        operationId: "deleteSport",
+        tags: ["Sports"],
+        summary: "Hapus cabang olahraga",
+        description: "Admin/panitia menghapus cabang olahraga. Sub-kategori terhapus otomatis (cascade). Player yang terhubung akan memiliki sport_id = null.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Berhasil dihapus", content: new OA\JsonContent(ref: "#/components/schemas/SuccessMessage"))]
+    #[OA\Response(response: 404, description: "Tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function destroy($id)
     {
         $sport = Sport::findOrFail($id);
         $sport->delete();
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Cabang olahraga berhasil dihapus.',
-        ]);
+        return response()->json(['status' => 'success', 'message' => 'Cabang olahraga berhasil dihapus.']);
     }
 }

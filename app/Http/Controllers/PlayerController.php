@@ -14,15 +14,15 @@ use Cloudinary\Cloudinary;
 class PlayerController extends Controller
 {
     #[OA\Get(
-        path: "/summary/contingent",
+        path: "/api/summary/contingent",
         operationId: "contingentSummary",
         tags: ["Players"],
-        summary: "Rangkuman tingkat risiko per kontingen",
-        description: "Menghasilkan data summary jumlah pemain dengan status high, moderate, dan low risk berdasarkan kontingen."
+        summary: "Rangkuman risiko kesehatan per kontingen",
+        description: "Mengembalikan jumlah pemain dengan status high, moderate, dan low risk berdasarkan kontingen. Hanya menghitung assessment terbaru per player."
     )]
     #[OA\Response(
         response: 200,
-        description: "Successful operation",
+        description: "Berhasil",
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "status", type: "string", example: "success"),
@@ -31,14 +31,14 @@ class PlayerController extends Controller
                     type: "array",
                     items: new OA\Items(
                         properties: [
-                            new OA\Property(property: "contingent", type: "string"),
-                            new OA\Property(property: "high_risk_count", type: "integer"),
-                            new OA\Property(property: "moderate_risk_count", type: "integer"),
-                            new OA\Property(property: "low_risk_count", type: "integer"),
-                            new OA\Property(property: "total_players", type: "integer")
+                            new OA\Property(property: "contingent",           type: "string",  example: "Fakultas Informatika"),
+                            new OA\Property(property: "high_risk_count",      type: "integer", example: 2),
+                            new OA\Property(property: "moderate_risk_count",  type: "integer", example: 5),
+                            new OA\Property(property: "low_risk_count",       type: "integer", example: 10),
+                            new OA\Property(property: "total_players",        type: "integer", example: 17),
                         ]
                     )
-                )
+                ),
             ]
         )
     )]
@@ -46,28 +46,26 @@ class PlayerController extends Controller
     {
         $summary = DB::table('players')
             ->join('self_assessments', 'players.id', '=', 'self_assessments.player_id')
+            ->leftJoin('contingents', 'contingents.id', '=', 'players.contingent_id')
             ->select(
-                'players.contingent',
-                DB::raw("count(case when risk_label = 'high' then 1 end) as high_risk_count"),
+                'contingents.name as contingent',
+                DB::raw("count(case when risk_label = 'high'     then 1 end) as high_risk_count"),
                 DB::raw("count(case when risk_label = 'moderate' then 1 end) as moderate_risk_count"),
-                DB::raw("count(case when risk_label = 'low' then 1 end) as low_risk_count"),
+                DB::raw("count(case when risk_label = 'low'      then 1 end) as low_risk_count"),
                 DB::raw("count(players.id) as total_players")
             )
-            ->groupBy('players.contingent')
+            ->groupBy('contingents.id', 'contingents.name')
             ->get();
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $summary
-        ]);
+        return response()->json(['status' => 'success', 'data' => $summary]);
     }
 
     #[OA\Post(
-        path: "/players",
+        path: "/api/players",
         operationId: "storePlayer",
         tags: ["Players"],
-        summary: "Menambah data pemain baru dan akun User",
-        description: "Menyimpan data pemain baru ke database dan membuat akun User terkait (diperuntukkan bagi Admin/Panitia atau PIC Kontingen).",
+        summary: "Buat akun player baru",
+        description: "Admin, panitia, atau PIC kontingen membuat akun player baru. Dibuat dengan data minimal — profil lengkap diisi kemudian oleh player sendiri via `PATCH /api/player/profile`.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
@@ -75,89 +73,131 @@ class PlayerController extends Controller
         content: new OA\JsonContent(
             required: ["name", "email", "password"],
             properties: [
-                new OA\Property(property: "name", type: "string", example: "John Doe"),
-                new OA\Property(property: "email", type: "string", example: "john@example.com"),
-                new OA\Property(property: "password", type: "string", example: "password123")
+                new OA\Property(property: "name",     type: "string", maxLength: 255, example: "Ahmad Fauzi"),
+                new OA\Property(property: "email",    type: "string", format: "email", example: "ahmad@telkomuniversity.ac.id"),
+                new OA\Property(property: "password", type: "string", format: "password", minLength: 8, example: "rahasia123"),
             ]
         )
     )]
-    #[OA\Response(response: 200, description: "Player created")]
-    #[OA\Response(response: 422, description: "Validation error")]
+    #[OA\Response(
+        response: 200,
+        description: "Player berhasil dibuat",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "message", type: "string", example: "Player and user account created successfully"),
+                new OA\Property(property: "player",  ref: "#/components/schemas/PlayerObject"),
+                new OA\Property(property: "user",    ref: "#/components/schemas/UserObject"),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 422,
+        description: "Validasi gagal — email sudah digunakan",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 403,
+        description: "Role tidak diizinkan",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 500,
+        description: "Server error",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|string|email|unique:users',
+            'name'     => 'required|string',
+            'email'    => 'required|string|email|unique:users',
             'password' => 'required|string|min:8',
         ]);
 
         DB::beginTransaction();
         try {
-            // Create user account for the player
             $user = \App\Models\User::create([
-                'name' => $request->name,
-                'email' => $request->email,
+                'name'     => $request->name,
+                'email'    => $request->email,
                 'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-                'role' => 'player'
+                'role'     => 'player',
             ]);
 
-            // Create player record associated with the user
             $player = Player::create([
                 'user_id' => $user->id,
-                'name' => $user->name,
-                // nim_nip, sport_branch, contingent can be null initially
+                'name'    => $user->name,
             ]);
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Player and user account created successfully',
-                'player' => $player,
-                'user' => $user
+                'player'  => $player,
+                'user'    => $user,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'message' => 'Failed to create player',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['message' => 'Failed to create player', 'error' => $e->getMessage()], 500);
         }
     }
 
     #[OA\Patch(
-        path: "/player/profile",
+        path: "/api/player/profile",
         operationId: "updateProfile",
         tags: ["Players"],
-        summary: "Melengkapi profil pemain",
-        description: "Melengkapi data profil pemain seperti nim_nip, sport_branch, dan contingent.",
+        summary: "Lengkapi atau update profil pemain",
+        description: "Player yang sedang login melengkapi profilnya: NIM/NIP, cabang olahraga, dan status kacamata. Kontingen dikelola terpisah oleh PIC via `POST /api/contingents/my/players`.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: "nim_nip", type: "string", example: "1301234567"),
-                new OA\Property(property: "sport_id", type: "integer", example: 1, description: "ID cabang olahraga dari tabel sports"),
-                new OA\Property(property: "sport_category_id", type: "integer", example: 2, description: "ID sub-kategori olahraga (opsional, hanya jika sport memiliki kategori)"),
-                new OA\Property(property: "contingent", type: "string", example: "Fakultas Informatika"),
-                new OA\Property(property: "is_kacamata", type: "boolean", example: false, description: "Penanda pengguna kacamata (flag mitra untuk pemantauan ekstra)")
+                new OA\Property(property: "nim_nip",           type: "string", example: "1301234567",
+                    description: "NIM (mahasiswa) atau NIP (dosen/karyawan). Harus unik."),
+                new OA\Property(property: "sport_id",          type: "integer", example: 1,
+                    description: "ID cabang olahraga dari tabel sports"),
+                new OA\Property(property: "sport_category_id", type: "integer", example: 2,
+                    description: "ID sub-kategori (opsional, hanya untuk sport dengan kategori seperti Putra/Putri)"),
+                new OA\Property(property: "is_kacamata",       type: "boolean", example: false,
+                    description: "Penanda pengguna kacamata — disimpan di tabel users untuk pemantauan AI"),
             ]
         )
     )]
-    #[OA\Response(response: 200, description: "Profile updated successfully")]
+    #[OA\Response(
+        response: 200,
+        description: "Profil berhasil diperbarui",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Profil player berhasil diperbarui"),
+                new OA\Property(property: "data",    type: "object",
+                    properties: [
+                        new OA\Property(property: "player",      ref: "#/components/schemas/PlayerObject"),
+                        new OA\Property(property: "is_kacamata", type: "boolean", example: false),
+                    ]
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: "Profil player belum tersedia untuk akun ini",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 422,
+        description: "Validasi gagal — NIM/NIP sudah dipakai",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
     public function updateProfile(Request $request)
     {
-        $user = $request->user();
+        $user   = $request->user();
         $player = $user->player;
 
         if (!$player) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Profil player belum tersedia untuk akun ini.'
-            ], 404);
+            return response()->json(['status' => 'error', 'message' => 'Profil player belum tersedia untuk akun ini.'], 404);
         }
 
-        // Jika nim_nip berubah, pastikan unik di tabel players
         $rules = [
             'sport_id'          => 'nullable|integer|exists:sports,id',
             'sport_category_id' => 'nullable|integer|exists:sport_categories,id',
@@ -172,7 +212,6 @@ class PlayerController extends Controller
 
         $validated = $request->validate($rules);
 
-        // is_kacamata disimpan di User, bukan Player (atribut personal, bukan per-event)
         if (array_key_exists('is_kacamata', $validated)) {
             $user->update(['is_kacamata' => (bool) $validated['is_kacamata']]);
             unset($validated['is_kacamata']);
@@ -181,9 +220,9 @@ class PlayerController extends Controller
         $player->update($validated);
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Profil player berhasil diperbarui',
-            'data' => [
+            'data'    => [
                 'player'      => $player->fresh(),
                 'is_kacamata' => $user->fresh()->is_kacamata,
             ],
@@ -191,11 +230,11 @@ class PlayerController extends Controller
     }
 
     #[OA\Post(
-        path: "/players/enroll-face",
+        path: "/api/players/enroll-face",
         operationId: "enrollFace",
-        tags: ["Players", "Face Recognition"],
-        summary: "Enroll foto profil pemain untuk face recognition",
-        description: "Upload foto profil pemain ke Cloudinary, lalu kirim ke FastAPI untuk ekstraksi vektor wajah 512D AdaFace dan simpan ke tabel face_embeddings.",
+        tags: ["Players"],
+        summary: "Upload foto profil untuk face recognition",
+        description: "Player mengunggah foto profil ke Cloudinary. Foto kemudian dikirim sinkron ke AI Engine (FastAPI) untuk ekstraksi vektor wajah 512D menggunakan model AdaFace dan disimpan ke tabel `face_embeddings`.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
@@ -205,53 +244,83 @@ class PlayerController extends Controller
             schema: new OA\Schema(
                 required: ["photo"],
                 properties: [
-                    new OA\Property(property: "photo", type: "string", format: "binary", description: "Foto profil pemain (max 5MB)")
+                    new OA\Property(property: "photo", type: "string", format: "binary",
+                        description: "File gambar wajah pemain. Format: jpeg/png/jpg. Maksimal 5MB. Pastikan wajah terlihat jelas dan tidak tertutup."),
                 ]
             )
         )
     )]
-    #[OA\Response(response: 200, description: "Face enrollment berhasil")]
-    #[OA\Response(response: 404, description: "Profil player belum tersedia untuk akun ini")]
-    #[OA\Response(response: 422, description: "Validasi gagal atau wajah tidak terdeteksi")]
-    #[OA\Response(response: 502, description: "Gagal berkomunikasi dengan AI Engine")]
+    #[OA\Response(
+        response: 200,
+        description: "Foto diunggah dan wajah berhasil diregistrasi ke AI Engine",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Foto profil berhasil diunggah dan vektor wajah berhasil diregistrasi."),
+                new OA\Property(property: "data",    type: "object",
+                    properties: [
+                        new OA\Property(property: "player_id", type: "integer",  example: 7),
+                        new OA\Property(property: "photo_url", type: "string",   example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/player_profiles/player_7.jpg"),
+                        new OA\Property(property: "ai_result", type: "object",   description: "Response mentah dari AI Engine FastAPI",
+                            properties: [
+                                new OA\Property(property: "player_id",    type: "integer", example: 7),
+                                new OA\Property(property: "status",       type: "string",  example: "registered"),
+                                new OA\Property(property: "face_detected",type: "boolean", example: true),
+                            ]
+                        ),
+                    ]
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: "Profil player belum tersedia untuk akun ini",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 422,
+        description: "Validasi gagal atau wajah tidak terdeteksi oleh AI Engine",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 502,
+        description: "Gagal berkomunikasi dengan AI Engine (FastAPI tidak merespons)",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 500,
+        description: "Server error internal",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
     public function enrollFace(Request $request)
     {
-        // 1. Validasi file upload
         $request->validate([
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120', // Max 5MB
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
-        $user = $request->user();
-
-        // 2. Cari player yang terkait dengan user yang login
+        $user   = $request->user();
         $player = $user->player;
 
         if (!$player) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Profil player belum tersedia untuk akun ini.'
-            ], 404);
+            return response()->json(['status' => 'error', 'message' => 'Profil player belum tersedia untuk akun ini.'], 404);
         }
 
         try {
             DB::beginTransaction();
 
-            // 3. Upload foto ke Cloudinary
-            $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
+            $cloudinary   = new Cloudinary(env('CLOUDINARY_URL'));
             $uploadResult = $cloudinary->uploadApi()->upload($request->file('photo')->getRealPath(), [
-                'folder' => 'telucup/player_profiles',
+                'folder'    => 'telucup/player_profiles',
                 'public_id' => 'player_' . $player->id,
-                'overwrite' => true, // Timpa jika sudah ada foto sebelumnya
+                'overwrite' => true,
             ]);
 
             $imageUrl = $uploadResult['secure_url'];
-
-            // 4. Update photo_path di tabel players
             $player->update(['photo_path' => $imageUrl]);
 
-            // 5. Kirim request SINKRON ke FastAPI /api/register-face
             $fastApiBaseUrl = rtrim(str_replace('/api/process-photo', '', env('FASTAPI_URL', 'http://127.0.0.1:8001')), '/');
-            $registerUrl = $fastApiBaseUrl . '/api/register-face';
+            $registerUrl    = $fastApiBaseUrl . '/api/register-face';
 
             Log::info("Mengirim face enrollment untuk Player ID {$player->id} ke {$registerUrl}");
 
@@ -263,38 +332,28 @@ class PlayerController extends Controller
             if (!$aiResponse->successful()) {
                 $errorDetail = $aiResponse->json('detail') ?? 'AI Engine tidak merespon dengan benar.';
                 DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Face enrollment gagal: ' . $errorDetail,
-                ], 422);
+                return response()->json(['status' => 'error', 'message' => 'Face enrollment gagal: ' . $errorDetail], 422);
             }
 
             DB::commit();
 
             return response()->json([
-                'status' => 'success',
+                'status'  => 'success',
                 'message' => 'Foto profil berhasil diunggah dan vektor wajah berhasil diregistrasi.',
-                'data' => [
+                'data'    => [
                     'player_id' => $player->id,
                     'photo_url' => $imageUrl,
                     'ai_result' => $aiResponse->json(),
-                ]
+                ],
             ]);
-
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             DB::rollBack();
             Log::error("Koneksi ke AI Engine gagal: " . $e->getMessage());
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal terhubung ke AI Engine. Pastikan service berjalan.',
-            ], 502);
+            return response()->json(['status' => 'error', 'message' => 'Gagal terhubung ke AI Engine. Pastikan service berjalan.'], 502);
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error("Face enrollment error: " . $e->getMessage());
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal memproses face enrollment: ' . $e->getMessage(),
-            ], 500);
+            return response()->json(['status' => 'error', 'message' => 'Gagal memproses face enrollment: ' . $e->getMessage()], 500);
         }
     }
 }

@@ -14,6 +14,7 @@ use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\SportController;
 use App\Http\Controllers\ContingentController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\BracketController;
 
 // Auth Routes (API)
 Route::post('/register', [AuthController::class, 'register']);
@@ -144,8 +145,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/registrations/{id}', [RegistrationController::class, 'show'])->name('registrations.show');
         Route::post('/registrations/{id}/verify', [RegistrationController::class, 'verify'])->name('registrations.verify');
 
-        Route::post('/bracket/generate', [GameController::class, 'generateBracket'])->name('bracket.generate');
-        Route::post('/bracket/update-score/{id}', [GameController::class, 'updateScore'])->name('bracket.update');
+        // Bracket — generate & reset (admin/panitia)
+        Route::post('/bracket/generate', [BracketController::class, 'generate'])->name('bracket.generate');
+        Route::delete('/bracket/reset', [BracketController::class, 'reset'])->name('bracket.reset');
+
+        // Matches — update (admin/panitia)
+        Route::patch('/matches/{id}/score', [BracketController::class, 'updateScore'])->name('matches.score');
+        Route::patch('/matches/{id}/schedule', [BracketController::class, 'updateSchedule'])->name('matches.schedule');
+        Route::patch('/matches/{id}/teams', [BracketController::class, 'setTeams'])->name('matches.teams');
+        Route::patch('/matches/{id}/swap', [BracketController::class, 'swapTeams'])->name('matches.swap');
+        Route::patch('/matches/{id}/status', [BracketController::class, 'setStatus'])->name('matches.status');
+
+        // Checkin peserta pertandingan (admin/panitia)
+        Route::get('/matches/{id}/checkin', [BracketController::class, 'getCheckin'])->name('matches.checkin.index');
+        Route::post('/matches/{id}/checkin/{player_id}', [BracketController::class, 'checkinPlayer'])->name('matches.checkin.store');
+        Route::delete('/matches/{id}/checkin/{player_id}', [BracketController::class, 'undoCheckin'])->name('matches.checkin.destroy');
 
         // Endpoint untuk update role Player -> PIC Kontingen
         Route::put('/admin/users/{id}/promote-to-pic', [\App\Http\Controllers\AdminController::class, 'promoteToPic']);
@@ -167,7 +181,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('/my-gallery/{photo_face_id}/validate', [GalleryController::class, 'validate'])->name('gallery.validate');
 });
 
-Route::get('/bracket/detail/{id}', [GameController::class, 'show'])->name('bracket.detail');
+// Bracket & match detail — publik
+Route::get('/bracket', [BracketController::class, 'bracket'])->name('bracket.view');
+Route::get('/matches/{id}', [BracketController::class, 'matchDetail'])->name('matches.detail');
 
 // Publik / Semua User yang Login
 Route::get('/summary/contingent', [PlayerController::class, 'contingentSummary'])->name('summary.contingent');

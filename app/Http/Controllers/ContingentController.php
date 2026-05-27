@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use OpenApi\Attributes as OA;
+
 use App\Models\Contingent;
 use App\Models\Player;
 use App\Models\User;
@@ -10,30 +12,58 @@ use Illuminate\Support\Facades\DB;
 
 class ContingentController extends Controller
 {
-    // ----------------------------------------------------------------
-    // PUBLIC / SEMUA USER LOGIN
-    // ----------------------------------------------------------------
-
-    /**
-     * GET /contingents
-     * Daftar semua kontingen beserta info PIC dan jumlah anggota.
-     */
+    #[OA\Get(
+        path: "/api/contingents",
+        operationId: "listContingents",
+        tags: ["Contingents"],
+        summary: "Daftar semua kontingen",
+        description: "Mengembalikan semua kontingen beserta informasi PIC dan jumlah anggota. Dapat diakses publik."
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "data", type: "array", items: new OA\Items(
+                    properties: [
+                        new OA\Property(property: "id", type: "integer", example: 1),
+                        new OA\Property(property: "name", type: "string", example: "Fakultas Informatika"),
+                        new OA\Property(property: "pic", type: "object", nullable: true),
+                        new OA\Property(property: "players_count", type: "integer", example: 12),
+                    ]
+                )),
+            ]
+        )
+    )]
     public function index()
     {
         $contingents = Contingent::with(['pic:id,name,email'])
             ->withCount('players')
             ->get();
 
-        return response()->json([
-            'status' => 'success',
-            'data'   => $contingents,
-        ]);
+        return response()->json(['status' => 'success', 'data' => $contingents]);
     }
 
-    /**
-     * GET /contingents/{id}
-     * Detail satu kontingen beserta daftar player-nya.
-     */
+    #[OA\Get(
+        path: "/api/contingents/{id}",
+        operationId: "showContingent",
+        tags: ["Contingents"],
+        summary: "Detail kontingen beserta anggota",
+        description: "Mengembalikan detail kontingen termasuk daftar seluruh player yang terdaftar."
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "data",   ref: "#/components/schemas/ContingentObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Kontingen tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function show($id)
     {
         $contingent = Contingent::with([
@@ -41,20 +71,38 @@ class ContingentController extends Controller
             'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path,verification_status',
         ])->findOrFail($id);
 
-        return response()->json([
-            'status' => 'success',
-            'data'   => $contingent,
-        ]);
+        return response()->json(['status' => 'success', 'data' => $contingent]);
     }
 
-    // ----------------------------------------------------------------
-    // PANITIA / ADMIN — CRUD KONTINGEN
-    // ----------------------------------------------------------------
-
-    /**
-     * POST /contingents
-     * Buat kontingen baru. Body: { "name": "Fakultas Informatika" }
-     */
+    #[OA\Post(
+        path: "/api/contingents",
+        operationId: "createContingent",
+        tags: ["Contingents"],
+        summary: "Buat kontingen baru",
+        description: "Admin/panitia membuat kontingen baru yang mewakili satu fakultas atau divisi.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["name"],
+            properties: [
+                new OA\Property(property: "name", type: "string", example: "Fakultas Informatika"),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: "Kontingen berhasil dibuat",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Kontingen berhasil dibuat."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/ContingentObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 422, description: "Nama sudah digunakan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -70,10 +118,34 @@ class ContingentController extends Controller
         ], 201);
     }
 
-    /**
-     * PUT /contingents/{id}
-     * Update nama kontingen.
-     */
+    #[OA\Put(
+        path: "/api/contingents/{id}",
+        operationId: "updateContingent",
+        tags: ["Contingents"],
+        summary: "Update nama kontingen",
+        description: "Admin/panitia mengupdate nama kontingen.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["name"],
+            properties: [new OA\Property(property: "name", type: "string", example: "Fakultas Teknik")]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil diperbarui",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Kontingen berhasil diperbarui."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/ContingentObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Kontingen tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function update(Request $request, $id)
     {
         $contingent = Contingent::findOrFail($id);
@@ -91,29 +163,55 @@ class ContingentController extends Controller
         ]);
     }
 
-    /**
-     * DELETE /contingents/{id}
-     * Hapus kontingen. Player yang terhubung akan memiliki contingent_id = null.
-     */
+    #[OA\Delete(
+        path: "/api/contingents/{id}",
+        operationId: "deleteContingent",
+        tags: ["Contingents"],
+        summary: "Hapus kontingen",
+        description: "Admin/panitia menghapus kontingen. Player yang terhubung akan memiliki contingent_id = null.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Berhasil dihapus", content: new OA\JsonContent(ref: "#/components/schemas/SuccessMessage"))]
+    #[OA\Response(response: 404, description: "Kontingen tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function destroy($id)
     {
         $contingent = Contingent::findOrFail($id);
         $contingent->delete();
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Kontingen berhasil dihapus.',
-        ]);
+        return response()->json(['status' => 'success', 'message' => 'Kontingen berhasil dihapus.']);
     }
 
-    /**
-     * PUT /contingents/{id}/assign-pic
-     * Panitia menugaskan user sebagai PIC dari kontingen ini.
-     * Body: { "user_id": 5 }
-     *
-     * Sekaligus mengubah role user menjadi pic_kontingen (jika belum)
-     * dan memasukkan player-nya ke dalam kontingen ini.
-     */
+    #[OA\Put(
+        path: "/api/contingents/{id}/assign-pic",
+        operationId: "assignPic",
+        tags: ["Contingents"],
+        summary: "Tugaskan PIC kontingen",
+        description: "Admin/panitia menugaskan seorang user sebagai PIC (Person In Charge) dari kontingen. Role user otomatis diubah menjadi `pic_kontingen` dan player-nya dimasukkan ke kontingen tersebut.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["user_id"],
+            properties: [
+                new OA\Property(property: "user_id", type: "integer", example: 5, description: "ID user yang akan dijadikan PIC"),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "PIC berhasil ditugaskan",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Budi berhasil ditugaskan sebagai PIC kontingen Fakultas Informatika."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/ContingentObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 422, description: "User adalah panitia/admin", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function assignPic(Request $request, $id)
     {
         $contingent = Contingent::findOrFail($id);
@@ -133,13 +231,9 @@ class ContingentController extends Controller
 
         DB::beginTransaction();
         try {
-            // Ubah role menjadi pic_kontingen
             $user->update(['role' => 'pic_kontingen']);
-
-            // Daftarkan sebagai PIC di kontingen
             $contingent->update(['pic_user_id' => $user->id]);
 
-            // Masukkan player-nya ke kontingen ini (jika punya record player)
             if ($user->player) {
                 $user->player->update(['contingent_id' => $contingent->id]);
             }
@@ -153,21 +247,29 @@ class ContingentController extends Controller
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal menugaskan PIC: ' . $e->getMessage(),
-            ], 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 
-    // ----------------------------------------------------------------
-    // PIC KONTINGEN — KELOLA ANGGOTA KONTINGENNYA SENDIRI
-    // ----------------------------------------------------------------
-
-    /**
-     * GET /contingents/my
-     * PIC melihat detail kontingennya sendiri beserta semua anggota.
-     */
+    #[OA\Get(
+        path: "/api/contingents/my",
+        operationId: "myContingent",
+        tags: ["Contingents"],
+        summary: "Detail kontingen milik PIC yang login",
+        description: "PIC kontingen melihat detail kontingennya sendiri beserta seluruh anggota.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "data",   ref: "#/components/schemas/ContingentObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Belum ditugaskan sebagai PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function myContingent(Request $request)
     {
         $contingent = $request->user()->managedContingent;
@@ -183,27 +285,46 @@ class ContingentController extends Controller
             'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path,verification_status',
         ]);
 
-        return response()->json([
-            'status' => 'success',
-            'data'   => $contingent,
-        ]);
+        return response()->json(['status' => 'success', 'data' => $contingent]);
     }
 
-    /**
-     * POST /contingents/my/players
-     * PIC menambahkan player ke kontingennya.
-     * Body: { "player_id": 7 }
-     */
+    #[OA\Post(
+        path: "/api/contingents/my/players",
+        operationId: "addPlayerToContingent",
+        tags: ["Contingents"],
+        summary: "PIC menambahkan player ke kontingen",
+        description: "PIC kontingen menambahkan seorang player ke dalam kontingennya. Player harus sudah memiliki akun di sistem.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["player_id"],
+            properties: [
+                new OA\Property(property: "player_id", type: "integer", example: 7),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Player berhasil ditambahkan",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Ahmad Fauzi berhasil ditambahkan ke kontingen Fakultas Informatika."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/PlayerObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 422, description: "Player sudah ada di kontingen lain", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 403, description: "Belum ditugaskan sebagai PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function addPlayer(Request $request)
     {
         $user       = $request->user();
         $contingent = $user->managedContingent;
 
         if (!$contingent) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.',
-            ], 403);
+            return response()->json(['status' => 'error', 'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.'], 403);
         }
 
         $validated = $request->validate([
@@ -213,10 +334,7 @@ class ContingentController extends Controller
         $player = Player::findOrFail($validated['player_id']);
 
         if ($player->contingent_id && $player->contingent_id !== $contingent->id) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Player ini sudah terdaftar di kontingen lain.',
-            ], 422);
+            return response()->json(['status' => 'error', 'message' => 'Player ini sudah terdaftar di kontingen lain.'], 422);
         }
 
         $player->update(['contingent_id' => $contingent->id]);
@@ -228,37 +346,34 @@ class ContingentController extends Controller
         ]);
     }
 
-    /**
-     * DELETE /contingents/my/players/{player_id}
-     * PIC mengeluarkan player dari kontingennya.
-     */
+    #[OA\Delete(
+        path: "/api/contingents/my/players/{player_id}",
+        operationId: "removePlayerFromContingent",
+        tags: ["Contingents"],
+        summary: "PIC mengeluarkan player dari kontingen",
+        description: "PIC kontingen mengeluarkan seorang player dari kontingennya. PIC tidak dapat mengeluarkan dirinya sendiri.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "player_id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Player berhasil dikeluarkan", content: new OA\JsonContent(ref: "#/components/schemas/SuccessMessage"))]
+    #[OA\Response(response: 403, description: "Player bukan anggota kontingen ini", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function removePlayer(Request $request, $playerId)
     {
         $user       = $request->user();
         $contingent = $user->managedContingent;
 
         if (!$contingent) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.',
-            ], 403);
+            return response()->json(['status' => 'error', 'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.'], 403);
         }
 
         $player = Player::findOrFail($playerId);
 
         if ($player->contingent_id !== $contingent->id) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Player ini bukan anggota kontingen Anda.',
-            ], 403);
+            return response()->json(['status' => 'error', 'message' => 'Player ini bukan anggota kontingen Anda.'], 403);
         }
 
-        // Jangan keluarkan PIC dari kontingennya sendiri
         if ($player->user_id === $user->id) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'PIC tidak dapat dikeluarkan dari kontingen melalui endpoint ini.',
-            ], 422);
+            return response()->json(['status' => 'error', 'message' => 'PIC tidak dapat dikeluarkan dari kontingen melalui endpoint ini.'], 422);
         }
 
         $player->update(['contingent_id' => null]);

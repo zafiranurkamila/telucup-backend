@@ -106,7 +106,43 @@ class SelfAssessmentController extends Controller
         tags: ["Self Assessment"],
         description: "Mengembalikan daftar pertanyaan terstruktur dalam 4 domain yang harus dirender oleh frontend. Response berisi version, sections (array berisi section DEMO, A, B, C, D), dan masing-masing section berisi questions dengan field code, type, text, options, is_red_flag, weight, required."
     )]
-    #[OA\Response(response: 200, description: "Struktur kuesioner lengkap")]
+    #[OA\Response(
+        response: 200,
+        description: "Struktur kuesioner lengkap",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "data",   type: "object",
+                    properties: [
+                        new OA\Property(property: "version", type: "string", example: "1.0.0"),
+                        new OA\Property(property: "sections", type: "array",
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: "code",        type: "string",  example: "A"),
+                                    new OA\Property(property: "title",       type: "string",  example: "Riwayat Kardiovaskular"),
+                                    new OA\Property(property: "description", type: "string",  nullable: true),
+                                    new OA\Property(property: "questions",   type: "array",
+                                        items: new OA\Items(
+                                            properties: [
+                                                new OA\Property(property: "code",       type: "string",  example: "A1_heart_condition_diagnosed"),
+                                                new OA\Property(property: "type",       type: "string",  enum: ["boolean", "integer", "select"], example: "boolean"),
+                                                new OA\Property(property: "text",       type: "string",  example: "Apakah Anda pernah didiagnosis penyakit jantung?"),
+                                                new OA\Property(property: "options",    type: "array",   nullable: true,
+                                                    items: new OA\Items(type: "string")),
+                                                new OA\Property(property: "is_red_flag",type: "boolean", example: true),
+                                                new OA\Property(property: "weight",     type: "number",  format: "float", example: 10.0),
+                                                new OA\Property(property: "required",   type: "boolean", example: true),
+                                            ]
+                                        )
+                                    ),
+                                ]
+                            )
+                        ),
+                    ]
+                ),
+            ]
+        )
+    )]
     public function questionnaire(): JsonResponse
     {
         return response()->json([
@@ -156,9 +192,9 @@ class SelfAssessmentController extends Controller
         description: "Assessment berhasil disimpan",
         content: new OA\JsonContent(ref: "#/components/schemas/SelfAssessmentResult")
     )]
-    #[OA\Response(response: 403, description: "User mencoba submit atas nama player lain")]
-    #[OA\Response(response: 404, description: "Profil player tidak ditemukan")]
-    #[OA\Response(response: 422, description: "Validasi gagal")]
+    #[OA\Response(response: 403, description: "User mencoba submit atas nama player lain", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 404, description: "Profil player tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 422, description: "Validasi gagal", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function store(StoreSelfAssessmentRequest $request): JsonResponse
     {
         $user = $request->user();
@@ -231,7 +267,7 @@ class SelfAssessmentController extends Controller
         description: "Data assessment terakhir, atau data: null jika belum pernah mengisi",
         content: new OA\JsonContent(ref: "#/components/schemas/SelfAssessmentResult")
     )]
-    #[OA\Response(response: 404, description: "Profil player tidak ditemukan")]
+    #[OA\Response(response: 404, description: "Profil player tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function myLatest(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -275,7 +311,34 @@ class SelfAssessmentController extends Controller
     #[OA\Parameter(name: "requires_clearance", in: "query", schema: new OA\Schema(type: "boolean"))]
     #[OA\Parameter(name: "is_kacamata", in: "query", schema: new OA\Schema(type: "boolean"))]
     #[OA\Parameter(name: "per_page", in: "query", schema: new OA\Schema(type: "integer", default: 20))]
-    #[OA\Response(response: 200, description: "Paginated list assessment")]
+    #[OA\Response(
+        response: 200,
+        description: "Paginated list assessment",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(
+                    property: "data",
+                    type: "object",
+                    properties: [
+                        new OA\Property(
+                            property: "data",
+                            type: "array",
+                            items: new OA\Items(ref: "#/components/schemas/SelfAssessmentResult")
+                        ),
+                        new OA\Property(property: "current_page",   type: "integer", example: 1),
+                        new OA\Property(property: "last_page",      type: "integer", example: 5),
+                        new OA\Property(property: "per_page",       type: "integer", example: 20),
+                        new OA\Property(property: "total",          type: "integer", example: 87),
+                        new OA\Property(property: "from",           type: "integer", nullable: true, example: 1),
+                        new OA\Property(property: "to",             type: "integer", nullable: true, example: 20),
+                        new OA\Property(property: "next_page_url",  type: "string",  nullable: true, example: "/api/self-assessment?page=2"),
+                        new OA\Property(property: "prev_page_url",  type: "string",  nullable: true, example: null),
+                    ]
+                ),
+            ]
+        )
+    )]
     public function index(Request $request): JsonResponse
     {
         $query = SelfAssessment::query()
@@ -286,10 +349,10 @@ class SelfAssessmentController extends Controller
             $query->where('risk_label', $risk);
         }
         if ($sport = $request->query('sport_branch')) {
-            $query->whereHas('player', fn($q) => $q->where('sport_branch', $sport));
+            $query->whereHas('player.sport', fn($q) => $q->where('name', 'like', "%{$sport}%"));
         }
         if ($cont = $request->query('contingent')) {
-            $query->whereHas('player', fn($q) => $q->where('contingent', $cont));
+            $query->whereHas('player.contingent', fn($q) => $q->where('name', 'like', "%{$cont}%"));
         }
         if ($request->boolean('requires_clearance')) {
             $query->where('requires_clearance', true);
@@ -321,8 +384,8 @@ class SelfAssessmentController extends Controller
         description: "Detail assessment",
         content: new OA\JsonContent(ref: "#/components/schemas/SelfAssessmentResult")
     )]
-    #[OA\Response(response: 403, description: "Peserta mencoba mengakses data milik orang lain")]
-    #[OA\Response(response: 404, description: "Assessment tidak ditemukan")]
+    #[OA\Response(response: 403, description: "Peserta mencoba mengakses data milik orang lain", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 404, description: "Assessment tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function show(Request $request, int $id): JsonResponse
     {
         $assessment = SelfAssessment::with(['player.user'])->find($id);
@@ -379,7 +442,7 @@ class SelfAssessmentController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 404, description: "Assessment tidak ditemukan")]
+    #[OA\Response(response: 404, description: "Assessment tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function submitReview(ReviewSelfAssessmentRequest $request, int $id): JsonResponse
     {
         $assessment = SelfAssessment::find($id);
@@ -446,17 +509,18 @@ class SelfAssessmentController extends Controller
 
         $summary = DB::table('self_assessments')
             ->join('players', 'players.id', '=', 'self_assessments.player_id')
+            ->leftJoin('contingents', 'contingents.id', '=', 'players.contingent_id')
             ->whereIn('self_assessments.id', $latestIds)
             ->select(
-                'players.contingent',
+                'contingents.name as contingent',
                 DB::raw("COUNT(CASE WHEN risk_label = 'high' THEN 1 END) as high_risk_count"),
                 DB::raw("COUNT(CASE WHEN risk_label = 'medium' THEN 1 END) as medium_risk_count"),
                 DB::raw("COUNT(CASE WHEN risk_label = 'low' THEN 1 END) as low_risk_count"),
                 DB::raw("COUNT(CASE WHEN is_kacamata_snapshot = true THEN 1 END) as kacamata_count"),
                 DB::raw('COUNT(*) as total_assessed')
             )
-            ->groupBy('players.contingent')
-            ->orderBy('players.contingent')
+            ->groupBy('contingents.id', 'contingents.name')
+            ->orderBy('contingents.name')
             ->get();
 
         return response()->json([
@@ -500,17 +564,18 @@ class SelfAssessmentController extends Controller
 
         $summary = DB::table('self_assessments')
             ->join('players', 'players.id', '=', 'self_assessments.player_id')
+            ->leftJoin('sports', 'sports.id', '=', 'players.sport_id')
             ->whereIn('self_assessments.id', $latestIds)
             ->select(
-                'players.sport_branch',
+                'sports.name as sport_branch',
                 DB::raw("COUNT(CASE WHEN risk_label = 'high' THEN 1 END) as high_risk_count"),
                 DB::raw("COUNT(CASE WHEN risk_label = 'medium' THEN 1 END) as medium_risk_count"),
                 DB::raw("COUNT(CASE WHEN risk_label = 'low' THEN 1 END) as low_risk_count"),
                 DB::raw("COUNT(CASE WHEN is_kacamata_snapshot = true THEN 1 END) as kacamata_count"),
                 DB::raw('COUNT(*) as total_assessed')
             )
-            ->groupBy('players.sport_branch')
-            ->orderBy('players.sport_branch')
+            ->groupBy('sports.id', 'sports.name')
+            ->orderBy('sports.name')
             ->get();
 
         return response()->json([
@@ -525,8 +590,8 @@ class SelfAssessmentController extends Controller
             'id'                    => $a->id,
             'player_id'             => $a->player_id,
             'player_name'           => $a->player?->name,
-            'sport_branch'          => $a->sport_branch_snapshot ?? $a->player?->sport_branch,
-            'contingent'            => $a->player?->contingent,
+            'sport_branch'          => $a->sport_branch_snapshot ?? $a->player?->sport?->name,
+            'contingent'            => $a->player?->contingent?->name,
             'snapshot' => [
                 'age'         => $a->age_snapshot,
                 'bmi'         => $a->bmi_snapshot,
