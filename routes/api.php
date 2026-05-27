@@ -11,10 +11,25 @@ use App\Http\Controllers\EventPhotoController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\GalleryController;
+use App\Http\Controllers\SportController;
+use App\Http\Controllers\ContingentController;
+use App\Http\Controllers\RegistrationController;
 
 // Auth Routes (API)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// ====================================================================
+// SPORTS — Publik (baca)
+// ====================================================================
+Route::get('/sports', [SportController::class, 'index'])->name('sports.index');
+Route::get('/sports/{id}', [SportController::class, 'show'])->name('sports.show');
+
+// ====================================================================
+// CONTINGENTS — Publik (baca)
+// ====================================================================
+Route::get('/contingents', [ContingentController::class, 'index'])->name('contingents.index');
+Route::get('/contingents/{id}', [ContingentController::class, 'show'])->whereNumber('id')->name('contingents.show');
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -77,6 +92,44 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // ====================================================================
+    // SPORTS — CRUD hanya untuk admin/panitia
+    // ====================================================================
+    Route::middleware(['role:admin,panitia'])->group(function () {
+        Route::post('/sports', [SportController::class, 'store'])->name('sports.store');
+        Route::put('/sports/{id}', [SportController::class, 'update'])->name('sports.update');
+        Route::delete('/sports/{id}', [SportController::class, 'destroy'])->name('sports.destroy');
+    });
+
+    // ====================================================================
+    // CONTINGENTS — CRUD & assign PIC (admin/panitia)
+    // ====================================================================
+    Route::middleware(['role:admin,panitia'])->group(function () {
+        Route::post('/contingents', [ContingentController::class, 'store'])->name('contingents.store');
+        Route::put('/contingents/{id}', [ContingentController::class, 'update'])->name('contingents.update');
+        Route::delete('/contingents/{id}', [ContingentController::class, 'destroy'])->name('contingents.destroy');
+        Route::put('/contingents/{id}/assign-pic', [ContingentController::class, 'assignPic'])->name('contingents.assign-pic');
+    });
+
+    // ====================================================================
+    // CONTINGENTS — Kelola anggota (PIC kontingen)
+    // ====================================================================
+    Route::middleware(['role:pic_kontingen'])->group(function () {
+        Route::get('/contingents/my', [ContingentController::class, 'myContingent'])->name('contingents.my');
+        Route::post('/contingents/my/players', [ContingentController::class, 'addPlayer'])->name('contingents.my.players.add');
+        Route::delete('/contingents/my/players/{player_id}', [ContingentController::class, 'removePlayer'])->name('contingents.my.players.remove');
+    });
+
+    // ====================================================================
+    // REGISTRATIONS (TIM) — PIC mendaftarkan tim ke cabang olahraga
+    // ====================================================================
+    Route::middleware(['role:pic_kontingen'])->group(function () {
+        Route::get('/registrations/my', [RegistrationController::class, 'myRegistrations'])->name('registrations.my');
+        Route::post('/registrations', [RegistrationController::class, 'store'])->name('registrations.store');
+        Route::post('/registrations/{id}/players', [RegistrationController::class, 'addPlayers'])->name('registrations.players.add');
+        Route::delete('/registrations/{id}/players/{player_id}', [RegistrationController::class, 'removePlayer'])->name('registrations.players.remove');
+    });
+
+    // ====================================================================
     // Panitia (Gabungan Admin & Panitia Lapangan/Medis)
     // ====================================================================
     Route::middleware(['role:panitia'])->group(function () {
@@ -84,9 +137,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/field/checkin/{id}', [VerificationController::class, 'checkIn'])->name('field.checkin');
 
         Route::get('/admin/templates', [\App\Http\Controllers\AdminController::class, 'templates']);
-        Route::get('/admin/registrations', [\App\Http\Controllers\AdminController::class, 'registrations']);
-        Route::post('/admin/registrations/{id}/verify', [\App\Http\Controllers\AdminController::class, 'verifyRegistration']);
         Route::get('/admin/schedules', [\App\Http\Controllers\AdminController::class, 'schedules']);
+
+        // Registrasi tim — pantau & verifikasi
+        Route::get('/registrations', [RegistrationController::class, 'index'])->name('registrations.index');
+        Route::get('/registrations/{id}', [RegistrationController::class, 'show'])->name('registrations.show');
+        Route::post('/registrations/{id}/verify', [RegistrationController::class, 'verify'])->name('registrations.verify');
 
         Route::post('/bracket/generate', [GameController::class, 'generateBracket'])->name('bracket.generate');
         Route::post('/bracket/update-score/{id}', [GameController::class, 'updateScore'])->name('bracket.update');

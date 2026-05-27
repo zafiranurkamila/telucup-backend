@@ -44,4 +44,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(Player::class);
     }
+
+    public function managedContingent()
+    {
+        return $this->hasOne(Contingent::class, 'pic_user_id');
+    }
 }

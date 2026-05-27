@@ -137,7 +137,8 @@ class PlayerController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "nim_nip", type: "string", example: "1301234567"),
-                new OA\Property(property: "sport_branch", type: "string", example: "Basket"),
+                new OA\Property(property: "sport_id", type: "integer", example: 1, description: "ID cabang olahraga dari tabel sports"),
+                new OA\Property(property: "sport_category_id", type: "integer", example: 2, description: "ID sub-kategori olahraga (opsional, hanya jika sport memiliki kategori)"),
                 new OA\Property(property: "contingent", type: "string", example: "Fakultas Informatika"),
                 new OA\Property(property: "is_kacamata", type: "boolean", example: false, description: "Penanda pengguna kacamata (flag mitra untuk pemantauan ekstra)")
             ]
@@ -158,9 +159,9 @@ class PlayerController extends Controller
 
         // Jika nim_nip berubah, pastikan unik di tabel players
         $rules = [
-            'sport_branch' => 'nullable|string',
-            'contingent' => 'nullable|string',
-            'is_kacamata' => 'nullable|boolean',
+            'sport_id'          => 'nullable|integer|exists:sports,id',
+            'sport_category_id' => 'nullable|integer|exists:sport_categories,id',
+            'is_kacamata'       => 'nullable|boolean',
         ];
 
         if ($request->has('nim_nip') && $request->nim_nip !== $player->nim_nip) {
