@@ -74,6 +74,49 @@ class ContingentController extends Controller
         return response()->json(['status' => 'success', 'data' => $contingent]);
     }
 
+    #[OA\Get(
+        path: "/api/pic-kontingen",
+        operationId: "listPicKontingen",
+        tags: ["Contingents"],
+        summary: "Daftar semua PIC kontingen",
+        description: "Mengembalikan semua user dengan role pic_kontingen beserta data kontingen yang mereka kelola. Hanya dapat diakses oleh admin dan panitia.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(
+                    property: "data",
+                    type: "array",
+                    items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: "id",    type: "integer", example: 3),
+                            new OA\Property(property: "name",  type: "string",  example: "Budi Santoso"),
+                            new OA\Property(property: "email", type: "string",  example: "budi@telkomuniversity.ac.id"),
+                            new OA\Property(property: "managed_contingent", type: "object", nullable: true,
+                                properties: [
+                                    new OA\Property(property: "id",   type: "integer", example: 1),
+                                    new OA\Property(property: "name", type: "string",  example: "Fakultas Informatika"),
+                                ]
+                            ),
+                        ]
+                    )
+                ),
+            ]
+        )
+    )]
+    public function picList()
+    {
+        $pics = User::where('role', 'pic_kontingen')
+            ->with('managedContingent:id,name,pic_user_id')
+            ->get(['id', 'name', 'email', 'role']);
+
+        return response()->json(['status' => 'success', 'data' => $pics]);
+    }
+
     #[OA\Post(
         path: "/api/contingents",
         operationId: "createContingent",
@@ -187,7 +230,7 @@ class ContingentController extends Controller
         operationId: "assignPic",
         tags: ["Contingents"],
         summary: "Tugaskan PIC kontingen",
-        description: "Admin/panitia menugaskan seorang user sebagai PIC (Person In Charge) dari kontingen. Role user otomatis diubah menjadi `pic_kontingen` dan player-nya dimasukkan ke kontingen tersebut.",
+        description: "Admin/panitia menugaskan seorang user sebagai PIC dari kontingen. Role user otomatis diubah menjadi `pic_kontingen` dan player-nya dimasukkan ke kontingen tersebut. Jika kontingen sudah memiliki PIC lain, PIC lama otomatis di-demote ke role `player`. Jika user sudah menjadi PIC di kontingen lain, relasi lama diputus.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
@@ -222,7 +265,7 @@ class ContingentController extends Controller
 
         $user = User::findOrFail($validated['user_id']);
 
-        if ($user->role === 'panitia' || $user->role === 'admin') {
+        if (in_array($user->role, ['panitia', 'admin'])) {
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Tidak dapat menugaskan panitia atau admin sebagai PIC kontingen.',
@@ -231,6 +274,19 @@ class ContingentController extends Controller
 
         DB::beginTransaction();
         try {
+            // Demote PIC lama jika kontingen sudah punya PIC lain
+            if ($contingent->pic_user_id && $contingent->pic_user_id !== $user->id) {
+                $oldPic = User::find($contingent->pic_user_id);
+                if ($oldPic) {
+                    $oldPic->update(['role' => 'player']);
+                }
+            }
+
+            // Lepas user dari kontingen lain jika sudah jadi PIC di tempat lain
+            Contingent::where('pic_user_id', $user->id)
+                ->where('id', '!=', $contingent->id)
+                ->update(['pic_user_id' => null]);
+
             $user->update(['role' => 'pic_kontingen']);
             $contingent->update(['pic_user_id' => $user->id]);
 

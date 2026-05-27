@@ -74,6 +74,40 @@ paths:
           description: Confirmation accepted
 
   /players:
+    get:
+      tags:
+        - Players
+      summary: Daftar semua player
+      description: Mengembalikan semua player beserta data user, cabang olahraga, kategori, dan kontingen. Hanya dapat diakses oleh admin dan panitia.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Daftar player berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlayerDetail'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden — role tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
         - Players
@@ -94,6 +128,42 @@ paths:
           description: Validation errors
         '401':
           description: Unauthorized
+
+  /pic-kontingen:
+    get:
+      tags:
+        - Players
+      summary: Daftar semua PIC kontingen
+      description: Mengembalikan semua user dengan role `pic_kontingen` beserta data kontingen yang mereka kelola. Hanya dapat diakses oleh admin dan panitia.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Daftar PIC kontingen berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PicKontingenDetail'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden — role tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /summary/contingent:
     get:
@@ -561,3 +631,149 @@ components:
           items:
             type: string
           example: ["Pernah pingsan saat olahraga: Tidak"]
+
+    PlayerDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        user_id:
+          type: integer
+          example: 12
+        name:
+          type: string
+          example: "Ahmad Fauzi"
+        nim_nip:
+          type: string
+          nullable: true
+          example: "1301234567"
+        sport_id:
+          type: integer
+          nullable: true
+          example: 2
+        sport_category_id:
+          type: integer
+          nullable: true
+          example: 1
+        contingent_id:
+          type: integer
+          nullable: true
+          example: 3
+        verification_status:
+          type: string
+          nullable: true
+          example: "verified"
+        photo_path:
+          type: string
+          nullable: true
+          example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/player_profiles/player_7.jpg"
+        employee_status:
+          type: string
+          nullable: true
+          example: "mahasiswa"
+        work_location:
+          type: string
+          nullable: true
+          example: "Bandung"
+        checked_in_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:30:00.000000Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-20T14:00:00.000000Z"
+        user:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              example: 12
+            name:
+              type: string
+              example: "Ahmad Fauzi"
+            email:
+              type: string
+              example: "ahmad@telkomuniversity.ac.id"
+            role:
+              type: string
+              example: "player"
+            is_kacamata:
+              type: boolean
+              example: false
+        sport:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              example: 2
+            name:
+              type: string
+              example: "Futsal"
+        sport_category:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: "Putra"
+        contingent:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              example: 3
+            name:
+              type: string
+              example: "Fakultas Informatika"
+
+    PicKontingenDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        name:
+          type: string
+          example: "Budi Santoso"
+        email:
+          type: string
+          example: "budi@telkomuniversity.ac.id"
+        role:
+          type: string
+          example: "pic_kontingen"
+        managed_contingent:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              example: 3
+            name:
+              type: string
+              example: "Fakultas Informatika"
+            pic_user_id:
+              type: integer
+              example: 5
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: "Forbidden."

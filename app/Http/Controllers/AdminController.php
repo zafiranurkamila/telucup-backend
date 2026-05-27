@@ -72,43 +72,4 @@ class AdminController extends Controller
         return response()->json($query->orderBy('match_date')->orderBy('match_time')->get());
     }
 
-    #[OA\Put(
-        path: "/api/admin/users/{id}/promote-to-pic",
-        operationId: "promoteToPic",
-        tags: ["Admin"],
-        summary: "Promosikan player menjadi PIC Kontingen",
-        description: "Mengubah role pengguna menjadi `pic_kontingen`. Untuk juga menugaskan ke kontingen tertentu, gunakan PUT /api/contingents/{id}/assign-pic.",
-        security: [["bearerAuth" => []]]
-    )]
-    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
-    #[OA\Response(
-        response: 200,
-        description: "Berhasil dipromosikan",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "message", type: "string", example: "User berhasil dipromosikan menjadi PIC Kontingen"),
-                new OA\Property(property: "user",    ref: "#/components/schemas/UserObject"),
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: 400,
-        description: "Tidak dapat mengubah role panitia",
-        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
-    )]
-    public function promoteToPic(Request $request, $id)
-    {
-        $user = \App\Models\User::findOrFail($id);
-
-        if ($user->role === 'panitia') {
-            return response()->json(['message' => 'Tidak dapat mengubah role panitia!'], 400);
-        }
-
-        $user->update(['role' => 'pic_kontingen']);
-
-        return response()->json([
-            'message' => 'User berhasil dipromosikan menjadi PIC Kontingen',
-            'user'    => $user,
-        ]);
-    }
 }

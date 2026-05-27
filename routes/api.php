@@ -93,6 +93,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // ====================================================================
+    // PLAYERS — Daftar semua player (admin/panitia)
+    // ====================================================================
+    Route::middleware(['role:admin,panitia'])->group(function () {
+        Route::get('/players', [PlayerController::class, 'index'])->name('players.index');
+        Route::get('/pic-kontingen', [ContingentController::class, 'picList'])->name('pic-kontingen.index');
+    });
+
+    // ====================================================================
     // SPORTS — CRUD hanya untuk admin/panitia
     // ====================================================================
     Route::middleware(['role:admin,panitia'])->group(function () {
@@ -161,8 +169,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/matches/{id}/checkin/{player_id}', [BracketController::class, 'checkinPlayer'])->name('matches.checkin.store');
         Route::delete('/matches/{id}/checkin/{player_id}', [BracketController::class, 'undoCheckin'])->name('matches.checkin.destroy');
 
-        // Endpoint untuk update role Player -> PIC Kontingen
-        Route::put('/admin/users/{id}/promote-to-pic', [\App\Http\Controllers\AdminController::class, 'promoteToPic']);
 
         // Panitia: Upload foto event untuk AI processing
         Route::post('/event-photos', [EventPhotoController::class, 'store']);

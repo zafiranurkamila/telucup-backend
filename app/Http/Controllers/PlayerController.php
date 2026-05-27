@@ -60,6 +60,40 @@ class PlayerController extends Controller
         return response()->json(['status' => 'success', 'data' => $summary]);
     }
 
+    #[OA\Get(
+        path: "/api/players",
+        operationId: "listPlayers",
+        tags: ["Players"],
+        summary: "Daftar semua player",
+        description: "Mengembalikan semua player beserta data user, cabang olahraga, kategori, dan kontingen. Hanya dapat diakses oleh admin dan panitia.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(
+                    property: "data",
+                    type: "array",
+                    items: new OA\Items(ref: "#/components/schemas/PlayerObject")
+                ),
+            ]
+        )
+    )]
+    public function index()
+    {
+        $players = Player::with([
+            'user:id,name,email,role,is_kacamata',
+            'sport:id,name',
+            'sportCategory:id,name',
+            'contingent:id,name',
+        ])->get();
+
+        return response()->json(['status' => 'success', 'data' => $players]);
+    }
+
     #[OA\Post(
         path: "/api/players",
         operationId: "storePlayer",

@@ -114,32 +114,66 @@
                 "tags": [
                     "Admin"
                 ],
-                "summary": "Promosikan player menjadi PIC Kontingen",
-                "description": "Mengubah role pengguna menjadi `pic_kontingen`. Untuk juga menugaskan ke kontingen tertentu, gunakan PUT /api/contingents/{id}/assign-pic.",
+                "summary": "Tugaskan user sebagai PIC kontingen",
+                "description": "Mengubah role user menjadi `pic_kontingen` sekaligus menghubungkannya ke kontingen via `pic_user_id`. Jika kontingen sudah memiliki PIC lain, PIC lama otomatis di-demote ke role `player`. Jika user sudah menjadi PIC di kontingen lain, relasi lama diputus terlebih dahulu.",
                 "operationId": "promoteToPic",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID user yang akan dijadikan PIC",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 5
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contingent_id"
+                                ],
+                                "properties": {
+                                    "contingent_id": {
+                                        "description": "ID kontingen yang akan dikelola user ini sebagai PIC",
+                                        "type": "integer",
+                                        "example": 3
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Berhasil dipromosikan",
+                        "description": "Berhasil ditugaskan",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "User berhasil dipromosikan menjadi PIC Kontingen"
+                                            "example": "Budi Santoso berhasil ditugaskan sebagai PIC kontingen Fakultas Informatika."
                                         },
-                                        "user": {
-                                            "$ref": "#/components/schemas/UserObject"
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "$ref": "#/components/schemas/UserObject"
+                                                },
+                                                "contingent": {
+                                                    "$ref": "#/components/schemas/ContingentObject"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -147,8 +181,18 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Tidak dapat mengubah role panitia",
+                    "422": {
+                        "description": "Tidak dapat mengubah role panitia atau admin",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1631,15 +1675,17 @@
                     "Contingents"
                 ],
                 "summary": "Tugaskan PIC kontingen",
-                "description": "Admin/panitia menugaskan seorang user sebagai PIC (Person In Charge) dari kontingen. Role user otomatis diubah menjadi `pic_kontingen` dan player-nya dimasukkan ke kontingen tersebut.",
+                "description": "Admin/panitia menugaskan seorang user sebagai PIC dari kontingen. Role user otomatis diubah menjadi `pic_kontingen`, `pic_user_id` pada kontingen diisi, dan player-nya dipindahkan ke kontingen tersebut. Jika kontingen sudah memiliki PIC lain, PIC lama otomatis di-demote ke role `player`. Jika user sudah menjadi PIC di kontingen lain, relasi lama diputus.",
                 "operationId": "assignPic",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID kontingen yang akan diberi PIC",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 3
                         }
                     }
                 ],
@@ -2311,7 +2357,298 @@
                 }
             }
         },
+        "/api/pic-kontingen": {
+            "get": {
+                "tags": [
+                    "Players"
+                ],
+                "summary": "Daftar semua PIC kontingen",
+                "description": "Mengembalikan semua user dengan role `pic_kontingen` beserta data kontingen yang mereka kelola. Hanya dapat diakses oleh admin dan panitia.",
+                "operationId": "listPicKontingen",
+                "responses": {
+                    "200": {
+                        "description": "Daftar PIC kontingen berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 5
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Budi Santoso"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "example": "budi@telkomuniversity.ac.id"
+                                                    },
+                                                    "role": {
+                                                        "type": "string",
+                                                        "example": "pic_kontingen"
+                                                    },
+                                                    "managed_contingent": {
+                                                        "type": "object",
+                                                        "nullable": true,
+                                                        "description": "Kontingen yang dikelola PIC ini. null jika belum ditugaskan ke kontingen manapun.",
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 3
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "Fakultas Informatika"
+                                                            },
+                                                            "pic_user_id": {
+                                                                "type": "integer",
+                                                                "example": 5
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden — role tidak diizinkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/players": {
+            "get": {
+                "tags": [
+                    "Players"
+                ],
+                "summary": "Daftar semua player",
+                "description": "Mengembalikan semua player beserta data user, cabang olahraga, kategori, dan kontingen. Hanya dapat diakses oleh admin dan panitia.",
+                "operationId": "listPlayers",
+                "responses": {
+                    "200": {
+                        "description": "Daftar player berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 7
+                                                    },
+                                                    "user_id": {
+                                                        "type": "integer",
+                                                        "example": 12
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Ahmad Fauzi"
+                                                    },
+                                                    "nim_nip": {
+                                                        "type": "string",
+                                                        "nullable": true,
+                                                        "example": "1301234567"
+                                                    },
+                                                    "sport_id": {
+                                                        "type": "integer",
+                                                        "nullable": true,
+                                                        "example": 2
+                                                    },
+                                                    "sport_category_id": {
+                                                        "type": "integer",
+                                                        "nullable": true,
+                                                        "example": 1
+                                                    },
+                                                    "contingent_id": {
+                                                        "type": "integer",
+                                                        "nullable": true,
+                                                        "example": 3
+                                                    },
+                                                    "verification_status": {
+                                                        "type": "string",
+                                                        "nullable": true,
+                                                        "example": "verified"
+                                                    },
+                                                    "photo_path": {
+                                                        "type": "string",
+                                                        "nullable": true,
+                                                        "example": "https://res.cloudinary.com/demo/image/upload/v1/telucup/player_profiles/player_7.jpg"
+                                                    },
+                                                    "employee_status": {
+                                                        "type": "string",
+                                                        "nullable": true,
+                                                        "example": "mahasiswa"
+                                                    },
+                                                    "work_location": {
+                                                        "type": "string",
+                                                        "nullable": true,
+                                                        "example": "Bandung"
+                                                    },
+                                                    "checked_in_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "nullable": true,
+                                                        "example": null
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-01-15T08:30:00.000000Z"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-01-20T14:00:00.000000Z"
+                                                    },
+                                                    "user": {
+                                                        "type": "object",
+                                                        "nullable": true,
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 12
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "Ahmad Fauzi"
+                                                            },
+                                                            "email": {
+                                                                "type": "string",
+                                                                "example": "ahmad@telkomuniversity.ac.id"
+                                                            },
+                                                            "role": {
+                                                                "type": "string",
+                                                                "example": "player"
+                                                            },
+                                                            "is_kacamata": {
+                                                                "type": "boolean",
+                                                                "example": false
+                                                            }
+                                                        }
+                                                    },
+                                                    "sport": {
+                                                        "type": "object",
+                                                        "nullable": true,
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 2
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "Futsal"
+                                                            }
+                                                        }
+                                                    },
+                                                    "sport_category": {
+                                                        "type": "object",
+                                                        "nullable": true,
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "Putra"
+                                                            }
+                                                        }
+                                                    },
+                                                    "contingent": {
+                                                        "type": "object",
+                                                        "nullable": true,
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 3
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "Fakultas Informatika"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden — role tidak diizinkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
             "post": {
                 "tags": [
                     "Players"
