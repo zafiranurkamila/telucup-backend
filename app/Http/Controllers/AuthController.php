@@ -141,4 +141,29 @@ class AuthController extends Controller
             'token' => $user->createToken('api-token')->plainTextToken,
         ]);
     }
+
+    #[OA\Post(
+        path: "/api/logout",
+        operationId: "logoutUser",
+        tags: ["Authentication"],
+        summary: "Logout dan cabut Bearer token",
+        description: "Mencabut (revoke) token yang sedang digunakan sehingga tidak bisa dipakai lagi. Membutuhkan header `Authorization: Bearer <token>`.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Logout berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "message", type: "string", example: "Logout berhasil."),
+            ]
+        )
+    )]
+    #[OA\Response(response: 401, description: "Unauthenticated", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json(['message' => 'Logout berhasil.']);
+    }
 }

@@ -19,6 +19,7 @@ use App\Http\Controllers\BracketController;
 // Auth Routes (API)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 // ====================================================================
 // SPORTS — Publik (baca)
@@ -105,6 +106,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ====================================================================
     Route::middleware(['role:admin,panitia'])->group(function () {
         Route::post('/sports', [SportController::class, 'store'])->name('sports.store');
+        Route::post('/sports/{id}/icon', [SportController::class, 'uploadIcon'])->name('sports.icon');
         Route::put('/sports/{id}', [SportController::class, 'update'])->name('sports.update');
         Route::delete('/sports/{id}', [SportController::class, 'destroy'])->name('sports.destroy');
     });
@@ -169,6 +171,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/matches/{id}/checkin/{player_id}', [BracketController::class, 'checkinPlayer'])->name('matches.checkin.store');
         Route::delete('/matches/{id}/checkin/{player_id}', [BracketController::class, 'undoCheckin'])->name('matches.checkin.destroy');
 
+
+        // Assign player ke kontingen
+        Route::put('/players/{id}/assign-contingent', [PlayerController::class, 'assignContingent'])->name('players.assign-contingent');
 
         // Panitia: Upload foto event untuk AI processing
         Route::post('/event-photos', [EventPhotoController::class, 'store']);

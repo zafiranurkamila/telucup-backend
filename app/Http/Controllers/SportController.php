@@ -8,6 +8,8 @@ use App\Models\Sport;
 use App\Models\SportCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Cloudinary\Cloudinary;
 
 class SportController extends Controller
 {
@@ -78,24 +80,23 @@ class SportController extends Controller
         operationId: "createSport",
         tags: ["Sports"],
         summary: "Buat cabang olahraga baru",
-        description: "Admin/panitia membuat cabang olahraga baru. Jika sport memiliki sub-kategori (misal Badminton Putra/Putri), sertakan array `categories`. Jika tidak, sertakan `max_members` langsung.",
+        description: "Admin/panitia membuat cabang olahraga baru. Gunakan `multipart/form-data` jika ingin mengupload icon. Untuk categories, kirim sebagai `categories[0][name]`, `categories[0][max_members]`, dst.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
         required: true,
-        content: new OA\JsonContent(
-            required: ["name"],
-            properties: [
-                new OA\Property(property: "name", type: "string", example: "Futsal"),
-                new OA\Property(property: "icon_path", type: "string", example: "icons/futsal.png"),
-                new OA\Property(property: "max_members", type: "integer", example: 5, description: "Diisi jika sport TIDAK memiliki sub-kategori"),
-                new OA\Property(property: "categories", type: "array", description: "Diisi jika sport memiliki sub-kategori", items: new OA\Items(
-                    properties: [
-                        new OA\Property(property: "name", type: "string", example: "Tunggal Putra"),
-                        new OA\Property(property: "max_members", type: "integer", example: 1),
-                    ]
-                )),
-            ]
+        content: new OA\MediaType(
+            mediaType: "multipart/form-data",
+            schema: new OA\Schema(
+                required: ["name"],
+                properties: [
+                    new OA\Property(property: "name",        type: "string",  example: "Futsal"),
+                    new OA\Property(property: "icon",        type: "string",  format: "binary",
+                        description: "File gambar icon cabang olahraga. Format: jpeg/png/jpg/svg. Maks 2MB."),
+                    new OA\Property(property: "max_members", type: "integer", example: 5,
+                        description: "Diisi jika sport TIDAK memiliki sub-kategori"),
+                ]
+            )
         )
     )]
     #[OA\Response(
@@ -110,11 +111,12 @@ class SportController extends Controller
         )
     )]
     #[OA\Response(response: 422, description: "Validasi gagal", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 500, description: "Server error / gagal upload ke Cloudinary", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name'                      => 'required|string|max:255|unique:sports,name',
-            'icon_path'                 => 'nullable|string|max:500',
+            'icon'                      => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048',
             'max_members'               => 'nullable|integer|min:1',
             'categories'                => 'nullable|array',
             'categories.*.name'         => 'required|string|max:100',
@@ -124,13 +126,25 @@ class SportController extends Controller
         DB::beginTransaction();
         try {
             $sport = Sport::create([
-                'name'        => $validated['name'],
-                'icon_path'   => $validated['icon_path'] ?? null,
-                'max_members' => $validated['max_members'] ?? null,
+                'name'        => $request->name,
+                'max_members' => $request->max_members,
             ]);
 
-            if (!empty($validated['categories'])) {
-                foreach ($validated['categories'] as $cat) {
+            if ($request->hasFile('icon')) {
+                $cloudinary   = new Cloudinary(env('CLOUDINARY_URL'));
+                $uploadResult = $cloudinary->uploadApi()->upload(
+                    $request->file('icon')->getRealPath(),
+                    [
+                        'folder'    => 'telucup/sport_icons',
+                        'public_id' => 'sport_' . $sport->id,
+                        'overwrite' => true,
+                    ]
+                );
+                $sport->update(['icon_path' => $uploadResult['secure_url']]);
+            }
+
+            if ($request->filled('categories')) {
+                foreach ($request->categories as $cat) {
                     SportCategory::create([
                         'sport_id'    => $sport->id,
                         'name'        => $cat['name'],
@@ -143,11 +157,80 @@ class SportController extends Controller
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Cabang olahraga berhasil dibuat.',
-                'data'    => $sport->load('categories'),
+                'data'    => $sport->fresh()->load('categories'),
             ], 201);
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('Sport store error: ' . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/sports/{id}/icon",
+        operationId: "uploadSportIcon",
+        tags: ["Sports"],
+        summary: "Upload atau ganti icon cabang olahraga",
+        description: "Admin/panitia mengupload atau mengganti icon cabang olahraga yang sudah ada. File diupload ke Cloudinary dan URL-nya disimpan sebagai `icon_path`.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\MediaType(
+            mediaType: "multipart/form-data",
+            schema: new OA\Schema(
+                required: ["icon"],
+                properties: [
+                    new OA\Property(property: "icon", type: "string", format: "binary",
+                        description: "File gambar icon. Format: jpeg/png/jpg/svg. Maks 2MB."),
+                ]
+            )
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Icon berhasil diupload",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Icon berhasil diupload."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/SportObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Sport tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 422, description: "Validasi gagal", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 500, description: "Gagal upload ke Cloudinary", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function uploadIcon(Request $request, $id)
+    {
+        $request->validate([
+            'icon' => 'required|image|mimes:jpeg,png,jpg,svg|max:2048',
+        ]);
+
+        $sport = Sport::findOrFail($id);
+
+        try {
+            $cloudinary   = new Cloudinary(env('CLOUDINARY_URL'));
+            $uploadResult = $cloudinary->uploadApi()->upload(
+                $request->file('icon')->getRealPath(),
+                [
+                    'folder'    => 'telucup/sport_icons',
+                    'public_id' => 'sport_' . $sport->id,
+                    'overwrite' => true,
+                ]
+            );
+
+            $sport->update(['icon_path' => $uploadResult['secure_url']]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Icon berhasil diupload.',
+                'data'    => $sport->fresh()->load('categories'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Sport uploadIcon error: ' . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'Gagal mengupload icon: ' . $e->getMessage()], 500);
         }
     }
 

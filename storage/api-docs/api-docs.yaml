@@ -136,6 +136,33 @@ paths:
                           example: 'The email has already been taken.'
                     type: object
                 type: object
+  /api/logout:
+    post:
+      tags:
+        - Authentication
+      summary: 'Logout dan cabut Bearer token'
+      description: 'Mencabut (revoke) token yang sedang digunakan sehingga tidak bisa dipakai lagi.'
+      operationId: logoutUser
+      responses:
+        200:
+          description: 'Logout berhasil'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message:
+                    type: string
+                    example: 'Logout berhasil.'
+                type: object
+        401:
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
   /api/login:
     post:
       tags:
@@ -1771,6 +1798,76 @@ paths:
       security:
         -
           bearerAuth: []
+  '/api/players/{id}/assign-contingent':
+    put:
+      tags:
+        - Players
+      summary: 'Assign player ke kontingen'
+      description: 'Panitia atau admin menugaskan player ke kontingen tertentu. Kirim `contingent_id: null` untuk melepas player dari kontingen.'
+      operationId: assignPlayerContingent
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'ID player'
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                contingent_id:
+                  description: 'ID kontingen tujuan. Kirim null untuk melepas dari kontingen.'
+                  type: integer
+                  nullable: true
+                  example: 3
+              type: object
+      responses:
+        200:
+          description: 'Player berhasil di-assign ke kontingen'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Player berhasil di-assign ke kontingen.'
+                  data:
+                    $ref: '#/components/schemas/PlayerObject'
+                type: object
+        404:
+          description: 'Player atau kontingen tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Validasi gagal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        401:
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        403:
+          description: 'Forbidden — hanya panitia/admin'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
   /api/player/profile:
     patch:
       tags:
@@ -2717,12 +2814,12 @@ paths:
       tags:
         - Sports
       summary: 'Buat cabang olahraga baru'
-      description: 'Admin/panitia membuat cabang olahraga baru. Jika sport memiliki sub-kategori (misal Badminton Putra/Putri), sertakan array `categories`. Jika tidak, sertakan `max_members` langsung.'
+      description: "Admin/panitia membuat cabang olahraga baru menggunakan `multipart/form-data`. Untuk categories, kirim sebagai `categories[0][name]`, `categories[0][max_members]`, dst. Icon akan diupload ke Cloudinary secara otomatis."
       operationId: createSport
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               required:
                 - name
@@ -2730,25 +2827,14 @@ paths:
                 name:
                   type: string
                   example: Futsal
-                icon_path:
+                icon:
                   type: string
-                  example: icons/futsal.png
+                  format: binary
+                  description: 'File gambar icon. Format: jpeg/png/jpg/svg. Maks 2MB.'
                 max_members:
                   description: 'Diisi jika sport TIDAK memiliki sub-kategori'
                   type: integer
                   example: 5
-                categories:
-                  description: 'Diisi jika sport memiliki sub-kategori'
-                  type: array
-                  items:
-                    properties:
-                      name:
-                        type: string
-                        example: 'Tunggal Putra'
-                      max_members:
-                        type: integer
-                        example: 1
-                    type: object
               type: object
       responses:
         201:
@@ -2768,6 +2854,12 @@ paths:
                 type: object
         422:
           description: 'Validasi gagal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: 'Server error / gagal upload ke Cloudinary'
           content:
             application/json:
               schema:
@@ -2895,6 +2987,70 @@ paths:
                 $ref: '#/components/schemas/SuccessMessage'
         404:
           description: 'Tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+  '/api/sports/{id}/icon':
+    post:
+      tags:
+        - Sports
+      summary: 'Upload atau ganti icon cabang olahraga'
+      description: 'Admin/panitia mengupload atau mengganti icon cabang olahraga yang sudah ada. File diupload ke Cloudinary dan URL-nya disimpan sebagai `icon_path`. Karena PHP tidak mendukung multipart pada PUT, endpoint ini menggunakan POST.'
+      operationId: uploadSportIcon
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - icon
+              properties:
+                icon:
+                  type: string
+                  format: binary
+                  description: 'File gambar icon. Format: jpeg/png/jpg/svg. Maks 2MB.'
+              type: object
+      responses:
+        200:
+          description: 'Icon berhasil diupload'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Icon berhasil diupload.'
+                  data:
+                    $ref: '#/components/schemas/SportObject'
+                type: object
+        404:
+          description: 'Sport tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Validasi gagal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: 'Gagal upload ke Cloudinary'
           content:
             application/json:
               schema:

@@ -263,6 +263,64 @@ class PlayerController extends Controller
         ]);
     }
 
+    #[OA\Put(
+        path: "/api/players/{id}/assign-contingent",
+        operationId: "assignPlayerContingent",
+        tags: ["Players"],
+        summary: "Assign player ke kontingen",
+        description: "Panitia atau admin menugaskan player ke kontingen tertentu. Kirim `contingent_id: null` untuk melepas player dari kontingen.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"), description: "ID player")]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "contingent_id", type: "integer", nullable: true, example: 3,
+                    description: "ID kontingen tujuan. Kirim null untuk melepas dari kontingen."),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Player berhasil di-assign ke kontingen",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Player berhasil di-assign ke kontingen."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/PlayerObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Player atau kontingen tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 422, description: "Validasi gagal", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function assignContingent(Request $request, $id)
+    {
+        $request->validate([
+            'contingent_id' => 'nullable|integer|exists:contingents,id',
+        ]);
+
+        $player = Player::find($id);
+        if (!$player) {
+            return response()->json(['status' => 'error', 'message' => 'Player tidak ditemukan.'], 404);
+        }
+
+        $player->update(['contingent_id' => $request->contingent_id]);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => $request->contingent_id
+                ? 'Player berhasil di-assign ke kontingen.'
+                : 'Player berhasil dilepas dari kontingen.',
+            'data' => $player->fresh()->load([
+                'user:id,name,email,role,is_kacamata',
+                'sport:id,name',
+                'sportCategory:id,name',
+                'contingent:id,name',
+            ]),
+        ]);
+    }
+
     #[OA\Post(
         path: "/api/players/enroll-face",
         operationId: "enrollFace",
