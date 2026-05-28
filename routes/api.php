@@ -175,8 +175,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Assign player ke kontingen
         Route::put('/players/{id}/assign-contingent', [PlayerController::class, 'assignContingent'])->name('players.assign-contingent');
 
-        // Panitia: Upload foto event untuk AI processing
+        // Panitia: Upload, Ambil & Hapus foto event
+        Route::get('/event-photos', [EventPhotoController::class, 'index']);
         Route::post('/event-photos', [EventPhotoController::class, 'store']);
+        Route::delete('/event-photos/{id}', [EventPhotoController::class, 'destroy']);
     });
 
     // ====================================================================

@@ -12,6 +12,45 @@ use Illuminate\Support\Facades\DB;
 
 class EventPhotoController extends Controller
 {
+    #[OA\Get(
+        path: "/api/event-photos",
+        operationId: "getEventPhotos",
+        tags: ["Event Photo"],
+        summary: "Mengambil semua data foto event",
+        description: "Mengambil semua data foto dokumentasi event yang telah diunggah.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil mengambil data foto event",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Berhasil mengambil data foto event"),
+                new OA\Property(property: "data", type: "array", items: new OA\Items(
+                    properties: [
+                        new OA\Property(property: "id", type: "integer", example: 1),
+                        new OA\Property(property: "cloudinary_public_id", type: "string", example: "telucup/event_photos/abc123"),
+                        new OA\Property(property: "image_url", type: "string", example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/event_photos/abc123.jpg"),
+                        new OA\Property(property: "uploaded_by", type: "integer", example: 2),
+                        new OA\Property(property: "created_at", type: "string", format: "date-time"),
+                        new OA\Property(property: "updated_at", type: "string", format: "date-time")
+                    ]
+                ))
+            ]
+        )
+    )]
+    public function index()
+    {
+        $photos = EventPhoto::orderBy('created_at', 'desc')->get();
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Berhasil mengambil data foto event',
+            'data' => $photos
+        ], 200);
+    }
+
     #[OA\Post(
         path: "/api/event-photos",
         operationId: "storeEventPhoto",
@@ -100,6 +139,83 @@ class EventPhotoController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json(['status' => 'error', 'message' => 'Gagal mengunggah foto: ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[OA\Delete(
+        path: "/api/event-photos/{id}",
+        operationId: "deleteEventPhoto",
+        tags: ["Event Photo"],
+        summary: "Menghapus foto event",
+        description: "Panitia menghapus foto event berdasarkan ID. Tindakan ini juga akan menghapus foto dari Cloudinary beserta relasi wajah yang terdeteksi.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(
+        name: "id",
+        description: "ID foto event",
+        required: true,
+        in: "path",
+        schema: new OA\Schema(type: "integer")
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Foto berhasil dihapus",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Foto event berhasil dihapus.")
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: "Foto tidak ditemukan",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 500,
+        description: "Gagal menghapus foto atau server error",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $eventPhoto = EventPhoto::find($id);
+
+            if (!$eventPhoto) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Foto event tidak ditemukan.'
+                ], 404);
+            }
+
+            // Hapus relasi wajah yang terdeteksi di foto ini
+            $eventPhoto->photoFaces()->delete();
+
+            // Hapus dari Cloudinary jika memiliki public_id
+            if ($eventPhoto->cloudinary_public_id) {
+                $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
+                $cloudinary->uploadApi()->destroy($eventPhoto->cloudinary_public_id);
+            }
+
+            // Hapus dari database
+            $eventPhoto->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Foto event berhasil dihapus.'
+            ], 200);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menghapus foto: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

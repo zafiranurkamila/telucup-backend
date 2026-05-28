@@ -109,106 +109,6 @@
                 ]
             }
         },
-        "/api/admin/users/{id}/promote-to-pic": {
-            "put": {
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Tugaskan user sebagai PIC kontingen",
-                "description": "Mengubah role user menjadi `pic_kontingen` sekaligus menghubungkannya ke kontingen via `pic_user_id`. Jika kontingen sudah memiliki PIC lain, PIC lama otomatis di-demote ke role `player`. Jika user sudah menjadi PIC di kontingen lain, relasi lama diputus terlebih dahulu.",
-                "operationId": "promoteToPic",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID user yang akan dijadikan PIC",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "example": 5
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "contingent_id"
-                                ],
-                                "properties": {
-                                    "contingent_id": {
-                                        "description": "ID kontingen yang akan dikelola user ini sebagai PIC",
-                                        "type": "integer",
-                                        "example": 3
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Berhasil ditugaskan",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Budi Santoso berhasil ditugaskan sebagai PIC kontingen Fakultas Informatika."
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "user": {
-                                                    "$ref": "#/components/schemas/UserObject"
-                                                },
-                                                "contingent": {
-                                                    "$ref": "#/components/schemas/ContingentObject"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Tidak dapat mengubah role panitia atau admin",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
         "/api/register": {
             "post": {
                 "tags": [
@@ -386,6 +286,49 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout dan cabut Bearer token",
+                "description": "Mencabut (revoke) token yang sedang digunakan sehingga tidak bisa dipakai lagi. Membutuhkan header `Authorization: Bearer <token>`.",
+                "operationId": "logoutUser",
+                "responses": {
+                    "200": {
+                        "description": "Logout berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Logout berhasil."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/bracket/generate": {
@@ -1669,23 +1612,88 @@
                 ]
             }
         },
+        "/api/pic-kontingen": {
+            "get": {
+                "tags": [
+                    "Contingents"
+                ],
+                "summary": "Daftar semua PIC kontingen",
+                "description": "Mengembalikan semua user dengan role pic_kontingen beserta data kontingen yang mereka kelola. Hanya dapat diakses oleh admin dan panitia.",
+                "operationId": "listPicKontingen",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 3
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Budi Santoso"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "example": "budi@telkomuniversity.ac.id"
+                                                    },
+                                                    "managed_contingent": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "Fakultas Informatika"
+                                                            }
+                                                        },
+                                                        "type": "object",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/contingents/{id}/assign-pic": {
             "put": {
                 "tags": [
                     "Contingents"
                 ],
                 "summary": "Tugaskan PIC kontingen",
-                "description": "Admin/panitia menugaskan seorang user sebagai PIC dari kontingen. Role user otomatis diubah menjadi `pic_kontingen`, `pic_user_id` pada kontingen diisi, dan player-nya dipindahkan ke kontingen tersebut. Jika kontingen sudah memiliki PIC lain, PIC lama otomatis di-demote ke role `player`. Jika user sudah menjadi PIC di kontingen lain, relasi lama diputus.",
+                "description": "Admin/panitia menugaskan seorang user sebagai PIC dari kontingen. Role user otomatis diubah menjadi `pic_kontingen` dan player-nya dimasukkan ke kontingen tersebut. Jika kontingen sudah memiliki PIC lain, PIC lama otomatis di-demote ke role `player`. Jika user sudah menjadi PIC di kontingen lain, relasi lama diputus.",
                 "operationId": "assignPic",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID kontingen yang akan diberi PIC",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "example": 3
+                            "type": "integer"
                         }
                     }
                 ],
@@ -1924,6 +1932,73 @@
             }
         },
         "/api/event-photos": {
+            "get": {
+                "tags": [
+                    "Event Photo"
+                ],
+                "summary": "Mengambil semua data foto event",
+                "description": "Mengambil semua data foto dokumentasi event yang telah diunggah.",
+                "operationId": "getEventPhotos",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil data foto event",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Berhasil mengambil data foto event"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "cloudinary_public_id": {
+                                                        "type": "string",
+                                                        "example": "telucup/event_photos/abc123"
+                                                    },
+                                                    "image_url": {
+                                                        "type": "string",
+                                                        "example": "https://res.cloudinary.com/demo/image/upload/v1/telucup/event_photos/abc123.jpg"
+                                                    },
+                                                    "uploaded_by": {
+                                                        "type": "integer",
+                                                        "example": 2
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
             "post": {
                 "tags": [
                     "Event Photo"
@@ -2020,6 +2095,74 @@
                     },
                     "500": {
                         "description": "Gagal upload ke Cloudinary atau server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/event-photos/{id}": {
+            "delete": {
+                "tags": [
+                    "Event Photo"
+                ],
+                "summary": "Menghapus foto event",
+                "description": "Panitia menghapus foto event berdasarkan ID. Tindakan ini juga akan menghapus foto dari Cloudinary beserta relasi wajah yang terdeteksi.",
+                "operationId": "deleteEventPhoto",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID foto event",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Foto berhasil dihapus",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Foto event berhasil dihapus."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Foto tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Gagal menghapus foto atau server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2357,102 +2500,6 @@
                 }
             }
         },
-        "/api/pic-kontingen": {
-            "get": {
-                "tags": [
-                    "Players"
-                ],
-                "summary": "Daftar semua PIC kontingen",
-                "description": "Mengembalikan semua user dengan role `pic_kontingen` beserta data kontingen yang mereka kelola. Hanya dapat diakses oleh admin dan panitia.",
-                "operationId": "listPicKontingen",
-                "responses": {
-                    "200": {
-                        "description": "Daftar PIC kontingen berhasil diambil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "properties": {
-                                                    "id": {
-                                                        "type": "integer",
-                                                        "example": 5
-                                                    },
-                                                    "name": {
-                                                        "type": "string",
-                                                        "example": "Budi Santoso"
-                                                    },
-                                                    "email": {
-                                                        "type": "string",
-                                                        "example": "budi@telkomuniversity.ac.id"
-                                                    },
-                                                    "role": {
-                                                        "type": "string",
-                                                        "example": "pic_kontingen"
-                                                    },
-                                                    "managed_contingent": {
-                                                        "type": "object",
-                                                        "nullable": true,
-                                                        "description": "Kontingen yang dikelola PIC ini. null jika belum ditugaskan ke kontingen manapun.",
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "integer",
-                                                                "example": 3
-                                                            },
-                                                            "name": {
-                                                                "type": "string",
-                                                                "example": "Fakultas Informatika"
-                                                            },
-                                                            "pic_user_id": {
-                                                                "type": "integer",
-                                                                "example": 5
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden — role tidak diizinkan",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
         "/api/players": {
             "get": {
                 "tags": [
@@ -2463,7 +2510,7 @@
                 "operationId": "listPlayers",
                 "responses": {
                     "200": {
-                        "description": "Daftar player berhasil diambil",
+                        "description": "Berhasil",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2475,169 +2522,11 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "properties": {
-                                                    "id": {
-                                                        "type": "integer",
-                                                        "example": 7
-                                                    },
-                                                    "user_id": {
-                                                        "type": "integer",
-                                                        "example": 12
-                                                    },
-                                                    "name": {
-                                                        "type": "string",
-                                                        "example": "Ahmad Fauzi"
-                                                    },
-                                                    "nim_nip": {
-                                                        "type": "string",
-                                                        "nullable": true,
-                                                        "example": "1301234567"
-                                                    },
-                                                    "sport_id": {
-                                                        "type": "integer",
-                                                        "nullable": true,
-                                                        "example": 2
-                                                    },
-                                                    "sport_category_id": {
-                                                        "type": "integer",
-                                                        "nullable": true,
-                                                        "example": 1
-                                                    },
-                                                    "contingent_id": {
-                                                        "type": "integer",
-                                                        "nullable": true,
-                                                        "example": 3
-                                                    },
-                                                    "verification_status": {
-                                                        "type": "string",
-                                                        "nullable": true,
-                                                        "example": "verified"
-                                                    },
-                                                    "photo_path": {
-                                                        "type": "string",
-                                                        "nullable": true,
-                                                        "example": "https://res.cloudinary.com/demo/image/upload/v1/telucup/player_profiles/player_7.jpg"
-                                                    },
-                                                    "employee_status": {
-                                                        "type": "string",
-                                                        "nullable": true,
-                                                        "example": "mahasiswa"
-                                                    },
-                                                    "work_location": {
-                                                        "type": "string",
-                                                        "nullable": true,
-                                                        "example": "Bandung"
-                                                    },
-                                                    "checked_in_at": {
-                                                        "type": "string",
-                                                        "format": "date-time",
-                                                        "nullable": true,
-                                                        "example": null
-                                                    },
-                                                    "created_at": {
-                                                        "type": "string",
-                                                        "format": "date-time",
-                                                        "example": "2025-01-15T08:30:00.000000Z"
-                                                    },
-                                                    "updated_at": {
-                                                        "type": "string",
-                                                        "format": "date-time",
-                                                        "example": "2025-01-20T14:00:00.000000Z"
-                                                    },
-                                                    "user": {
-                                                        "type": "object",
-                                                        "nullable": true,
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "integer",
-                                                                "example": 12
-                                                            },
-                                                            "name": {
-                                                                "type": "string",
-                                                                "example": "Ahmad Fauzi"
-                                                            },
-                                                            "email": {
-                                                                "type": "string",
-                                                                "example": "ahmad@telkomuniversity.ac.id"
-                                                            },
-                                                            "role": {
-                                                                "type": "string",
-                                                                "example": "player"
-                                                            },
-                                                            "is_kacamata": {
-                                                                "type": "boolean",
-                                                                "example": false
-                                                            }
-                                                        }
-                                                    },
-                                                    "sport": {
-                                                        "type": "object",
-                                                        "nullable": true,
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "integer",
-                                                                "example": 2
-                                                            },
-                                                            "name": {
-                                                                "type": "string",
-                                                                "example": "Futsal"
-                                                            }
-                                                        }
-                                                    },
-                                                    "sport_category": {
-                                                        "type": "object",
-                                                        "nullable": true,
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "integer",
-                                                                "example": 1
-                                                            },
-                                                            "name": {
-                                                                "type": "string",
-                                                                "example": "Putra"
-                                                            }
-                                                        }
-                                                    },
-                                                    "contingent": {
-                                                        "type": "object",
-                                                        "nullable": true,
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "integer",
-                                                                "example": 3
-                                                            },
-                                                            "name": {
-                                                                "type": "string",
-                                                                "example": "Fakultas Informatika"
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                "type": "object"
+                                                "$ref": "#/components/schemas/PlayerObject"
                                             }
                                         }
                                     },
                                     "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden — role tidak diizinkan",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -2835,6 +2724,95 @@
                     },
                     "422": {
                         "description": "Validasi gagal — NIM/NIP sudah dipakai",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/players/{id}/assign-contingent": {
+            "put": {
+                "tags": [
+                    "Players"
+                ],
+                "summary": "Assign player ke kontingen",
+                "description": "Panitia atau admin menugaskan player ke kontingen tertentu. Kirim `contingent_id: null` untuk melepas player dari kontingen.",
+                "operationId": "assignPlayerContingent",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID player",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "contingent_id": {
+                                        "description": "ID kontingen tujuan. Kirim null untuk melepas dari kontingen.",
+                                        "type": "integer",
+                                        "example": 3,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Player berhasil di-assign ke kontingen",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Player berhasil di-assign ke kontingen."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlayerObject"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Player atau kontingen tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4175,12 +4153,12 @@
                     "Sports"
                 ],
                 "summary": "Buat cabang olahraga baru",
-                "description": "Admin/panitia membuat cabang olahraga baru. Jika sport memiliki sub-kategori (misal Badminton Putra/Putri), sertakan array `categories`. Jika tidak, sertakan `max_members` langsung.",
+                "description": "Admin/panitia membuat cabang olahraga baru. Gunakan `multipart/form-data` jika ingin mengupload icon. Untuk categories, kirim sebagai `categories[0][name]`, `categories[0][max_members]`, dst.",
                 "operationId": "createSport",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
                                     "name"
@@ -4190,31 +4168,15 @@
                                         "type": "string",
                                         "example": "Futsal"
                                     },
-                                    "icon_path": {
+                                    "icon": {
+                                        "description": "File gambar icon cabang olahraga. Format: jpeg/png/jpg/svg. Maks 2MB.",
                                         "type": "string",
-                                        "example": "icons/futsal.png"
+                                        "format": "binary"
                                     },
                                     "max_members": {
                                         "description": "Diisi jika sport TIDAK memiliki sub-kategori",
                                         "type": "integer",
                                         "example": 5
-                                    },
-                                    "categories": {
-                                        "description": "Diisi jika sport memiliki sub-kategori",
-                                        "type": "array",
-                                        "items": {
-                                            "properties": {
-                                                "name": {
-                                                    "type": "string",
-                                                    "example": "Tunggal Putra"
-                                                },
-                                                "max_members": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
                                     }
                                 },
                                 "type": "object"
@@ -4248,6 +4210,16 @@
                     },
                     "422": {
                         "description": "Validasi gagal",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error / gagal upload ke Cloudinary",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4442,6 +4414,106 @@
                     },
                     "404": {
                         "description": "Tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sports/{id}/icon": {
+            "post": {
+                "tags": [
+                    "Sports"
+                ],
+                "summary": "Upload atau ganti icon cabang olahraga",
+                "description": "Admin/panitia mengupload atau mengganti icon cabang olahraga yang sudah ada. File diupload ke Cloudinary dan URL-nya disimpan sebagai `icon_path`.",
+                "operationId": "uploadSportIcon",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "icon"
+                                ],
+                                "properties": {
+                                    "icon": {
+                                        "description": "File gambar icon. Format: jpeg/png/jpg/svg. Maks 2MB.",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Icon berhasil diupload",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Icon berhasil diupload."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SportObject"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Sport tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Gagal upload ke Cloudinary",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4682,7 +4754,6 @@
                         "type": "string",
                         "example": "player",
                         "enum": [
-                            "admin",
                             "panitia",
                             "pic_kontingen",
                             "player"
