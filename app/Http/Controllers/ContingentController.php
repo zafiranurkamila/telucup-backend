@@ -265,10 +265,10 @@ class ContingentController extends Controller
 
         $user = User::findOrFail($validated['user_id']);
 
-        if (in_array($user->role, ['panitia', 'admin'])) {
+        if ($user->role === 'panitia') {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Tidak dapat menugaskan panitia atau admin sebagai PIC kontingen.',
+                'message' => 'Tidak dapat menugaskan panitia sebagai PIC kontingen.',
             ], 422);
         }
 

@@ -62,13 +62,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
             ->name('self-assessment.me');
 
         // Submit assessment — player atau pic_kontingen
-        Route::middleware(['role:pic_kontingen,player,admin,panitia'])->group(function () {
+        Route::middleware(['role:pic_kontingen,player,panitia'])->group(function () {
             Route::post('/', [SelfAssessmentController::class, 'store'])
                 ->name('self-assessment.store');
         });
 
-        // Panitia & admin: list, detail, summary
-        Route::middleware(['role:admin,panitia'])->group(function () {
+        // Panitia: list, detail, summary
+        Route::middleware(['role:panitia'])->group(function () {
             Route::get('/', [SelfAssessmentController::class, 'index'])
                 ->name('self-assessment.index');
             Route::get('/summary/contingent', [SelfAssessmentController::class, 'summaryByContingent'])
@@ -89,22 +89,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ====================================================================
     // PIC Kontingen / Panitia
     // ====================================================================
-    Route::middleware(['role:pic_kontingen,admin,panitia'])->group(function () {
+    Route::middleware(['role:pic_kontingen,panitia'])->group(function () {
         Route::post('/players', [PlayerController::class, 'store'])->name('players.store');
     });
 
     // ====================================================================
-    // PLAYERS — Daftar semua player (admin/panitia)
+    // PLAYERS — Daftar semua player (panitia)
     // ====================================================================
-    Route::middleware(['role:admin,panitia'])->group(function () {
+    Route::middleware(['role:panitia'])->group(function () {
         Route::get('/players', [PlayerController::class, 'index'])->name('players.index');
         Route::get('/pic-kontingen', [ContingentController::class, 'picList'])->name('pic-kontingen.index');
     });
 
     // ====================================================================
-    // SPORTS — CRUD hanya untuk admin/panitia
+    // SPORTS — CRUD hanya untuk panitia
     // ====================================================================
-    Route::middleware(['role:admin,panitia'])->group(function () {
+    Route::middleware(['role:panitia'])->group(function () {
         Route::post('/sports', [SportController::class, 'store'])->name('sports.store');
         Route::post('/sports/{id}/icon', [SportController::class, 'uploadIcon'])->name('sports.icon');
         Route::put('/sports/{id}', [SportController::class, 'update'])->name('sports.update');
@@ -112,9 +112,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // ====================================================================
-    // CONTINGENTS — CRUD & assign PIC (admin/panitia)
+    // CONTINGENTS — CRUD & assign PIC (panitia)
     // ====================================================================
-    Route::middleware(['role:admin,panitia'])->group(function () {
+    Route::middleware(['role:panitia'])->group(function () {
         Route::post('/contingents', [ContingentController::class, 'store'])->name('contingents.store');
         Route::put('/contingents/{id}', [ContingentController::class, 'update'])->name('contingents.update');
         Route::delete('/contingents/{id}', [ContingentController::class, 'destroy'])->name('contingents.destroy');

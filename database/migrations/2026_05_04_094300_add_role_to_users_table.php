@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('role')->default('pic_kontingen'); // admin, panitia, pic_kontingen
+            $table->string('role')->default('pic_kontingen'); // panitia, pic_kontingen, player
         });
     }
 

@@ -64,7 +64,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Arief Kurniawan',
             'email' => 'arief@telucup.com',
             'password' => Hash::make('password'),
-            'role' => 'admin' // Super Admin sesuai gambar
+            'role' => 'panitia'
         ]);
 
         // 3. Buat Registrasi (Gambar 2)

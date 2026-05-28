@@ -203,7 +203,7 @@ class SelfAssessmentController extends Controller
         $player = null;
         if ($playerId) {
             $player = Player::find($playerId);
-            if ($player && !in_array($user->role, ['admin', 'panitia'])) {
+            if ($player && !$user->role === 'panitia') {
                 if ($player->user_id !== $user->id) {
                     return response()->json([
                         'status'  => 'error',
@@ -398,7 +398,7 @@ class SelfAssessmentController extends Controller
         }
 
         $user = $request->user();
-        if (!in_array($user->role, ['admin', 'panitia'])) {
+        if (!$user->role === 'panitia') {
             if (!$assessment->player || $assessment->player->user_id !== $user->id) {
                 return response()->json([
                     'status'  => 'error',
