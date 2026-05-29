@@ -136,6 +136,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['role:pic_kontingen'])->group(function () {
         Route::get('/registrations/my', [RegistrationController::class, 'myRegistrations'])->name('registrations.my');
         Route::post('/registrations', [RegistrationController::class, 'store'])->name('registrations.store');
+        Route::post('/registrations/{id}/submit', [RegistrationController::class, 'submit'])->name('registrations.submit');
         Route::post('/registrations/{id}/players', [RegistrationController::class, 'addPlayers'])->name('registrations.players.add');
         Route::delete('/registrations/{id}/players/{player_id}', [RegistrationController::class, 'removePlayer'])->name('registrations.players.remove');
     });
@@ -150,8 +151,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/admin/templates', [\App\Http\Controllers\AdminController::class, 'templates']);
         Route::get('/admin/schedules', [\App\Http\Controllers\AdminController::class, 'schedules']);
 
-        // Registrasi tim — pantau & verifikasi
+        // Registrasi tim — pantau, kepatuhan & verifikasi
         Route::get('/registrations', [RegistrationController::class, 'index'])->name('registrations.index');
+        Route::get('/registrations/compliance', [RegistrationController::class, 'compliance'])->name('registrations.compliance');
         Route::get('/registrations/{id}', [RegistrationController::class, 'show'])->name('registrations.show');
         Route::post('/registrations/{id}/verify', [RegistrationController::class, 'verify'])->name('registrations.verify');
 

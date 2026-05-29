@@ -1980,7 +1980,8 @@ paths:
           schema:
             type: string
             enum:
-              - pending
+              - draft
+              - submitted
               - verified
               - rejected
       responses:
@@ -2019,8 +2020,8 @@ paths:
     post:
       tags:
         - Registrations
-      summary: 'PIC mendaftarkan tim ke cabang olahraga'
-      description: 'PIC kontingen mendaftarkan timnya ke satu cabang olahraga (dan sub-kategori jika ada). Satu kontingen hanya boleh mendaftar satu kali per sport+kategori. Jumlah pemain dibatasi oleh `max_members`.'
+      summary: 'PIC mendaftarkan tim ke cabang olahraga (tahap draft)'
+      description: 'PIC kontingen mendaftarkan timnya ke satu cabang olahraga. Pendaftaran dibuat dengan status `draft` — PIC masih bisa menambah/mengeluarkan pemain. Setelah siap, PIC harus memanggil endpoint submit untuk mengajukan ke panitia.'
       operationId: createRegistration
       requestBody:
         required: true
@@ -2049,7 +2050,7 @@ paths:
               type: object
       responses:
         201:
-          description: 'Tim berhasil didaftarkan'
+          description: 'Draft tim berhasil dibuat'
           content:
             application/json:
               schema:
@@ -2059,7 +2060,7 @@ paths:
                     example: success
                   message:
                     type: string
-                    example: 'Tim berhasil didaftarkan.'
+                    example: 'Draft tim berhasil dibuat.'
                   data:
                     $ref: '#/components/schemas/RegistrationObject'
                 type: object
@@ -2078,12 +2079,58 @@ paths:
       security:
         -
           bearerAuth: []
+  '/api/registrations/{id}/submit':
+    post:
+      tags:
+        - Registrations
+      summary: 'PIC mengajukan pendaftaran tim ke panitia'
+      description: 'PIC mengubah status pendaftaran dari `draft` menjadi `submitted`. Setelah disubmit, daftar pemain tidak dapat diubah lagi dan pendaftaran menunggu verifikasi panitia.'
+      operationId: submitRegistration
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID registrasi'
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Pendaftaran berhasil diajukan'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Pendaftaran tim berhasil diajukan ke panitia.'
+                  data:
+                    $ref: '#/components/schemas/RegistrationObject'
+                type: object
+        422:
+          description: 'Pendaftaran tidak dalam status draft'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        403:
+          description: 'Bukan milik kontingen Anda'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
   '/api/registrations/{id}/players':
     post:
       tags:
         - Registrations
       summary: 'PIC menambahkan pemain ke tim'
-      description: 'PIC menambahkan satu atau lebih player ke pendaftaran tim. Validasi: player harus dari kontingen yang sama, tidak boleh melebihi `max_members`, dan status pendaftaran harus masih `pending`.'
+      description: 'PIC menambahkan satu atau lebih player ke pendaftaran tim. Validasi: player harus dari kontingen yang sama, tidak boleh melebihi `max_members`, dan status pendaftaran harus masih `draft`.'
       operationId: addPlayersToRegistration
       parameters:
         -
@@ -2126,7 +2173,7 @@ paths:
                     $ref: '#/components/schemas/RegistrationObject'
                 type: object
         422:
-          description: 'Kapasitas tim penuh atau player bukan dari kontingen ini'
+          description: 'Kapasitas tim penuh, player bukan dari kontingen ini, atau pendaftaran sudah disubmit'
           content:
             application/json:
               schema:
@@ -2139,7 +2186,7 @@ paths:
       tags:
         - Registrations
       summary: 'PIC mengeluarkan pemain dari tim'
-      description: 'PIC mengeluarkan satu player dari pendaftaran tim yang masih berstatus pending.'
+      description: 'PIC mengeluarkan satu player dari pendaftaran tim yang masih berstatus draft.'
       operationId: removePlayerFromRegistration
       parameters:
         -
@@ -2252,7 +2299,7 @@ paths:
       tags:
         - Registrations
       summary: 'Panitia menyetujui atau menolak pendaftaran tim'
-      description: 'Panitia/admin mengubah status pendaftaran tim menjadi `verified` (disetujui) atau `rejected` (ditolak). Hanya tim yang `verified` yang akan diikutsertakan dalam generate bagan.'
+      description: 'Panitia/admin mengubah status pendaftaran tim dari `submitted` menjadi `verified` (disetujui) atau `rejected` (ditolak). Hanya tim yang sudah disubmit oleh PIC yang dapat diverifikasi.'
       operationId: verifyRegistration
       parameters:
         -
@@ -2290,6 +2337,45 @@ paths:
                     example: 'Status pendaftaran berhasil diperbarui.'
                   data:
                     $ref: '#/components/schemas/RegistrationObject'
+                type: object
+        422:
+          description: 'Pendaftaran belum disubmit oleh PIC'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+  /api/registrations/compliance:
+    get:
+      tags:
+        - Registrations
+      summary: 'Panitia melihat kepatuhan pendaftaran tiap kontingen'
+      description: 'Mengembalikan daftar tiap cabang olahraga (dan sub-kategorinya) beserta kontingen yang sudah dan belum mendaftar. Satu kontingen wajib mengirim satu tim ke setiap sport/sub-kategori yang tersedia.'
+      operationId: registrationCompliance
+      parameters:
+        -
+          name: sport_id
+          in: query
+          description: 'Filter ke satu cabang olahraga tertentu'
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ComplianceRow'
                 type: object
       security:
         -
@@ -3286,16 +3372,18 @@ components:
           format: date-time
       type: object
     RegistrationObject:
-      description: 'Pendaftaran tim kontingen untuk satu cabang olahraga'
+      description: 'Pendaftaran tim kontingen untuk satu cabang olahraga. Alur status: draft → submitted → verified/rejected.'
       properties:
         id:
           type: integer
           example: 1
         status:
+          description: 'draft: PIC masih menyusun tim; submitted: sudah diajukan ke panitia; verified: disetujui; rejected: ditolak'
           type: string
-          example: pending
+          example: draft
           enum:
-            - pending
+            - draft
+            - submitted
             - verified
             - rejected
         contingent:
@@ -3328,6 +3416,78 @@ components:
         updated_at:
           type: string
           format: date-time
+      type: object
+    ComplianceRegisteredEntry:
+      description: 'Satu kontingen yang sudah mendaftar dalam konteks compliance check'
+      properties:
+        registration_id:
+          type: integer
+          example: 7
+        status:
+          type: string
+          example: submitted
+          enum:
+            - draft
+            - submitted
+            - verified
+            - rejected
+        contingent:
+          $ref: '#/components/schemas/ContingentObject'
+      type: object
+    ComplianceRow:
+      description: 'Baris kepatuhan pendaftaran untuk satu kombinasi sport/sub-kategori'
+      properties:
+        sport:
+          description: 'Cabang olahraga (hanya id, name, icon_path)'
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: Badminton
+            icon_path:
+              type: string
+              nullable: true
+          type: object
+        sport_category:
+          description: 'Sub-kategori (null jika sport tidak memiliki kategori)'
+          properties:
+            id:
+              type: integer
+              example: 2
+            name:
+              type: string
+              example: Putra
+          type: object
+          nullable: true
+        total_contingents:
+          description: 'Total seluruh kontingen yang terdaftar di sistem'
+          type: integer
+          example: 10
+        registered_count:
+          description: 'Jumlah kontingen yang sudah membuat pendaftaran (status apapun)'
+          type: integer
+          example: 7
+        not_registered_count:
+          description: 'Jumlah kontingen yang belum mendaftar sama sekali'
+          type: integer
+          example: 3
+        compliance_rate:
+          description: 'Persentase kontingen yang sudah mendaftar'
+          type: number
+          format: float
+          example: 70
+        registered:
+          description: 'Daftar kontingen yang sudah mendaftar beserta status pendaftarannya'
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceRegisteredEntry'
+        not_registered:
+          description: 'Daftar kontingen yang belum mendaftar sama sekali'
+          type: array
+          items:
+            $ref: '#/components/schemas/ContingentObject'
       type: object
     TeamInMatch:
       description: 'Tim yang bertanding dalam satu pertandingan'

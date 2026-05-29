@@ -115,10 +115,13 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: "RegistrationObject",
-    description: "Pendaftaran tim kontingen untuk satu cabang olahraga",
+    description: "Pendaftaran tim kontingen untuk satu cabang olahraga. Alur status: draft → submitted → verified/rejected.",
     properties: [
         new OA\Property(property: "id",              type: "integer", example: 1),
-        new OA\Property(property: "status",          type: "string",  enum: ["pending", "verified", "rejected"], example: "pending"),
+        new OA\Property(property: "status",          type: "string",
+            enum: ["draft", "submitted", "verified", "rejected"],
+            example: "draft",
+            description: "draft: PIC masih menyusun tim; submitted: sudah diajukan ke panitia; verified: disetujui; rejected: ditolak"),
         new OA\Property(property: "contingent",      ref: "#/components/schemas/ContingentObject"),
         new OA\Property(property: "sport",           ref: "#/components/schemas/SportObject"),
         new OA\Property(property: "sport_category",  nullable: true, ref: "#/components/schemas/SportCategoryObject"),
@@ -129,6 +132,55 @@ use OpenApi\Attributes as OA;
             items: new OA\Items(ref: "#/components/schemas/PlayerObject")),
         new OA\Property(property: "created_at",      type: "string",  format: "date-time"),
         new OA\Property(property: "updated_at",      type: "string",  format: "date-time"),
+    ]
+)]
+#[OA\Schema(
+    schema: "ComplianceRegisteredEntry",
+    description: "Satu kontingen yang sudah mendaftar dalam konteks compliance check",
+    properties: [
+        new OA\Property(property: "registration_id", type: "integer", example: 7),
+        new OA\Property(property: "status",          type: "string",
+            enum: ["draft", "submitted", "verified", "rejected"],
+            example: "submitted"),
+        new OA\Property(property: "contingent",      ref: "#/components/schemas/ContingentObject"),
+    ]
+)]
+#[OA\Schema(
+    schema: "ComplianceRow",
+    description: "Baris kepatuhan pendaftaran untuk satu kombinasi sport/sub-kategori",
+    properties: [
+        new OA\Property(property: "sport",
+            type: "object",
+            description: "Cabang olahraga (hanya id, name, icon_path)",
+            properties: [
+                new OA\Property(property: "id",        type: "integer", example: 1),
+                new OA\Property(property: "name",      type: "string",  example: "Badminton"),
+                new OA\Property(property: "icon_path", type: "string",  nullable: true),
+            ]
+        ),
+        new OA\Property(property: "sport_category",
+            type: "object",
+            nullable: true,
+            description: "Sub-kategori (null jika sport tidak memiliki kategori)",
+            properties: [
+                new OA\Property(property: "id",   type: "integer", example: 2),
+                new OA\Property(property: "name", type: "string",  example: "Putra"),
+            ]
+        ),
+        new OA\Property(property: "total_contingents",     type: "integer", example: 10,
+            description: "Total seluruh kontingen yang terdaftar di sistem"),
+        new OA\Property(property: "registered_count",      type: "integer", example: 7,
+            description: "Jumlah kontingen yang sudah membuat pendaftaran (status apapun)"),
+        new OA\Property(property: "not_registered_count",  type: "integer", example: 3,
+            description: "Jumlah kontingen yang belum mendaftar sama sekali"),
+        new OA\Property(property: "compliance_rate",       type: "number", format: "float", example: 70.0,
+            description: "Persentase kontingen yang sudah mendaftar"),
+        new OA\Property(property: "registered",            type: "array",
+            description: "Daftar kontingen yang sudah mendaftar beserta status pendaftarannya",
+            items: new OA\Items(ref: "#/components/schemas/ComplianceRegisteredEntry")),
+        new OA\Property(property: "not_registered",        type: "array",
+            description: "Daftar kontingen yang belum mendaftar sama sekali",
+            items: new OA\Items(ref: "#/components/schemas/ContingentObject")),
     ]
 )]
 #[OA\Schema(

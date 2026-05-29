@@ -8,6 +8,7 @@ use App\Models\Registration;
 use App\Models\Player;
 use App\Models\Sport;
 use App\Models\SportCategory;
+use App\Models\Contingent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,8 +18,8 @@ class RegistrationController extends Controller
         path: "/api/registrations",
         operationId: "createRegistration",
         tags: ["Registrations"],
-        summary: "PIC mendaftarkan tim ke cabang olahraga",
-        description: "PIC kontingen mendaftarkan timnya ke satu cabang olahraga (dan sub-kategori jika ada). Satu kontingen hanya boleh mendaftar satu kali per sport+kategori. Jumlah pemain dibatasi oleh `max_members`.",
+        summary: "PIC mendaftarkan tim ke cabang olahraga (tahap draft)",
+        description: "PIC kontingen mendaftarkan timnya ke satu cabang olahraga. Pendaftaran dibuat dengan status `draft` — PIC masih bisa menambah/mengeluarkan pemain. Setelah siap, PIC harus memanggil endpoint submit untuk mengajukan ke panitia.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
@@ -34,11 +35,11 @@ class RegistrationController extends Controller
     )]
     #[OA\Response(
         response: 201,
-        description: "Tim berhasil didaftarkan",
+        description: "Draft tim berhasil dibuat",
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "status",  type: "string", example: "success"),
-                new OA\Property(property: "message", type: "string", example: "Tim berhasil didaftarkan."),
+                new OA\Property(property: "message", type: "string", example: "Draft tim berhasil dibuat."),
                 new OA\Property(property: "data",    ref: "#/components/schemas/RegistrationObject"),
             ]
         )
@@ -96,7 +97,7 @@ class RegistrationController extends Controller
                 'contingent_id'     => $contingent->id,
                 'sport_id'          => $sport->id,
                 'sport_category_id' => $validated['sport_category_id'] ?? null,
-                'status'            => 'pending',
+                'status'            => 'draft',
             ]);
 
             if (!empty($playerIds)) {
@@ -107,8 +108,8 @@ class RegistrationController extends Controller
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Tim berhasil didaftarkan.',
-                'data'    => $registration->load(['contingent', 'sport', 'sportCategory', 'players']),
+                'message' => 'Draft tim berhasil dibuat.',
+                'data'    => $this->formatRegistration($registration->load(['contingent', 'sport', 'sportCategory', 'players'])),
             ], 201);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -117,11 +118,56 @@ class RegistrationController extends Controller
     }
 
     #[OA\Post(
+        path: "/api/registrations/{id}/submit",
+        operationId: "submitRegistration",
+        tags: ["Registrations"],
+        summary: "PIC mengajukan pendaftaran tim ke panitia",
+        description: "PIC mengubah status pendaftaran dari `draft` menjadi `submitted`. Setelah disubmit, daftar pemain tidak dapat diubah lagi dan pendaftaran menunggu verifikasi panitia.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"), description: "ID registrasi")]
+    #[OA\Response(
+        response: 200,
+        description: "Pendaftaran berhasil diajukan",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Pendaftaran tim berhasil diajukan ke panitia."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/RegistrationObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 422, description: "Pendaftaran tidak dalam status draft", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 403, description: "Bukan milik kontingen Anda", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function submit(Request $request, $id)
+    {
+        $user         = $request->user();
+        $contingent   = $user->managedContingent;
+        $registration = Registration::with(['contingent', 'sport', 'sportCategory', 'players'])->findOrFail($id);
+
+        if (!$contingent || $registration->contingent_id !== $contingent->id) {
+            return response()->json(['status' => 'error', 'message' => 'Anda tidak memiliki akses ke pendaftaran ini.'], 403);
+        }
+
+        if ($registration->status !== 'draft') {
+            return response()->json(['status' => 'error', 'message' => 'Hanya pendaftaran berstatus draft yang dapat diajukan.'], 422);
+        }
+
+        $registration->update(['status' => 'submitted']);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Pendaftaran tim berhasil diajukan ke panitia.',
+            'data'    => $this->formatRegistration($registration->fresh(['contingent', 'sport', 'sportCategory', 'players'])),
+        ]);
+    }
+
+    #[OA\Post(
         path: "/api/registrations/{id}/players",
         operationId: "addPlayersToRegistration",
         tags: ["Registrations"],
         summary: "PIC menambahkan pemain ke tim",
-        description: "PIC menambahkan satu atau lebih player ke pendaftaran tim. Validasi: player harus dari kontingen yang sama, tidak boleh melebihi `max_members`, dan status pendaftaran harus masih `pending`.",
+        description: "PIC menambahkan satu atau lebih player ke pendaftaran tim. Validasi: player harus dari kontingen yang sama, tidak boleh melebihi `max_members`, dan status pendaftaran harus masih `draft`.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"), description: "ID registrasi")]
@@ -145,7 +191,7 @@ class RegistrationController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 422, description: "Kapasitas tim penuh atau player bukan dari kontingen ini", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 422, description: "Kapasitas tim penuh, player bukan dari kontingen ini, atau pendaftaran sudah disubmit", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function addPlayers(Request $request, $id)
     {
         $user         = $request->user();
@@ -156,8 +202,8 @@ class RegistrationController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Anda tidak memiliki akses ke pendaftaran ini.'], 403);
         }
 
-        if ($registration->status !== 'pending') {
-            return response()->json(['status' => 'error', 'message' => 'Tim yang sudah diverifikasi tidak dapat diubah.'], 422);
+        if ($registration->status !== 'draft') {
+            return response()->json(['status' => 'error', 'message' => 'Pemain hanya dapat diubah saat pendaftaran masih berstatus draft.'], 422);
         }
 
         $validated = $request->validate([
@@ -182,7 +228,7 @@ class RegistrationController extends Controller
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Pemain berhasil ditambahkan ke tim.',
-                'data'    => $registration->fresh(['contingent', 'sport', 'sportCategory', 'players']),
+                'data'    => $this->formatRegistration($registration->fresh(['contingent', 'sport', 'sportCategory', 'players'])),
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -195,7 +241,7 @@ class RegistrationController extends Controller
         operationId: "removePlayerFromRegistration",
         tags: ["Registrations"],
         summary: "PIC mengeluarkan pemain dari tim",
-        description: "PIC mengeluarkan satu player dari pendaftaran tim yang masih berstatus pending.",
+        description: "PIC mengeluarkan satu player dari pendaftaran tim yang masih berstatus draft.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"), description: "ID registrasi")]
@@ -222,8 +268,8 @@ class RegistrationController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Anda tidak memiliki akses ke pendaftaran ini.'], 403);
         }
 
-        if ($registration->status !== 'pending') {
-            return response()->json(['status' => 'error', 'message' => 'Tim yang sudah diverifikasi tidak dapat diubah.'], 422);
+        if ($registration->status !== 'draft') {
+            return response()->json(['status' => 'error', 'message' => 'Pemain hanya dapat diubah saat pendaftaran masih berstatus draft.'], 422);
         }
 
         $detached = $registration->players()->detach($playerId);
@@ -235,7 +281,7 @@ class RegistrationController extends Controller
         return response()->json([
             'status'  => 'success',
             'message' => 'Pemain berhasil dikeluarkan dari tim.',
-            'data'    => $registration->fresh(['contingent', 'sport', 'sportCategory', 'players']),
+            'data'    => $this->formatRegistration($registration->fresh(['contingent', 'sport', 'sportCategory', 'players'])),
         ]);
     }
 
@@ -284,7 +330,7 @@ class RegistrationController extends Controller
     )]
     #[OA\Parameter(name: "sport_id", in: "query", required: false, schema: new OA\Schema(type: "integer"))]
     #[OA\Parameter(name: "contingent_id", in: "query", required: false, schema: new OA\Schema(type: "integer"))]
-    #[OA\Parameter(name: "status", in: "query", required: false, schema: new OA\Schema(type: "string", enum: ["pending", "verified", "rejected"]))]
+    #[OA\Parameter(name: "status", in: "query", required: false, schema: new OA\Schema(type: "string", enum: ["draft", "submitted", "verified", "rejected"]))]
     #[OA\Response(
         response: 200,
         description: "Berhasil (paginated)",
@@ -350,7 +396,7 @@ class RegistrationController extends Controller
         operationId: "verifyRegistration",
         tags: ["Registrations"],
         summary: "Panitia menyetujui atau menolak pendaftaran tim",
-        description: "Panitia/admin mengubah status pendaftaran tim menjadi `verified` (disetujui) atau `rejected` (ditolak). Hanya tim yang `verified` yang akan diikutsertakan dalam generate bagan.",
+        description: "Panitia/admin mengubah status pendaftaran tim dari `submitted` menjadi `verified` (disetujui) atau `rejected` (ditolak). Hanya tim yang sudah disubmit oleh PIC yang dapat diverifikasi.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
@@ -374,9 +420,14 @@ class RegistrationController extends Controller
             ]
         )
     )]
+    #[OA\Response(response: 422, description: "Pendaftaran belum disubmit oleh PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function verify(Request $request, $id)
     {
         $registration = Registration::findOrFail($id);
+
+        if ($registration->status !== 'submitted') {
+            return response()->json(['status' => 'error', 'message' => 'Hanya pendaftaran yang sudah disubmit oleh PIC yang dapat diverifikasi.'], 422);
+        }
 
         $validated = $request->validate([
             'status' => 'required|in:verified,rejected',
@@ -387,13 +438,113 @@ class RegistrationController extends Controller
         return response()->json([
             'status'  => 'success',
             'message' => 'Status pendaftaran berhasil diperbarui.',
-            'data'    => $registration->fresh(['contingent', 'sport', 'sportCategory', 'players']),
+            'data'    => $this->formatRegistration($registration->fresh(['contingent', 'sport', 'sportCategory', 'players'])),
         ]);
+    }
+
+    #[OA\Get(
+        path: "/api/registrations/compliance",
+        operationId: "registrationCompliance",
+        tags: ["Registrations"],
+        summary: "Panitia melihat kepatuhan pendaftaran tiap kontingen",
+        description: "Mengembalikan daftar tiap cabang olahraga (dan sub-kategorinya) beserta kontingen yang sudah dan belum mendaftar. Satu kontingen wajib mengirim satu tim ke setiap sport/sub-kategori yang tersedia.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "sport_id", in: "query", required: false, schema: new OA\Schema(type: "integer"), description: "Filter ke satu cabang olahraga tertentu")]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "data",   type: "array",
+                    items: new OA\Items(ref: "#/components/schemas/ComplianceRow")),
+            ]
+        )
+    )]
+    public function compliance(Request $request)
+    {
+        $allContingents = Contingent::orderBy('name')->get();
+        $totalContingents = $allContingents->count();
+
+        $sportsQuery = Sport::with('categories')->orderBy('name');
+        if ($request->filled('sport_id')) {
+            $sportsQuery->where('id', $request->sport_id);
+        }
+        $sports = $sportsQuery->get();
+
+        // Ambil semua registrasi sekaligus untuk menghindari N+1
+        $allRegistrations = Registration::with('contingent')
+            ->when($request->filled('sport_id'), fn ($q) => $q->where('sport_id', $request->sport_id))
+            ->get()
+            ->groupBy(fn ($r) => $r->sport_id . '_' . ($r->sport_category_id ?? 'null'));
+
+        $result = [];
+
+        foreach ($sports as $sport) {
+            // Sport tanpa sub-kategori → satu slot wajib per kontingen
+            if ($sport->categories->isEmpty()) {
+                $key           = $sport->id . '_null';
+                $registrations = $allRegistrations->get($key, collect());
+
+                $result[] = $this->buildComplianceRow(
+                    $sport, null, $allContingents, $registrations, $totalContingents
+                );
+            } else {
+                // Sport dengan sub-kategori → satu slot wajib per kategori per kontingen
+                foreach ($sport->categories as $category) {
+                    $key           = $sport->id . '_' . $category->id;
+                    $registrations = $allRegistrations->get($key, collect());
+
+                    $result[] = $this->buildComplianceRow(
+                        $sport, $category, $allContingents, $registrations, $totalContingents
+                    );
+                }
+            }
+        }
+
+        return response()->json(['status' => 'success', 'data' => $result]);
     }
 
     // ──────────────────────────────────────────────────────────────
     //  Helpers
     // ──────────────────────────────────────────────────────────────
+
+    private function buildComplianceRow(
+        Sport $sport,
+        ?SportCategory $category,
+        $allContingents,
+        $registrations,
+        int $totalContingents
+    ): array {
+        $registeredContingentIds = $registrations->pluck('contingent_id')->toArray();
+
+        $registered = $registrations->map(fn ($r) => [
+            'registration_id' => $r->id,
+            'status'          => $r->status,
+            'contingent'      => $r->contingent,
+        ])->values();
+
+        $notRegistered = $allContingents
+            ->whereNotIn('id', $registeredContingentIds)
+            ->values();
+
+        $registeredCount = $registered->count();
+        $complianceRate  = $totalContingents > 0
+            ? round($registeredCount / $totalContingents * 100, 1)
+            : 0;
+
+        return [
+            'sport'                => $sport->only(['id', 'name', 'icon_path']),
+            'sport_category'       => $category ? $category->only(['id', 'name']) : null,
+            'total_contingents'    => $totalContingents,
+            'registered_count'     => $registeredCount,
+            'not_registered_count' => $totalContingents - $registeredCount,
+            'compliance_rate'      => $complianceRate,
+            'registered'           => $registered,
+            'not_registered'       => $notRegistered,
+        ];
+    }
 
     private function attachPlayers(Registration $registration, array $playerIds, int $contingentId): void
     {
