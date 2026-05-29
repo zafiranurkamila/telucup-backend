@@ -10,6 +10,7 @@ use App\Models\User;
 use Cloudinary\Cloudinary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class ContingentController extends Controller
 {
@@ -395,6 +396,89 @@ class ContingentController extends Controller
             'total'      => $players->count(),
             'data'       => $players,
         ]);
+    }
+
+    #[OA\Post(
+        path: "/api/contingents/my/players/register",
+        operationId: "registerPlayerToContingent",
+        tags: ["Contingents"],
+        summary: "PIC membuat akun player baru dan langsung masuk ke kontingennya",
+        description: "PIC kontingen membuat akun User + Player baru sekaligus langsung menambahkan player tersebut ke kontingennya. Berbeda dengan `POST /api/contingents/my/players` yang hanya menambahkan player yang sudah ada.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["name", "email", "password"],
+            properties: [
+                new OA\Property(property: "name",     type: "string",  maxLength: 255, example: "Ahmad Fauzi"),
+                new OA\Property(property: "email",    type: "string",  format: "email", example: "ahmad@telkomuniversity.ac.id"),
+                new OA\Property(property: "password", type: "string",  format: "password", minLength: 8, example: "rahasia123"),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: "Akun player berhasil dibuat dan ditambahkan ke kontingen",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Akun Ahmad Fauzi berhasil dibuat dan ditambahkan ke kontingen Fakultas Informatika."),
+                new OA\Property(property: "data",    type: "object",
+                    properties: [
+                        new OA\Property(property: "player", ref: "#/components/schemas/PlayerObject"),
+                        new OA\Property(property: "user",   ref: "#/components/schemas/UserObject"),
+                    ]
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(response: 403, description: "Belum ditugaskan sebagai PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 422, description: "Email sudah digunakan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 500, description: "Server error", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function registerPlayer(Request $request)
+    {
+        $contingent = $request->user()->managedContingent;
+
+        if (!$contingent) {
+            return response()->json(['status' => 'error', 'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|email|unique:users,email',
+            'password' => 'required|string|min:8',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name'     => $validated['name'],
+                'email'    => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'role'     => 'player',
+            ]);
+
+            $player = Player::create([
+                'user_id'       => $user->id,
+                'name'          => $validated['name'],
+                'contingent_id' => $contingent->id,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "Akun {$validated['name']} berhasil dibuat dan ditambahkan ke kontingen {$contingent->name}.",
+                'data'    => [
+                    'player' => $player->load(['user:id,name,email,role,is_kacamata', 'contingent:id,name']),
+                    'user'   => $user->only(['id', 'name', 'email', 'role', 'is_kacamata', 'created_at']),
+                ],
+            ], 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => 'Gagal membuat akun player: ' . $e->getMessage()], 500);
+        }
     }
 
     #[OA\Post(

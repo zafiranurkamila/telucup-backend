@@ -33,6 +33,11 @@ Route::get('/sports/{id}', [SportController::class, 'show'])->name('sports.show'
 Route::get('/contingents', [ContingentController::class, 'index'])->name('contingents.index');
 Route::get('/contingents/{id}', [ContingentController::class, 'show'])->whereNumber('id')->name('contingents.show');
 
+// ====================================================================
+// PLAYERS — Publik (baca)
+// ====================================================================
+Route::get('/players/{id}', [PlayerController::class, 'show'])->whereNumber('id')->name('players.show');
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -129,6 +134,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['role:pic_kontingen'])->group(function () {
         Route::get('/contingents/my', [ContingentController::class, 'myContingent'])->name('contingents.my');
         Route::get('/contingents/my/players', [ContingentController::class, 'myPlayers'])->name('contingents.my.players.index');
+        Route::post('/contingents/my/players/register', [ContingentController::class, 'registerPlayer'])->name('contingents.my.players.register');
         Route::post('/contingents/my/image', [ContingentController::class, 'uploadMyImage'])->name('contingents.my.image.upload');
         Route::delete('/contingents/my/image', [ContingentController::class, 'deleteMyImage'])->name('contingents.my.image.delete');
         Route::post('/contingents/my/players', [ContingentController::class, 'addPlayer'])->name('contingents.my.players.add');

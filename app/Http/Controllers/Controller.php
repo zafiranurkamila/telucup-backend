@@ -222,6 +222,8 @@ use OpenApi\Attributes as OA;
                 new OA\Property(property: "contingent", ref: "#/components/schemas/ContingentObject"),
             ]
         ),
+        new OA\Property(property: "is_third_place_match", type: "boolean", example: false,
+            description: "true jika ini adalah pertandingan perebutan juara 3"),
         new OA\Property(property: "next_match_id",   type: "integer", nullable: true, example: 15),
         new OA\Property(property: "next_match_slot", type: "string",  nullable: true, enum: ["a", "b"]),
     ]
@@ -287,13 +289,57 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
-    schema: "BracketRound",
+    schema: "BracketRoundItem",
     description: "Satu ronde dalam bagan pertandingan",
     properties: [
         new OA\Property(property: "round",   type: "integer", example: 1),
         new OA\Property(property: "name",    type: "string",  example: "Perempat Final"),
         new OA\Property(property: "matches", type: "array",
             items: new OA\Items(ref: "#/components/schemas/MatchObject")),
+    ]
+)]
+#[OA\Schema(
+    schema: "BracketResults",
+    description: "Hasil akhir turnamen: juara 1, 2, dan 3",
+    properties: [
+        new OA\Property(property: "juara1", nullable: true,
+            description: "Pemenang Final (Juara 1)",
+            properties: [
+                new OA\Property(property: "registration_id", type: "integer", example: 3),
+                new OA\Property(property: "contingent", ref: "#/components/schemas/ContingentObject"),
+            ], type: "object"
+        ),
+        new OA\Property(property: "juara2", nullable: true,
+            description: "Runner-up / kalah di Final (Juara 2)",
+            properties: [
+                new OA\Property(property: "registration_id", type: "integer", example: 7),
+                new OA\Property(property: "contingent", ref: "#/components/schemas/ContingentObject"),
+            ], type: "object"
+        ),
+        new OA\Property(property: "juara3", nullable: true,
+            description: "Pemenang pertandingan perebutan Juara 3",
+            properties: [
+                new OA\Property(property: "registration_id", type: "integer", example: 5),
+                new OA\Property(property: "contingent", ref: "#/components/schemas/ContingentObject"),
+            ], type: "object"
+        ),
+    ]
+)]
+#[OA\Schema(
+    schema: "BracketRound",
+    description: "Tampilan lengkap bagan pertandingan, termasuk semua ronde, pertandingan perebutan juara 3, dan hasil akhir turnamen",
+    properties: [
+        new OA\Property(property: "sport",             type: "object", nullable: true),
+        new OA\Property(property: "sport_category",    type: "object", nullable: true),
+        new OA\Property(property: "total_rounds",      type: "integer", example: 3),
+        new OA\Property(property: "rounds",            type: "array",
+            description: "Ronde-ronde utama bagan (tidak termasuk pertandingan juara 3)",
+            items: new OA\Items(ref: "#/components/schemas/BracketRoundItem")),
+        new OA\Property(property: "third_place_match", nullable: true,
+            ref: "#/components/schemas/MatchObject",
+            description: "Pertandingan perebutan Juara 3 (loser Semifinal). null jika belum ada (kurang dari 4 tim)."),
+        new OA\Property(property: "results",           ref: "#/components/schemas/BracketResults",
+            description: "Hasil akhir: Juara 1, 2, dan 3. Diisi bertahap seiring pertandingan selesai."),
     ]
 )]
 #[OA\Schema(

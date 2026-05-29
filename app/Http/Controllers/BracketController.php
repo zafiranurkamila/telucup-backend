@@ -380,6 +380,17 @@ class BracketController extends Controller
                 $nextGame->update([$slotColumn => $winnerId]);
             }
 
+            // Auto-advance kalah ke pertandingan perebutan juara 3
+            $loserId = ($winnerId === $game->registration_a_id)
+                ? $game->registration_b_id
+                : $game->registration_a_id;
+
+            if ($game->loser_next_match_id && $game->loser_next_match_slot && $loserId) {
+                $thirdPlaceGame = Game::findOrFail($game->loser_next_match_id);
+                $loserSlot = 'registration_' . $game->loser_next_match_slot . '_id';
+                $thirdPlaceGame->update([$loserSlot => $loserId]);
+            }
+
             DB::commit();
 
             return response()->json([
@@ -1014,6 +1025,37 @@ class BracketController extends Controller
 
             $prevRoundGames = $currentRoundGames;
         }
+
+        // Buat pertandingan perebutan juara 3 jika ada ronde semifinal (totalRounds >= 2)
+        if ($totalRounds >= 2) {
+            $semiRound = $totalRounds - 1;
+
+            $thirdPlace = Game::create([
+                'sport_id'             => $sportId,
+                'sport_category_id'    => $categoryId,
+                'round'                => $totalRounds,
+                'round_name'           => 'Perebutan Juara 3',
+                'match_number'         => 2,
+                'is_third_place_match' => true,
+                'status'               => 'scheduled',
+                'score_a'              => 0,
+                'score_b'              => 0,
+            ]);
+
+            // Link dua pertandingan semifinal ke pertandingan juara 3 (untuk propagasi loser)
+            $semiFinals = Game::where('sport_id', $sportId)
+                ->where('sport_category_id', $categoryId)
+                ->where('round', $semiRound)
+                ->orderBy('match_number')
+                ->get();
+
+            foreach ($semiFinals->take(2) as $index => $sf) {
+                $sf->update([
+                    'loser_next_match_id'   => $thirdPlace->id,
+                    'loser_next_match_slot' => $index === 0 ? 'a' : 'b',
+                ]);
+            }
+        }
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1055,7 +1097,11 @@ class BracketController extends Controller
         ->orderBy('match_number')
         ->get();
 
-        $rounds = $games->groupBy('round')->map(function ($matches, $round) {
+        // Pisahkan pertandingan perebutan juara 3 dari bagan utama
+        $thirdPlaceGame = $games->firstWhere('is_third_place_match', true);
+        $mainGames      = $games->where('is_third_place_match', false);
+
+        $rounds = $mainGames->groupBy('round')->map(function ($matches, $round) {
             return [
                 'round'   => (int) $round,
                 'name'    => $matches->first()->round_name,
@@ -1063,12 +1109,52 @@ class BracketController extends Controller
             ];
         })->values();
 
+        // Final adalah pertandingan bagan utama di ronde tertinggi
+        $finalGame = $mainGames->sortByDesc('round')->first();
+
         return [
-            'sport'          => $sport,
-            'sport_category' => $category,
-            'total_rounds'   => $rounds->count(),
-            'rounds'         => $rounds,
+            'sport'             => $sport,
+            'sport_category'    => $category,
+            'total_rounds'      => $rounds->count(),
+            'rounds'            => $rounds,
+            'third_place_match' => $thirdPlaceGame ? $this->formatMatch($thirdPlaceGame) : null,
+            'results'           => $this->computeResults($finalGame, $thirdPlaceGame),
         ];
+    }
+
+    private function computeResults(?Game $finalGame, ?Game $thirdPlaceGame): array
+    {
+        $juara1 = null;
+        $juara2 = null;
+        $juara3 = null;
+
+        if ($finalGame && $finalGame->winner_registration_id) {
+            $juara1 = [
+                'registration_id' => $finalGame->winner_registration_id,
+                'contingent'      => optional($finalGame->winner)->contingent,
+            ];
+
+            // Loser Final = Juara 2
+            if ($finalGame->registration_a_id && $finalGame->registration_b_id) {
+                $isAWinner  = $finalGame->winner_registration_id === $finalGame->registration_a_id;
+                $loserRegId = $isAWinner ? $finalGame->registration_b_id : $finalGame->registration_a_id;
+                $loserReg   = $isAWinner ? $finalGame->registrationB : $finalGame->registrationA;
+
+                $juara2 = [
+                    'registration_id' => $loserRegId,
+                    'contingent'      => optional($loserReg)->contingent,
+                ];
+            }
+        }
+
+        if ($thirdPlaceGame && $thirdPlaceGame->winner_registration_id) {
+            $juara3 = [
+                'registration_id' => $thirdPlaceGame->winner_registration_id,
+                'contingent'      => optional($thirdPlaceGame->winner)->contingent,
+            ];
+        }
+
+        return compact('juara1', 'juara2', 'juara3');
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1078,11 +1164,12 @@ class BracketController extends Controller
     private function formatMatch(Game $game): array
     {
         return [
-            'id'           => $game->id,
-            'round'        => $game->round,
-            'round_name'   => $game->round_name,
-            'match_number' => $game->match_number,
-            'status'       => $game->status,
+            'id'                   => $game->id,
+            'round'                => $game->round,
+            'round_name'           => $game->round_name,
+            'match_number'         => $game->match_number,
+            'is_third_place_match' => (bool) $game->is_third_place_match,
+            'status'               => $game->status,
 
             // Jadwal & venue
             'match_date'   => $game->match_date?->format('Y-m-d'),

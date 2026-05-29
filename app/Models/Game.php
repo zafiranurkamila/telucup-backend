@@ -13,6 +13,8 @@ class Game extends Model
         'registration_a_id', 'registration_b_id',
         'winner_registration_id',
         'next_match_id', 'next_match_slot',
+        'loser_next_match_id', 'loser_next_match_slot',
+        'is_third_place_match',
         'score_a', 'score_b',
         'status', 'round', 'round_name', 'match_number',
         'match_date', 'match_time', 'location',
@@ -20,8 +22,9 @@ class Game extends Model
     ];
 
     protected $casts = [
-        'stats'      => 'array',
-        'match_date' => 'date',
+        'stats'               => 'array',
+        'match_date'          => 'date',
+        'is_third_place_match'=> 'boolean',
     ];
 
     public function sport(): BelongsTo
@@ -52,6 +55,11 @@ class Game extends Model
     public function nextMatch(): BelongsTo
     {
         return $this->belongsTo(Game::class, 'next_match_id');
+    }
+
+    public function loserNextMatch(): BelongsTo
+    {
+        return $this->belongsTo(Game::class, 'loser_next_match_id');
     }
 
     public function playerCheckins(): HasMany

@@ -61,6 +61,37 @@ class PlayerController extends Controller
     }
 
     #[OA\Get(
+        path: "/api/players/{id}",
+        operationId: "showPlayer",
+        tags: ["Players"],
+        summary: "Detail data player",
+        description: "Mengembalikan data lengkap satu player beserta informasi akun, cabang olahraga, sub-kategori, dan kontingen. Dapat diakses oleh siapa saja tanpa autentikasi."
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"), description: "ID player")]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "data",   ref: "#/components/schemas/PlayerObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Player tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function show($id)
+    {
+        $player = Player::with([
+            'user:id,name,email,role,is_kacamata',
+            'sport:id,name',
+            'sportCategory:id,name',
+            'contingent:id,name',
+        ])->findOrFail($id);
+
+        return response()->json(['status' => 'success', 'data' => $player]);
+    }
+
+    #[OA\Get(
         path: "/api/players",
         operationId: "listPlayers",
         tags: ["Players"],

@@ -1319,6 +1319,79 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/contingents/my/players/register:
+    post:
+      tags:
+        - Contingents
+      summary: 'PIC membuat akun player baru dan langsung masuk ke kontingennya'
+      description: 'PIC kontingen membuat akun User + Player baru sekaligus langsung menambahkan player tersebut ke kontingennya. Berbeda dengan `POST /api/contingents/my/players` yang hanya menambahkan player yang sudah ada.'
+      operationId: registerPlayerToContingent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  example: 'Ahmad Fauzi'
+                  maxLength: 255
+                email:
+                  type: string
+                  format: email
+                  example: ahmad@telkomuniversity.ac.id
+                password:
+                  type: string
+                  format: password
+                  example: rahasia123
+                  minLength: 8
+              type: object
+      responses:
+        201:
+          description: 'Akun player berhasil dibuat dan ditambahkan ke kontingen'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Akun Ahmad Fauzi berhasil dibuat dan ditambahkan ke kontingen Fakultas Informatika.'
+                  data:
+                    properties:
+                      player:
+                        $ref: '#/components/schemas/PlayerObject'
+                      user:
+                        $ref: '#/components/schemas/UserObject'
+                    type: object
+                type: object
+        403:
+          description: 'Belum ditugaskan sebagai PIC'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Email sudah digunakan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: 'Server error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
   '/api/contingents/{id}/image':
     post:
       tags:
@@ -1906,6 +1979,40 @@ paths:
                           example: 17
                       type: object
                 type: object
+  '/api/players/{id}':
+    get:
+      tags:
+        - Players
+      summary: 'Detail data player'
+      description: 'Mengembalikan data lengkap satu player beserta informasi akun, cabang olahraga, sub-kategori, dan kontingen. Dapat diakses oleh siapa saja tanpa autentikasi.'
+      operationId: showPlayer
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID player'
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/PlayerObject'
+                type: object
+        404:
+          description: 'Player tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/players:
     get:
       tags:
@@ -3829,6 +3936,10 @@ components:
               $ref: '#/components/schemas/ContingentObject'
           type: object
           nullable: true
+        is_third_place_match:
+          description: 'true jika ini adalah pertandingan perebutan juara 3'
+          type: boolean
+          example: false
         next_match_id:
           type: integer
           example: 15
@@ -3956,7 +4067,7 @@ components:
                 - a
                 - b
           type: object
-    BracketRound:
+    BracketRoundItem:
       description: 'Satu ronde dalam bagan pertandingan'
       properties:
         round:
@@ -3969,6 +4080,66 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MatchObject'
+      type: object
+    BracketResults:
+      description: 'Hasil akhir turnamen: juara 1, 2, dan 3'
+      properties:
+        juara1:
+          description: 'Pemenang Final (Juara 1)'
+          properties:
+            registration_id:
+              type: integer
+              example: 3
+            contingent:
+              $ref: '#/components/schemas/ContingentObject'
+          type: object
+          nullable: true
+        juara2:
+          description: 'Runner-up / kalah di Final (Juara 2)'
+          properties:
+            registration_id:
+              type: integer
+              example: 7
+            contingent:
+              $ref: '#/components/schemas/ContingentObject'
+          type: object
+          nullable: true
+        juara3:
+          description: 'Pemenang pertandingan perebutan Juara 3'
+          properties:
+            registration_id:
+              type: integer
+              example: 5
+            contingent:
+              $ref: '#/components/schemas/ContingentObject'
+          type: object
+          nullable: true
+      type: object
+    BracketRound:
+      description: 'Tampilan lengkap bagan pertandingan, termasuk semua ronde, pertandingan perebutan juara 3, dan hasil akhir turnamen'
+      properties:
+        sport:
+          type: object
+          nullable: true
+        sport_category:
+          type: object
+          nullable: true
+        total_rounds:
+          type: integer
+          example: 3
+        rounds:
+          description: 'Ronde-ronde utama bagan (tidak termasuk pertandingan juara 3)'
+          type: array
+          items:
+            $ref: '#/components/schemas/BracketRoundItem'
+        third_place_match:
+          oneOf:
+            -
+              $ref: '#/components/schemas/MatchObject'
+          nullable: true
+          description: 'Pertandingan perebutan Juara 3 (loser Semifinal). null jika belum ada (kurang dari 4 tim).'
+        results:
+          $ref: '#/components/schemas/BracketResults'
       type: object
     PaginationMeta:
       description: 'Metadata paginasi Laravel'
