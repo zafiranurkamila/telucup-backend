@@ -95,7 +95,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: "pic",                  nullable: true,
             ref: "#/components/schemas/UserObject"),
         new OA\Property(property: "players_count",        type: "integer", example: 12,
-            description: "Hanya tersedia pada endpoint list"),
+            description: "Jumlah total player yang tergabung dalam kontingen ini"),
         new OA\Property(property: "created_at",           type: "string",  format: "date-time"),
     ]
 )]

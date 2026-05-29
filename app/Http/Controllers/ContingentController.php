@@ -340,8 +340,10 @@ class ContingentController extends Controller
         }
 
         $contingent->load([
+            'pic:id,name,email',
             'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path,verification_status',
         ]);
+        $contingent->loadCount('players');
 
         return response()->json(['status' => 'success', 'data' => $contingent]);
     }

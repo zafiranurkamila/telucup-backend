@@ -3681,7 +3681,7 @@ components:
               $ref: '#/components/schemas/UserObject'
           nullable: true
         players_count:
-          description: 'Hanya tersedia pada endpoint list'
+          description: 'Jumlah total player yang tergabung dalam kontingen ini'
           type: integer
           example: 12
         created_at:
