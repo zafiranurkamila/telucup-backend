@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Contingent extends Model
 {
-    protected $fillable = ['name', 'pic_user_id'];
+    protected $fillable = ['name', 'pic_user_id', 'cloudinary_public_id', 'image_url'];
 
     public function pic(): BelongsTo
     {

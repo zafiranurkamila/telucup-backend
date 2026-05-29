@@ -10,10 +10,79 @@ use App\Models\Registration;
 use App\Models\Sport;
 use App\Models\SportCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class BracketController extends Controller
 {
+    // ──────────────────────────────────────────────────────────────
+    //  JADWAL HARI INI (PIC KONTINGEN)
+    // ──────────────────────────────────────────────────────────────
+
+    #[OA\Get(
+        path: "/api/my-matches/today",
+        operationId: "myTodayMatches",
+        tags: ["Bracket"],
+        summary: "Pertandingan kontingen saya hari ini",
+        description: "PIC kontingen melihat semua pertandingan kontingennya yang dijadwalkan pada hari ini, diurutkan berdasarkan waktu mulai. Hanya pertandingan dengan `match_date` = hari ini yang dikembalikan. Pertandingan berstatus `bye` dikecualikan.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Daftar pertandingan hari ini berhasil diambil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(property: "date",   type: "string", format: "date", example: "2026-05-29"),
+                new OA\Property(property: "total",  type: "integer", example: 2),
+                new OA\Property(property: "data",   type: "array",
+                    items: new OA\Items(ref: "#/components/schemas/TodayMatchItem")),
+            ]
+        )
+    )]
+    #[OA\Response(response: 403, description: "Belum ditugaskan sebagai PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function myTodayMatches(Request $request)
+    {
+        $contingent = $request->user()->managedContingent;
+
+        if (!$contingent) {
+            return response()->json(['status' => 'error', 'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.'], 403);
+        }
+
+        $registrationIds = Registration::where('contingent_id', $contingent->id)->pluck('id');
+
+        $today   = Carbon::today()->toDateString();
+        $matches = Game::with([
+            'sport',
+            'sportCategory',
+            'registrationA.contingent',
+            'registrationA.players',
+            'registrationB.contingent',
+            'registrationB.players',
+            'winner.contingent',
+        ])
+            ->whereDate('match_date', $today)
+            ->where('status', '!=', 'bye')
+            ->where(function ($q) use ($registrationIds) {
+                $q->whereIn('registration_a_id', $registrationIds)
+                  ->orWhereIn('registration_b_id', $registrationIds);
+            })
+            ->orderBy('match_time')
+            ->get();
+
+        $data = $matches->map(function (Game $game) use ($registrationIds) {
+            $mySlot = $registrationIds->contains($game->registration_a_id) ? 'a' : 'b';
+            return array_merge($this->formatMatch($game), ['my_slot' => $mySlot]);
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'date'   => $today,
+            'total'  => $data->count(),
+            'data'   => $data,
+        ]);
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  GENERATE
     // ──────────────────────────────────────────────────────────────

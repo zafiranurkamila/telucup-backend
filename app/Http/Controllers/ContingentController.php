@@ -7,6 +7,7 @@ use OpenApi\Attributes as OA;
 use App\Models\Contingent;
 use App\Models\Player;
 use App\Models\User;
+use Cloudinary\Cloudinary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -344,6 +345,58 @@ class ContingentController extends Controller
         return response()->json(['status' => 'success', 'data' => $contingent]);
     }
 
+    #[OA\Get(
+        path: "/api/contingents/my/players",
+        operationId: "myContingentPlayers",
+        tags: ["Contingents"],
+        summary: "PIC melihat semua player di kontingennya",
+        description: "Mengembalikan seluruh data player yang terdaftar di kontingen PIC yang sedang login, lengkap dengan informasi akun, cabang olahraga, sub-kategori, dan status.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",      type: "string",  example: "success"),
+                new OA\Property(property: "contingent",  type: "object",
+                    properties: [
+                        new OA\Property(property: "id",   type: "integer", example: 1),
+                        new OA\Property(property: "name", type: "string",  example: "Fakultas Informatika"),
+                    ]
+                ),
+                new OA\Property(property: "total",       type: "integer", example: 12),
+                new OA\Property(property: "data",        type: "array",
+                    items: new OA\Items(ref: "#/components/schemas/PlayerObject")),
+            ]
+        )
+    )]
+    #[OA\Response(response: 403, description: "Belum ditugaskan sebagai PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function myPlayers(Request $request)
+    {
+        $contingent = $request->user()->managedContingent;
+
+        if (!$contingent) {
+            return response()->json(['status' => 'error', 'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.'], 403);
+        }
+
+        $players = \App\Models\Player::with([
+            'user:id,name,email,role,is_kacamata',
+            'sport:id,name',
+            'sportCategory:id,name',
+        ])
+            ->where('contingent_id', $contingent->id)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'status'     => 'success',
+            'contingent' => $contingent->only(['id', 'name']),
+            'total'      => $players->count(),
+            'data'       => $players,
+        ]);
+    }
+
     #[OA\Post(
         path: "/api/contingents/my/players",
         operationId: "addPlayerToContingent",
@@ -400,6 +453,228 @@ class ContingentController extends Controller
             'message' => "{$player->name} berhasil ditambahkan ke kontingen {$contingent->name}.",
             'data'    => $player->fresh(['contingent']),
         ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  UPLOAD / HAPUS GAMBAR KONTINGEN (Panitia — by ID)
+    // ──────────────────────────────────────────────────────────────
+
+    #[OA\Post(
+        path: "/api/contingents/{id}/image",
+        operationId: "uploadContingentImage",
+        tags: ["Contingents"],
+        summary: "Upload atau ganti gambar kontingen",
+        description: "Panitia mengunggah gambar representasi kontingen. Gambar diunggah ke Cloudinary. Jika sudah ada gambar sebelumnya, gambar lama dihapus otomatis dari Cloudinary.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\MediaType(
+            mediaType: "multipart/form-data",
+            schema: new OA\Schema(
+                required: ["image"],
+                properties: [
+                    new OA\Property(property: "image", type: "string", format: "binary",
+                        description: "File gambar. Format: jpeg/png/jpg. Maksimal 2MB."),
+                ]
+            )
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Gambar berhasil diunggah",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Gambar kontingen berhasil diunggah."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/ContingentObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 422, description: "Validasi gagal", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 500, description: "Gagal upload ke Cloudinary", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function uploadImage(Request $request, $id)
+    {
+        $contingent = Contingent::findOrFail($id);
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        try {
+            $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
+
+            if ($contingent->cloudinary_public_id) {
+                $cloudinary->uploadApi()->destroy($contingent->cloudinary_public_id);
+            }
+
+            $result = $cloudinary->uploadApi()->upload($request->file('image')->getRealPath(), [
+                'folder' => 'telucup/contingents',
+            ]);
+
+            $contingent->update([
+                'cloudinary_public_id' => $result['public_id'],
+                'image_url'            => $result['secure_url'],
+            ]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Gambar kontingen berhasil diunggah.',
+                'data'    => $contingent->fresh()->load('pic:id,name,email'),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'error', 'message' => 'Gagal mengunggah gambar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[OA\Delete(
+        path: "/api/contingents/{id}/image",
+        operationId: "deleteContingentImage",
+        tags: ["Contingents"],
+        summary: "Hapus gambar kontingen",
+        description: "Panitia menghapus gambar kontingen. Gambar dihapus dari Cloudinary dan kolom image_url dikosongkan.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Gambar berhasil dihapus", content: new OA\JsonContent(ref: "#/components/schemas/SuccessMessage"))]
+    #[OA\Response(response: 404, description: "Kontingen tidak punya gambar", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 500, description: "Gagal hapus dari Cloudinary", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function deleteImage($id)
+    {
+        $contingent = Contingent::findOrFail($id);
+
+        if (!$contingent->cloudinary_public_id) {
+            return response()->json(['status' => 'error', 'message' => 'Kontingen ini belum memiliki gambar.'], 404);
+        }
+
+        try {
+            $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
+            $cloudinary->uploadApi()->destroy($contingent->cloudinary_public_id);
+
+            $contingent->update([
+                'cloudinary_public_id' => null,
+                'image_url'            => null,
+            ]);
+
+            return response()->json(['status' => 'success', 'message' => 'Gambar kontingen berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'error', 'message' => 'Gagal menghapus gambar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  UPLOAD / HAPUS GAMBAR KONTINGEN (PIC — kontingen sendiri)
+    // ──────────────────────────────────────────────────────────────
+
+    #[OA\Post(
+        path: "/api/contingents/my/image",
+        operationId: "uploadMyContingentImage",
+        tags: ["Contingents"],
+        summary: "PIC upload atau ganti gambar kontingennya",
+        description: "PIC kontingen mengunggah gambar representasi kontingennya sendiri. Gambar diunggah ke Cloudinary. Jika sudah ada gambar sebelumnya, gambar lama dihapus otomatis.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\MediaType(
+            mediaType: "multipart/form-data",
+            schema: new OA\Schema(
+                required: ["image"],
+                properties: [
+                    new OA\Property(property: "image", type: "string", format: "binary",
+                        description: "File gambar. Format: jpeg/png/jpg. Maksimal 2MB."),
+                ]
+            )
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Gambar berhasil diunggah",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Gambar kontingen berhasil diunggah."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/ContingentObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 403, description: "Belum ditugaskan sebagai PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 500, description: "Gagal upload ke Cloudinary", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function uploadMyImage(Request $request)
+    {
+        $contingent = $request->user()->managedContingent;
+
+        if (!$contingent) {
+            return response()->json(['status' => 'error', 'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.'], 403);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        try {
+            $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
+
+            if ($contingent->cloudinary_public_id) {
+                $cloudinary->uploadApi()->destroy($contingent->cloudinary_public_id);
+            }
+
+            $result = $cloudinary->uploadApi()->upload($request->file('image')->getRealPath(), [
+                'folder' => 'telucup/contingents',
+            ]);
+
+            $contingent->update([
+                'cloudinary_public_id' => $result['public_id'],
+                'image_url'            => $result['secure_url'],
+            ]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Gambar kontingen berhasil diunggah.',
+                'data'    => $contingent->fresh()->load('pic:id,name,email'),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'error', 'message' => 'Gagal mengunggah gambar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[OA\Delete(
+        path: "/api/contingents/my/image",
+        operationId: "deleteMyContingentImage",
+        tags: ["Contingents"],
+        summary: "PIC hapus gambar kontingennya",
+        description: "PIC kontingen menghapus gambar kontingennya sendiri. Gambar dihapus dari Cloudinary dan kolom dikosongkan.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Response(response: 200, description: "Gambar berhasil dihapus", content: new OA\JsonContent(ref: "#/components/schemas/SuccessMessage"))]
+    #[OA\Response(response: 403, description: "Belum ditugaskan sebagai PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 404, description: "Kontingen belum memiliki gambar", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function deleteMyImage(Request $request)
+    {
+        $contingent = $request->user()->managedContingent;
+
+        if (!$contingent) {
+            return response()->json(['status' => 'error', 'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.'], 403);
+        }
+
+        if (!$contingent->cloudinary_public_id) {
+            return response()->json(['status' => 'error', 'message' => 'Kontingen ini belum memiliki gambar.'], 404);
+        }
+
+        try {
+            $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
+            $cloudinary->uploadApi()->destroy($contingent->cloudinary_public_id);
+
+            $contingent->update([
+                'cloudinary_public_id' => null,
+                'image_url'            => null,
+            ]);
+
+            return response()->json(['status' => 'success', 'message' => 'Gambar kontingen berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'error', 'message' => 'Gagal menghapus gambar: ' . $e->getMessage()], 500);
+        }
     }
 
     #[OA\Delete(

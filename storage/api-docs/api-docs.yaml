@@ -220,6 +220,44 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/my-matches/today:
+    get:
+      tags:
+        - Bracket
+      summary: 'Pertandingan kontingen saya hari ini'
+      description: 'PIC kontingen melihat semua pertandingan kontingennya yang dijadwalkan pada hari ini, diurutkan berdasarkan waktu mulai. Hanya pertandingan dengan `match_date` = hari ini yang dikembalikan. Pertandingan berstatus `bye` dikecualikan.'
+      operationId: myTodayMatches
+      responses:
+        200:
+          description: 'Daftar pertandingan hari ini berhasil diambil'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  date:
+                    type: string
+                    format: date
+                    example: '2026-05-29'
+                  total:
+                    type: integer
+                    example: 2
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TodayMatchItem'
+                type: object
+        403:
+          description: 'Belum ditugaskan sebagai PIC'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
   /api/bracket/generate:
     post:
       tags:
@@ -1190,6 +1228,48 @@ paths:
         -
           bearerAuth: []
   /api/contingents/my/players:
+    get:
+      tags:
+        - Contingents
+      summary: 'PIC melihat semua player di kontingennya'
+      description: 'Mengembalikan seluruh data player yang terdaftar di kontingen PIC yang sedang login, lengkap dengan informasi akun, cabang olahraga, sub-kategori, dan status.'
+      operationId: myContingentPlayers
+      responses:
+        200:
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  contingent:
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: 'Fakultas Informatika'
+                    type: object
+                  total:
+                    type: integer
+                    example: 12
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlayerObject'
+                type: object
+        403:
+          description: 'Belum ditugaskan sebagai PIC'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
     post:
       tags:
         - Contingents
@@ -1232,6 +1312,178 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         403:
           description: 'Belum ditugaskan sebagai PIC'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+  '/api/contingents/{id}/image':
+    post:
+      tags:
+        - Contingents
+      summary: 'Upload atau ganti gambar kontingen'
+      description: 'Panitia mengunggah gambar representasi kontingen. Gambar diunggah ke Cloudinary. Jika sudah ada gambar sebelumnya, gambar lama dihapus otomatis dari Cloudinary.'
+      operationId: uploadContingentImage
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - image
+              properties:
+                image:
+                  description: 'File gambar. Format: jpeg/png/jpg. Maksimal 2MB.'
+                  type: string
+                  format: binary
+              type: object
+      responses:
+        200:
+          description: 'Gambar berhasil diunggah'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Gambar kontingen berhasil diunggah.'
+                  data:
+                    $ref: '#/components/schemas/ContingentObject'
+                type: object
+        422:
+          description: 'Validasi gagal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: 'Gagal upload ke Cloudinary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+    delete:
+      tags:
+        - Contingents
+      summary: 'Hapus gambar kontingen'
+      description: 'Panitia menghapus gambar kontingen. Gambar dihapus dari Cloudinary dan kolom image_url dikosongkan.'
+      operationId: deleteContingentImage
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Gambar berhasil dihapus'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        404:
+          description: 'Kontingen tidak punya gambar'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: 'Gagal hapus dari Cloudinary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+  /api/contingents/my/image:
+    post:
+      tags:
+        - Contingents
+      summary: 'PIC upload atau ganti gambar kontingennya'
+      description: 'PIC kontingen mengunggah gambar representasi kontingennya sendiri. Gambar diunggah ke Cloudinary. Jika sudah ada gambar sebelumnya, gambar lama dihapus otomatis.'
+      operationId: uploadMyContingentImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - image
+              properties:
+                image:
+                  description: 'File gambar. Format: jpeg/png/jpg. Maksimal 2MB.'
+                  type: string
+                  format: binary
+              type: object
+      responses:
+        200:
+          description: 'Gambar berhasil diunggah'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Gambar kontingen berhasil diunggah.'
+                  data:
+                    $ref: '#/components/schemas/ContingentObject'
+                type: object
+        403:
+          description: 'Belum ditugaskan sebagai PIC'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: 'Gagal upload ke Cloudinary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+    delete:
+      tags:
+        - Contingents
+      summary: 'PIC hapus gambar kontingennya'
+      description: 'PIC kontingen menghapus gambar kontingennya sendiri. Gambar dihapus dari Cloudinary dan kolom dikosongkan.'
+      operationId: deleteMyContingentImage
+      responses:
+        200:
+          description: 'Gambar berhasil dihapus'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        403:
+          description: 'Belum ditugaskan sebagai PIC'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        404:
+          description: 'Kontingen belum memiliki gambar'
           content:
             application/json:
               schema:
@@ -3307,6 +3559,15 @@ components:
           type: integer
           example: 5
           nullable: true
+        cloudinary_public_id:
+          type: string
+          example: telucup/contingents/abc123
+          nullable: true
+        image_url:
+          description: 'URL gambar kontingen dari Cloudinary. null jika belum ada gambar.'
+          type: string
+          example: 'https://res.cloudinary.com/demo/image/upload/v1/telucup/contingents/abc123.jpg'
+          nullable: true
         pic:
           oneOf:
             -
@@ -3679,6 +3940,22 @@ components:
           example: '2026-06-15T08:30:00+07:00'
           nullable: true
       type: object
+    TodayMatchItem:
+      description: 'Pertandingan hari ini milik kontingen PIC. Identik dengan MatchObject ditambah field `my_slot`.'
+      type: object
+      allOf:
+        -
+          $ref: '#/components/schemas/MatchObject'
+        -
+          properties:
+            my_slot:
+              description: "Slot posisi kontingen PIC dalam pertandingan ini: 'a' atau 'b'"
+              type: string
+              example: a
+              enum:
+                - a
+                - b
+          type: object
     BracketRound:
       description: 'Satu ronde dalam bagan pertandingan'
       properties:

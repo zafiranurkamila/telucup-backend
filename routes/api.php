@@ -119,15 +119,27 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/contingents/{id}', [ContingentController::class, 'update'])->name('contingents.update');
         Route::delete('/contingents/{id}', [ContingentController::class, 'destroy'])->name('contingents.destroy');
         Route::put('/contingents/{id}/assign-pic', [ContingentController::class, 'assignPic'])->name('contingents.assign-pic');
+        Route::post('/contingents/{id}/image', [ContingentController::class, 'uploadImage'])->name('contingents.image.upload');
+        Route::delete('/contingents/{id}/image', [ContingentController::class, 'deleteImage'])->name('contingents.image.delete');
     });
 
     // ====================================================================
-    // CONTINGENTS — Kelola anggota (PIC kontingen)
+    // CONTINGENTS — Kelola anggota & gambar (PIC kontingen)
     // ====================================================================
     Route::middleware(['role:pic_kontingen'])->group(function () {
         Route::get('/contingents/my', [ContingentController::class, 'myContingent'])->name('contingents.my');
+        Route::get('/contingents/my/players', [ContingentController::class, 'myPlayers'])->name('contingents.my.players.index');
+        Route::post('/contingents/my/image', [ContingentController::class, 'uploadMyImage'])->name('contingents.my.image.upload');
+        Route::delete('/contingents/my/image', [ContingentController::class, 'deleteMyImage'])->name('contingents.my.image.delete');
         Route::post('/contingents/my/players', [ContingentController::class, 'addPlayer'])->name('contingents.my.players.add');
         Route::delete('/contingents/my/players/{player_id}', [ContingentController::class, 'removePlayer'])->name('contingents.my.players.remove');
+    });
+
+    // ====================================================================
+    // MATCHES — PIC melihat jadwal pertandingan kontingennya
+    // ====================================================================
+    Route::middleware(['role:pic_kontingen'])->group(function () {
+        Route::get('/my-matches/today', [BracketController::class, 'myTodayMatches'])->name('my-matches.today');
     });
 
     // ====================================================================

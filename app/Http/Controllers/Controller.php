@@ -84,14 +84,19 @@ use OpenApi\Attributes as OA;
     schema: "ContingentObject",
     description: "Kontingen yang mewakili satu fakultas atau divisi",
     properties: [
-        new OA\Property(property: "id",          type: "integer", example: 3),
-        new OA\Property(property: "name",        type: "string",  example: "Fakultas Informatika"),
-        new OA\Property(property: "pic_user_id", type: "integer", nullable: true, example: 5),
-        new OA\Property(property: "pic",         nullable: true,
+        new OA\Property(property: "id",                   type: "integer", example: 3),
+        new OA\Property(property: "name",                 type: "string",  example: "Fakultas Informatika"),
+        new OA\Property(property: "pic_user_id",          type: "integer", nullable: true, example: 5),
+        new OA\Property(property: "cloudinary_public_id", type: "string",  nullable: true,
+            example: "telucup/contingents/abc123"),
+        new OA\Property(property: "image_url",            type: "string",  nullable: true,
+            example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/contingents/abc123.jpg",
+            description: "URL gambar kontingen dari Cloudinary. null jika belum ada gambar."),
+        new OA\Property(property: "pic",                  nullable: true,
             ref: "#/components/schemas/UserObject"),
-        new OA\Property(property: "players_count", type: "integer", example: 12,
+        new OA\Property(property: "players_count",        type: "integer", example: 12,
             description: "Hanya tersedia pada endpoint list"),
-        new OA\Property(property: "created_at",  type: "string",  format: "date-time"),
+        new OA\Property(property: "created_at",           type: "string",  format: "date-time"),
     ]
 )]
 #[OA\Schema(
@@ -270,6 +275,15 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: "checked_in",      type: "boolean", example: true),
         new OA\Property(property: "checked_in_at",   type: "string",  format: "date-time", nullable: true,
             example: "2026-06-15T08:30:00+07:00"),
+    ]
+)]
+#[OA\Schema(
+    schema: "TodayMatchItem",
+    description: "Pertandingan hari ini milik kontingen PIC. Identik dengan MatchObject ditambah field `my_slot`.",
+    allOf: [new OA\Schema(ref: "#/components/schemas/MatchObject")],
+    properties: [
+        new OA\Property(property: "my_slot", type: "string", enum: ["a", "b"], example: "a",
+            description: "Slot posisi kontingen PIC dalam pertandingan ini: 'a' atau 'b'"),
     ]
 )]
 #[OA\Schema(
