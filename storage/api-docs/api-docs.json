@@ -4401,7 +4401,7 @@
                     "Self Assessment"
                 ],
                 "summary": "Submit jawaban self-assessment dan dapatkan klasifikasi risiko",
-                "description": "Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening.",
+                "description": "Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening. Field yang wajib divalidasi server: demo_age, demo_height_cm, demo_weight_kg, demo_activity_level, A1–A5, B1–B3. Selebihnya wajib secara logis untuk scoring lengkap.",
                 "operationId": "storeSelfAssessment",
                 "requestBody": {
                     "required": true,
@@ -4413,11 +4413,172 @@
                                 ],
                                 "properties": {
                                     "player_id": {
-                                        "description": "Optional ID player, jika diisi panitia atau jika user mensubmit untuk dirinya",
-                                        "type": "integer"
+                                        "description": "ID player (opsional). Kosongkan agar backend memakai player milik user yang login. Isi jika panitia submit atas nama player lain.",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
                                     },
                                     "answers": {
-                                        "description": "key adalah question code, value adalah jawaban",
+                                        "description": "Seluruh jawaban kuesioner dalam format { question_code: value }. Gunakan endpoint GET /api/self-assessment/questionnaire untuk mendapat daftar pertanyaan terbaru.",
+                                        "properties": {
+                                            "demo_age": {
+                                                "description": "[WAJIB] Usia (tahun)",
+                                                "type": "integer",
+                                                "maximum": 80,
+                                                "minimum": 10
+                                            },
+                                            "demo_height_cm": {
+                                                "description": "[WAJIB] Tinggi badan (cm)",
+                                                "type": "number",
+                                                "maximum": 230,
+                                                "minimum": 100
+                                            },
+                                            "demo_weight_kg": {
+                                                "description": "[WAJIB] Berat badan (kg)",
+                                                "type": "number",
+                                                "maximum": 200,
+                                                "minimum": 25
+                                            },
+                                            "demo_activity_level": {
+                                                "description": "[WAJIB] Frekuensi olahraga rutin saat ini",
+                                                "type": "string",
+                                                "enum": [
+                                                    "sedentary",
+                                                    "light",
+                                                    "moderate",
+                                                    "active"
+                                                ]
+                                            },
+                                            "A1_heart_condition_diagnosed": {
+                                                "description": "[WAJIB · RED FLAG] Pernah didiagnosis kondisi jantung + disarankan dokter hanya olahraga dengan rekomendasi medis",
+                                                "type": "boolean"
+                                            },
+                                            "A2_chest_pain_during_exercise": {
+                                                "description": "[WAJIB · RED FLAG] Nyeri dada saat olahraga dalam 12 bulan terakhir",
+                                                "type": "boolean"
+                                            },
+                                            "A3_unexplained_fainting": {
+                                                "description": "[WAJIB · RED FLAG] Pingsan / hampir pingsan tanpa sebab jelas (terutama saat/setelah aktivitas)",
+                                                "type": "boolean"
+                                            },
+                                            "A4_serious_medical_condition": {
+                                                "description": "[WAJIB · RED FLAG] Kondisi medis serius dalam pengobatan (asma berat, epilepsi, diabetes, hipertensi tidak terkontrol)",
+                                                "type": "boolean"
+                                            },
+                                            "A5_family_cardiac_death": {
+                                                "description": "[WAJIB · RED FLAG] Keluarga kandung meninggal mendadak karena jantung sebelum usia 50 tahun",
+                                                "type": "boolean"
+                                            },
+                                            "A6_breathing_palpitations": {
+                                                "description": "[WAJIB · YELLOW FLAG] Sesak napas berlebihan / jantung berdebar / pusing saat olahraga ringan–sedang",
+                                                "type": "boolean"
+                                            },
+                                            "A7_current_medication": {
+                                                "description": "[WAJIB] Obat-obatan rutin saat ini. Tulis 'tidak' jika tidak ada.",
+                                                "type": "string"
+                                            },
+                                            "A8_severe_allergy": {
+                                                "description": "[WAJIB · YELLOW FLAG] Riwayat alergi berat / anafilaksis",
+                                                "type": "boolean"
+                                            },
+                                            "B1_currently_recovering": {
+                                                "description": "[WAJIB · RED FLAG] Sedang dalam masa pemulihan cedera belum dinyatakan sembuh (patah tulang, robekan ligamen, ACL/meniscus)",
+                                                "type": "boolean"
+                                            },
+                                            "B2_current_pain_worsens": {
+                                                "description": "[WAJIB · RED FLAG] Nyeri tulang/sendi/otot saat ini yang memburuk dengan aktivitas",
+                                                "type": "boolean"
+                                            },
+                                            "B3_pain_score": {
+                                                "description": "[WAJIB] Intensitas nyeri saat ini (0=tidak ada, 10=sangat parah). ≥7 = red flag, 4–6 = yellow flag.",
+                                                "type": "integer",
+                                                "maximum": 10,
+                                                "minimum": 0
+                                            },
+                                            "B4_injury_count_12months": {
+                                                "description": "[WAJIB] Jumlah cedera olahraga dalam 12 bln yang menyebabkan absen >1 minggu. '3+' = yellow flag.",
+                                                "type": "string",
+                                                "enum": [
+                                                    "0",
+                                                    "1",
+                                                    "2",
+                                                    "3+"
+                                                ]
+                                            },
+                                            "B5_orthopedic_surgery": {
+                                                "description": "[WAJIB · YELLOW FLAG] Operasi orthopedic (sendi/tulang/ligamen/tendon) dalam 2 tahun terakhir",
+                                                "type": "boolean"
+                                            },
+                                            "B6_recurring_injury_area": {
+                                                "description": "[WAJIB] Bagian tubuh yang sering kambuh/tidak stabil. Tulis 'tidak' jika tidak ada.",
+                                                "type": "string"
+                                            },
+                                            "B7_injury_history_description": {
+                                                "description": "[OPSIONAL] Deskripsi singkat riwayat cedera paling signifikan. Tulis 'tidak ada' jika tidak pernah.",
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "C1_acute_symptoms": {
+                                                "description": "[WAJIB] Keluhan 7 hari terakhir (multi-pilih). Kirim ['none'] jika tidak ada keluhan. Nilai: fever_flu=demam/flu/batuk, diarrhea=diare/dehidrasi, new_injury=cedera baru, sleep_short=kurang tidur (<5 jam/malam).",
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "fever_flu",
+                                                        "diarrhea",
+                                                        "new_injury",
+                                                        "sleep_short",
+                                                        "none"
+                                                    ]
+                                                }
+                                            },
+                                            "C2_subjective_fitness": {
+                                                "description": "[WAJIB] Kondisi fisik saat ini vs kondisi normal (1=sangat buruk, 10=prima)",
+                                                "type": "integer",
+                                                "maximum": 10,
+                                                "minimum": 1
+                                            },
+                                            "C3_preparation_level": {
+                                                "description": "[WAJIB] Kesiapan latihan untuk cabang olahraga yang diikuti",
+                                                "type": "string",
+                                                "enum": [
+                                                    "well_prepared",
+                                                    "sporadic",
+                                                    "general_fitness",
+                                                    "not_prepared"
+                                                ]
+                                            },
+                                            "D1_stress_level": {
+                                                "description": "[WAJIB] Frekuensi stres berat akibat akademik/personal dalam 1 bulan terakhir (1=tidak pernah, 5=sangat sering)",
+                                                "type": "integer",
+                                                "maximum": 5,
+                                                "minimum": 1
+                                            },
+                                            "D2_sleep_hours": {
+                                                "description": "[WAJIB] Rata-rata jam tidur per malam dalam 2 minggu terakhir. '<5' = yellow flag.",
+                                                "type": "string",
+                                                "enum": [
+                                                    "<5",
+                                                    "5-6",
+                                                    "7-8",
+                                                    ">8"
+                                                ]
+                                            },
+                                            "D3_smoking_alcohol": {
+                                                "description": "[WAJIB] Kebiasaan merokok/konsumsi alkohol (none=tidak keduanya, social=jarang, regular=rutin)",
+                                                "type": "string",
+                                                "enum": [
+                                                    "none",
+                                                    "social",
+                                                    "regular"
+                                                ]
+                                            },
+                                            "D4_additional_notes": {
+                                                "description": "[OPSIONAL] Informasi kesehatan/fisik tambahan untuk panitia",
+                                                "type": "string",
+                                                "nullable": true
+                                            }
+                                        },
                                         "type": "object",
                                         "example": {
                                             "demo_age": 21,
@@ -4429,9 +4590,25 @@
                                             "A3_unexplained_fainting": false,
                                             "A4_serious_medical_condition": false,
                                             "A5_family_cardiac_death": false,
+                                            "A6_breathing_palpitations": false,
+                                            "A7_current_medication": "tidak",
+                                            "A8_severe_allergy": false,
                                             "B1_currently_recovering": false,
                                             "B2_current_pain_worsens": false,
-                                            "B3_pain_score": 2
+                                            "B3_pain_score": 2,
+                                            "B4_injury_count_12months": "0",
+                                            "B5_orthopedic_surgery": false,
+                                            "B6_recurring_injury_area": "tidak",
+                                            "B7_injury_history_description": "tidak ada",
+                                            "C1_acute_symptoms": [
+                                                "none"
+                                            ],
+                                            "C2_subjective_fitness": 8,
+                                            "C3_preparation_level": "well_prepared",
+                                            "D1_stress_level": 2,
+                                            "D2_sleep_hours": "7-8",
+                                            "D3_smoking_alcohol": "none",
+                                            "D4_additional_notes": null
                                         }
                                     }
                                 },

@@ -157,33 +157,95 @@ class SelfAssessmentController extends Controller
         summary: "Submit jawaban self-assessment dan dapatkan klasifikasi risiko",
         security: [["bearerAuth" => []]],
         tags: ["Self Assessment"],
-        description: "Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening."
+        description: "Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening. Field yang wajib divalidasi server: demo_age, demo_height_cm, demo_weight_kg, demo_activity_level, A1–A5, B1–B3. Selebihnya wajib secara logis untuk scoring lengkap."
     )]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
             required: ["answers"],
             properties: [
-                new OA\Property(property: "player_id", type: "integer", description: "Optional ID player, jika diisi panitia atau jika user mensubmit untuk dirinya"),
+                new OA\Property(
+                    property: "player_id",
+                    type: "integer",
+                    nullable: true,
+                    description: "ID player (opsional). Kosongkan agar backend memakai player milik user yang login. Isi jika panitia submit atas nama player lain.",
+                    example: null
+                ),
                 new OA\Property(
                     property: "answers",
                     type: "object",
-                    description: "key adalah question code, value adalah jawaban",
+                    description: "Seluruh jawaban kuesioner dalam format { question_code: value }. Gunakan endpoint GET /api/self-assessment/questionnaire untuk mendapat daftar pertanyaan terbaru.",
+                    properties: [
+                        // ── DEMO: Data Diri ──────────────────────────────────────────
+                        new OA\Property(property: "demo_age",           type: "integer", minimum: 10, maximum: 80,  description: "[WAJIB] Usia (tahun)"),
+                        new OA\Property(property: "demo_height_cm",     type: "number",  minimum: 100, maximum: 230, description: "[WAJIB] Tinggi badan (cm)"),
+                        new OA\Property(property: "demo_weight_kg",     type: "number",  minimum: 25,  maximum: 200, description: "[WAJIB] Berat badan (kg)"),
+                        new OA\Property(property: "demo_activity_level",type: "string",  enum: ["sedentary", "light", "moderate", "active"], description: "[WAJIB] Frekuensi olahraga rutin saat ini"),
+
+                        // ── Bagian A: Kardiovaskular & Kondisi Medis ─────────────────
+                        new OA\Property(property: "A1_heart_condition_diagnosed",   type: "boolean", description: "[WAJIB · RED FLAG] Pernah didiagnosis kondisi jantung + disarankan dokter hanya olahraga dengan rekomendasi medis"),
+                        new OA\Property(property: "A2_chest_pain_during_exercise",  type: "boolean", description: "[WAJIB · RED FLAG] Nyeri dada saat olahraga dalam 12 bulan terakhir"),
+                        new OA\Property(property: "A3_unexplained_fainting",        type: "boolean", description: "[WAJIB · RED FLAG] Pingsan / hampir pingsan tanpa sebab jelas (terutama saat/setelah aktivitas)"),
+                        new OA\Property(property: "A4_serious_medical_condition",   type: "boolean", description: "[WAJIB · RED FLAG] Kondisi medis serius dalam pengobatan (asma berat, epilepsi, diabetes, hipertensi tidak terkontrol)"),
+                        new OA\Property(property: "A5_family_cardiac_death",        type: "boolean", description: "[WAJIB · RED FLAG] Keluarga kandung meninggal mendadak karena jantung sebelum usia 50 tahun"),
+                        new OA\Property(property: "A6_breathing_palpitations",      type: "boolean", description: "[WAJIB · YELLOW FLAG] Sesak napas berlebihan / jantung berdebar / pusing saat olahraga ringan–sedang"),
+                        new OA\Property(property: "A7_current_medication",          type: "string",  description: "[WAJIB] Obat-obatan rutin saat ini. Tulis 'tidak' jika tidak ada."),
+                        new OA\Property(property: "A8_severe_allergy",              type: "boolean", description: "[WAJIB · YELLOW FLAG] Riwayat alergi berat / anafilaksis"),
+
+                        // ── Bagian B: Riwayat Cedera & Muskuloskeletal ───────────────
+                        new OA\Property(property: "B1_currently_recovering",     type: "boolean", description: "[WAJIB · RED FLAG] Sedang dalam masa pemulihan cedera belum dinyatakan sembuh (patah tulang, robekan ligamen, ACL/meniscus)"),
+                        new OA\Property(property: "B2_current_pain_worsens",     type: "boolean", description: "[WAJIB · RED FLAG] Nyeri tulang/sendi/otot saat ini yang memburuk dengan aktivitas"),
+                        new OA\Property(property: "B3_pain_score",               type: "integer", minimum: 0, maximum: 10, description: "[WAJIB] Intensitas nyeri saat ini (0=tidak ada, 10=sangat parah). ≥7 = red flag, 4–6 = yellow flag."),
+                        new OA\Property(property: "B4_injury_count_12months",    type: "string",  enum: ["0", "1", "2", "3+"], description: "[WAJIB] Jumlah cedera olahraga dalam 12 bln yang menyebabkan absen >1 minggu. '3+' = yellow flag."),
+                        new OA\Property(property: "B5_orthopedic_surgery",       type: "boolean", description: "[WAJIB · YELLOW FLAG] Operasi orthopedic (sendi/tulang/ligamen/tendon) dalam 2 tahun terakhir"),
+                        new OA\Property(property: "B6_recurring_injury_area",    type: "string",  description: "[WAJIB] Bagian tubuh yang sering kambuh/tidak stabil. Tulis 'tidak' jika tidak ada."),
+                        new OA\Property(property: "B7_injury_history_description", type: "string", nullable: true, description: "[OPSIONAL] Deskripsi singkat riwayat cedera paling signifikan. Tulis 'tidak ada' jika tidak pernah."),
+
+                        // ── Bagian C: Kondisi Saat Ini (7 hari terakhir) ────────────
+                        new OA\Property(
+                            property: "C1_acute_symptoms",
+                            type: "array",
+                            items: new OA\Items(type: "string", enum: ["fever_flu", "diarrhea", "new_injury", "sleep_short", "none"]),
+                            description: "[WAJIB] Keluhan 7 hari terakhir (multi-pilih). Kirim ['none'] jika tidak ada keluhan. Nilai: fever_flu=demam/flu/batuk, diarrhea=diare/dehidrasi, new_injury=cedera baru, sleep_short=kurang tidur (<5 jam/malam)."
+                        ),
+                        new OA\Property(property: "C2_subjective_fitness",   type: "integer", minimum: 1, maximum: 10, description: "[WAJIB] Kondisi fisik saat ini vs kondisi normal (1=sangat buruk, 10=prima)"),
+                        new OA\Property(property: "C3_preparation_level",    type: "string",  enum: ["well_prepared", "sporadic", "general_fitness", "not_prepared"], description: "[WAJIB] Kesiapan latihan untuk cabang olahraga yang diikuti"),
+
+                        // ── Bagian D: Psikososial & Lifestyle ───────────────────────
+                        new OA\Property(property: "D1_stress_level",      type: "integer", minimum: 1, maximum: 5, description: "[WAJIB] Frekuensi stres berat akibat akademik/personal dalam 1 bulan terakhir (1=tidak pernah, 5=sangat sering)"),
+                        new OA\Property(property: "D2_sleep_hours",       type: "string",  enum: ["<5", "5-6", "7-8", ">8"], description: "[WAJIB] Rata-rata jam tidur per malam dalam 2 minggu terakhir. '<5' = yellow flag."),
+                        new OA\Property(property: "D3_smoking_alcohol",   type: "string",  enum: ["none", "social", "regular"], description: "[WAJIB] Kebiasaan merokok/konsumsi alkohol (none=tidak keduanya, social=jarang, regular=rutin)"),
+                        new OA\Property(property: "D4_additional_notes",  type: "string",  nullable: true, description: "[OPSIONAL] Informasi kesehatan/fisik tambahan untuk panitia"),
+                    ],
                     example: [
-                        "demo_age" => 21,
-                        "demo_height_cm" => 170,
-                        "demo_weight_kg" => 65,
-                        "demo_activity_level" => "moderate",
-                        "A1_heart_condition_diagnosed" => false,
+                        "demo_age"                      => 21,
+                        "demo_height_cm"                => 170,
+                        "demo_weight_kg"                => 65,
+                        "demo_activity_level"           => "moderate",
+                        "A1_heart_condition_diagnosed"  => false,
                         "A2_chest_pain_during_exercise" => false,
-                        "A3_unexplained_fainting" => false,
-                        "A4_serious_medical_condition" => false,
-                        "A5_family_cardiac_death" => false,
-                        "B1_currently_recovering" => false,
-                        "B2_current_pain_worsens" => false,
-                        "B3_pain_score" => 2
+                        "A3_unexplained_fainting"       => false,
+                        "A4_serious_medical_condition"  => false,
+                        "A5_family_cardiac_death"       => false,
+                        "A6_breathing_palpitations"     => false,
+                        "A7_current_medication"         => "tidak",
+                        "A8_severe_allergy"             => false,
+                        "B1_currently_recovering"       => false,
+                        "B2_current_pain_worsens"       => false,
+                        "B3_pain_score"                 => 2,
+                        "B4_injury_count_12months"      => "0",
+                        "B5_orthopedic_surgery"         => false,
+                        "B6_recurring_injury_area"      => "tidak",
+                        "B7_injury_history_description" => "tidak ada",
+                        "C1_acute_symptoms"             => ["none"],
+                        "C2_subjective_fitness"         => 8,
+                        "C3_preparation_level"          => "well_prepared",
+                        "D1_stress_level"               => 2,
+                        "D2_sleep_hours"                => "7-8",
+                        "D3_smoking_alcohol"            => "none",
+                        "D4_additional_notes"           => null,
                     ]
-                )
+                ),
             ]
         )
     )]
