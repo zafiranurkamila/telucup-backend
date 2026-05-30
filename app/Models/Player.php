@@ -10,24 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Player extends Model
 {
     protected $fillable = [
-        'user_id', 'name', 'nim_nip', 'sport_id', 'sport_category_id',
-        'contingent_id', 'checked_in_at',
+        'user_id', 'name', 'nim_nip',
+        'contingent_id', 'risk_lvl',
         'photo_path', 'employee_status', 'work_location'
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function sport(): BelongsTo
-    {
-        return $this->belongsTo(Sport::class);
-    }
-
-    public function sportCategory(): BelongsTo
-    {
-        return $this->belongsTo(SportCategory::class);
     }
 
     public function contingent(): BelongsTo

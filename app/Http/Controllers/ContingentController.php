@@ -72,7 +72,7 @@ class ContingentController extends Controller
     {
         $contingent = Contingent::with([
             'pic:id,name,email',
-            'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path',
+            'players:id,contingent_id,name,nim_nip,photo_path,risk_lvl',
         ])->findOrFail($id);
 
         return response()->json(['status' => 'success', 'data' => $contingent]);
@@ -83,7 +83,7 @@ class ContingentController extends Controller
         operationId: "listPicKontingen",
         tags: ["Contingents"],
         summary: "Daftar semua PIC kontingen",
-        description: "Mengembalikan semua user dengan role pic_kontingen beserta data kontingen yang mereka kelola. Hanya dapat diakses oleh admin dan panitia.",
+        description: "Mengembalikan semua user dengan role `pic_kontingen` beserta kontingen yang mereka kelola dan level risiko kesehatan mereka. Hanya dapat diakses oleh panitia.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Response(
@@ -96,11 +96,23 @@ class ContingentController extends Controller
                     property: "data",
                     type: "array",
                     items: new OA\Items(
+                        type: "object",
                         properties: [
                             new OA\Property(property: "id",    type: "integer", example: 3),
                             new OA\Property(property: "name",  type: "string",  example: "Budi Santoso"),
-                            new OA\Property(property: "email", type: "string",  example: "budi@telkomuniversity.ac.id"),
-                            new OA\Property(property: "managed_contingent", type: "object", nullable: true,
+                            new OA\Property(property: "email", type: "string",  format: "email", example: "budi@telkomuniversity.ac.id"),
+                            new OA\Property(
+                                property: "risk_lvl",
+                                type: "string",
+                                enum: ["low", "medium", "high", "not_yet"],
+                                example: "low",
+                                description: "Level risiko kesehatan PIC berdasarkan self-assessment terakhirnya. Bernilai 'not_yet' jika PIC belum pernah mengisi self-assessment."
+                            ),
+                            new OA\Property(
+                                property: "managed_contingent",
+                                type: "object",
+                                nullable: true,
+                                description: "Kontingen yang dikelola PIC ini. null jika belum ditugaskan ke kontingen manapun.",
                                 properties: [
                                     new OA\Property(property: "id",   type: "integer", example: 1),
                                     new OA\Property(property: "name", type: "string",  example: "Fakultas Informatika"),
@@ -112,11 +124,23 @@ class ContingentController extends Controller
             ]
         )
     )]
+    #[OA\Response(response: 401, description: "Unauthenticated — token tidak disertakan atau tidak valid", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 403, description: "Forbidden — hanya role panitia yang dapat mengakses", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function picList()
     {
         $pics = User::where('role', 'pic_kontingen')
-            ->with('managedContingent:id,name,pic_user_id')
-            ->get(['id', 'name', 'email', 'role']);
+            ->with([
+                'managedContingent:id,name,pic_user_id',
+                'player:id,user_id,risk_lvl',
+            ])
+            ->get(['id', 'name', 'email', 'role'])
+            ->map(fn($u) => [
+                'id'                => $u->id,
+                'name'              => $u->name,
+                'email'             => $u->email,
+                'risk_lvl'          => $u->player?->risk_lvl ?? 'not_yet',
+                'managed_contingent'=> $u->managedContingent?->only(['id', 'name']),
+            ]);
 
         return response()->json(['status' => 'success', 'data' => $pics]);
     }
@@ -343,7 +367,7 @@ class ContingentController extends Controller
 
         $contingent->load([
             'pic:id,name,email',
-            'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path',
+            'players:id,contingent_id,name,nim_nip,photo_path,risk_lvl',
         ]);
         $contingent->loadCount('players');
 
@@ -387,8 +411,6 @@ class ContingentController extends Controller
 
         $players = \App\Models\Player::with([
             'user:id,name,email,role,is_kacamata',
-            'sport:id,name',
-            'sportCategory:id,name',
         ])
             ->where('contingent_id', $contingent->id)
             ->orderBy('name')

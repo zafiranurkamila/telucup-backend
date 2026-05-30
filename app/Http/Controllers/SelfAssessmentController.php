@@ -157,7 +157,7 @@ class SelfAssessmentController extends Controller
         summary: "Submit jawaban self-assessment dan dapatkan klasifikasi risiko",
         security: [["bearerAuth" => []]],
         tags: ["Self Assessment"],
-        description: "Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening. Field yang wajib divalidasi server: demo_age, demo_height_cm, demo_weight_kg, demo_activity_level, A1–A5, B1–B3. Selebihnya wajib secara logis untuk scoring lengkap."
+        description: "Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening. Field yang wajib divalidasi server: demo_age, demo_height_cm, demo_weight_kg, demo_activity_level, A1–A5, B1–B3. Selebihnya wajib secara logis untuk scoring lengkap. **Side-effect:** setelah assessment berhasil disimpan, field `risk_lvl` pada data player yang bersangkutan akan diperbarui secara otomatis sesuai hasil klasifikasi."
     )]
     #[OA\RequestBody(
         required: true,
@@ -292,6 +292,8 @@ class SelfAssessmentController extends Controller
             $payload = $this->scoringService->score($answers, $user, $player);
             $payload['player_id'] = $player->id;
             $assessment = SelfAssessment::create($payload);
+
+            $player->update(['risk_lvl' => $assessment->risk_label]);
 
             DB::commit();
 
@@ -687,19 +689,17 @@ class SelfAssessmentController extends Controller
             ->pluck('id');
 
         $summary = DB::table('self_assessments')
-            ->join('players', 'players.id', '=', 'self_assessments.player_id')
-            ->leftJoin('sports', 'sports.id', '=', 'players.sport_id')
             ->whereIn('self_assessments.id', $latestIds)
             ->select(
-                'sports.name as sport_branch',
+                'sport_branch_snapshot as sport_branch',
                 DB::raw("COUNT(CASE WHEN risk_label = 'high' THEN 1 END) as high_risk_count"),
                 DB::raw("COUNT(CASE WHEN risk_label = 'medium' THEN 1 END) as medium_risk_count"),
                 DB::raw("COUNT(CASE WHEN risk_label = 'low' THEN 1 END) as low_risk_count"),
                 DB::raw("COUNT(CASE WHEN is_kacamata_snapshot = true THEN 1 END) as kacamata_count"),
                 DB::raw('COUNT(*) as total_assessed')
             )
-            ->groupBy('sports.id', 'sports.name')
-            ->orderBy('sports.name')
+            ->groupBy('sport_branch_snapshot')
+            ->orderBy('sport_branch_snapshot')
             ->get();
 
         return response()->json([

@@ -83,8 +83,6 @@ class PlayerController extends Controller
     {
         $player = Player::with([
             'user:id,name,email,role,is_kacamata',
-            'sport:id,name',
-            'sportCategory:id,name',
             'contingent:id,name',
         ])->findOrFail($id);
 
@@ -96,7 +94,7 @@ class PlayerController extends Controller
         operationId: "listPlayers",
         tags: ["Players"],
         summary: "Daftar semua player",
-        description: "Mengembalikan semua player beserta data user, cabang olahraga, kategori, dan kontingen. Hanya dapat diakses oleh admin dan panitia.",
+        description: "Mengembalikan semua player beserta data user dan kontingen. Hanya dapat diakses oleh admin dan panitia.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Response(
@@ -117,8 +115,6 @@ class PlayerController extends Controller
     {
         $players = Player::with([
             'user:id,name,email,role,is_kacamata',
-            'sport:id,name',
-            'sportCategory:id,name',
             'contingent:id,name',
         ])->get();
 
@@ -210,20 +206,16 @@ class PlayerController extends Controller
         operationId: "updateProfile",
         tags: ["Players"],
         summary: "Lengkapi atau update profil pemain",
-        description: "Player yang sedang login melengkapi profilnya: NIM/NIP, cabang olahraga, dan status kacamata. Kontingen dikelola terpisah oleh PIC via `POST /api/contingents/my/players`.",
+        description: "Player yang sedang login melengkapi profilnya: NIM/NIP dan status kacamata. Kontingen dikelola oleh PIC via `POST /api/contingents/my/players`. Cabang olahraga didaftarkan melalui registrasi tim.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: "nim_nip",           type: "string", example: "1301234567",
+                new OA\Property(property: "nim_nip",     type: "string", example: "1301234567",
                     description: "NIM (mahasiswa) atau NIP (dosen/karyawan). Harus unik."),
-                new OA\Property(property: "sport_id",          type: "integer", example: 1,
-                    description: "ID cabang olahraga dari tabel sports"),
-                new OA\Property(property: "sport_category_id", type: "integer", example: 2,
-                    description: "ID sub-kategori (opsional, hanya untuk sport dengan kategori seperti Putra/Putri)"),
-                new OA\Property(property: "is_kacamata",       type: "boolean", example: false,
+                new OA\Property(property: "is_kacamata", type: "boolean", example: false,
                     description: "Penanda pengguna kacamata — disimpan di tabel users untuk pemantauan AI"),
             ]
         )
@@ -264,9 +256,7 @@ class PlayerController extends Controller
         }
 
         $rules = [
-            'sport_id'          => 'nullable|integer|exists:sports,id',
-            'sport_category_id' => 'nullable|integer|exists:sport_categories,id',
-            'is_kacamata'       => 'nullable|boolean',
+            'is_kacamata' => 'nullable|boolean',
         ];
 
         if ($request->has('nim_nip') && $request->nim_nip !== $player->nim_nip) {
@@ -345,8 +335,6 @@ class PlayerController extends Controller
                 : 'Player berhasil dilepas dari kontingen.',
             'data' => $player->fresh()->load([
                 'user:id,name,email,role,is_kacamata',
-                'sport:id,name',
-                'sportCategory:id,name',
                 'contingent:id,name',
             ]),
         ]);

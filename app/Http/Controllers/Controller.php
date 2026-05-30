@@ -103,18 +103,22 @@ use OpenApi\Attributes as OA;
     schema: "PlayerObject",
     description: "Data pemain (athlete)",
     properties: [
-        new OA\Property(property: "id",                  type: "integer", example: 7),
-        new OA\Property(property: "user_id",             type: "integer", example: 10),
-        new OA\Property(property: "name",                type: "string",  example: "Ahmad Fauzi"),
-        new OA\Property(property: "nim_nip",             type: "string",  nullable: true, example: "1301234567"),
-        new OA\Property(property: "sport_id",            type: "integer", nullable: true, example: 1),
-        new OA\Property(property: "sport_category_id",   type: "integer", nullable: true, example: 2),
-        new OA\Property(property: "contingent_id",       type: "integer", nullable: true, example: 3),
-        new OA\Property(property: "photo_path",          type: "string",  nullable: true, example: "https://res.cloudinary.com/..."),
-        new OA\Property(property: "checked_in_at",       type: "string",  format: "date-time", nullable: true),
-        new OA\Property(property: "employee_status",     type: "string",  nullable: true, example: "Mahasiswa"),
-        new OA\Property(property: "work_location",       type: "string",  nullable: true),
-        new OA\Property(property: "created_at",          type: "string",  format: "date-time"),
+        new OA\Property(property: "id",            type: "integer", example: 7),
+        new OA\Property(property: "user_id",       type: "integer", example: 10),
+        new OA\Property(property: "name",          type: "string",  example: "Ahmad Fauzi"),
+        new OA\Property(property: "nim_nip",       type: "string",  nullable: true, example: "1301234567"),
+        new OA\Property(property: "contingent_id", type: "integer", nullable: true, example: 3),
+        new OA\Property(property: "photo_path",    type: "string",  nullable: true, example: "https://res.cloudinary.com/..."),
+        new OA\Property(
+            property: "risk_lvl",
+            type: "string",
+            enum: ["low", "medium", "high", "not_yet"],
+            example: "not_yet",
+            description: "Level risiko kesehatan berdasarkan self-assessment terakhir. 'not_yet' jika belum pernah mengisi."
+        ),
+        new OA\Property(property: "employee_status", type: "string", nullable: true, example: "Mahasiswa"),
+        new OA\Property(property: "work_location",   type: "string", nullable: true),
+        new OA\Property(property: "created_at",      type: "string", format: "date-time"),
     ]
 )]
 #[OA\Schema(
@@ -229,50 +233,56 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: "CheckinPlayerItem",
-    description: "Data player beserta status checkin untuk sebuah pertandingan",
+    description: "Data seorang player beserta status kehadirannya pada satu pertandingan tertentu",
     properties: [
         new OA\Property(property: "id",            type: "integer", example: 7),
         new OA\Property(property: "name",          type: "string",  example: "Ahmad Fauzi"),
         new OA\Property(property: "nim_nip",       type: "string",  nullable: true, example: "1301234567"),
         new OA\Property(property: "photo_path",    type: "string",  nullable: true, example: "https://res.cloudinary.com/example/photo.jpg"),
         new OA\Property(property: "checked_in",    type: "boolean", example: false,
-            description: "true jika player sudah melakukan checkin untuk pertandingan ini"),
+            description: "true jika player sudah dicheckin untuk pertandingan ini. false jika belum hadir atau belum dicheckin."),
         new OA\Property(property: "checked_in_at", type: "string",  format: "date-time", nullable: true,
-            example: "2026-06-15T08:30:00+07:00"),
+            example: "2026-06-15T08:30:00+07:00",
+            description: "Timestamp saat checkin dilakukan. null jika belum dicheckin."),
     ]
 )]
 #[OA\Schema(
     schema: "CheckinTeam",
-    description: "Tim dalam konteks checkin pertandingan, berisi daftar player dengan status kehadiran",
+    description: "Satu tim dalam konteks checkin pertandingan, berisi daftar player beserta status kehadiran masing-masing",
     properties: [
-        new OA\Property(property: "registration_id", type: "integer", example: 4),
+        new OA\Property(property: "registration_id", type: "integer", example: 4,
+            description: "ID registrasi tim pada cabang olahraga ini"),
         new OA\Property(property: "slot",            type: "string",  enum: ["a", "b"], example: "a",
-            description: "Posisi tim dalam pertandingan: 'a' = tim tuan rumah, 'b' = tim tamu"),
+            description: "Posisi slot tim dalam bagan: 'a' = slot kiri, 'b' = slot kanan"),
         new OA\Property(property: "contingent",      ref: "#/components/schemas/ContingentObject"),
         new OA\Property(property: "players",         type: "array",
+            description: "Daftar seluruh player yang terdaftar di tim ini beserta status checkin masing-masing",
             items: new OA\Items(ref: "#/components/schemas/CheckinPlayerItem")),
     ]
 )]
 #[OA\Schema(
     schema: "MatchCheckinData",
-    description: "Data checkin sebuah pertandingan, menampilkan semua player kedua tim beserta status kehadiran",
+    description: "Data kehadiran seluruh player pada sebuah pertandingan, dikelompokkan per tim",
     properties: [
         new OA\Property(property: "match_id",     type: "integer", example: 12),
         new OA\Property(property: "round_name",   type: "string",  example: "Semifinal"),
         new OA\Property(property: "match_number", type: "integer", example: 1),
-        new OA\Property(property: "status",       type: "string",  enum: ["scheduled", "live", "finished", "bye"], example: "scheduled"),
-        new OA\Property(property: "team_a",       nullable: true, ref: "#/components/schemas/CheckinTeam"),
-        new OA\Property(property: "team_b",       nullable: true, ref: "#/components/schemas/CheckinTeam"),
+        new OA\Property(property: "status",       type: "string",
+            enum: ["scheduled", "live", "finished", "bye"], example: "scheduled"),
+        new OA\Property(property: "team_a",       nullable: true, ref: "#/components/schemas/CheckinTeam",
+            description: "Tim slot A. null jika tim belum ditentukan untuk pertandingan ini."),
+        new OA\Property(property: "team_b",       nullable: true, ref: "#/components/schemas/CheckinTeam",
+            description: "Tim slot B. null jika tim belum ditentukan untuk pertandingan ini."),
     ]
 )]
 #[OA\Schema(
     schema: "CheckinRecord",
-    description: "Record checkin satu player pada satu pertandingan",
+    description: "Record checkin satu player pada satu pertandingan, dikembalikan setelah operasi checkin berhasil",
     properties: [
         new OA\Property(property: "game_id",         type: "integer", example: 12),
         new OA\Property(property: "player_id",       type: "integer", example: 7),
         new OA\Property(property: "registration_id", type: "integer", example: 4,
-            description: "ID registrasi tim asal player (tim A atau tim B)"),
+            description: "ID registrasi tim asal player — menunjukkan player ini berasal dari tim A atau tim B"),
         new OA\Property(property: "checked_in",      type: "boolean", example: true),
         new OA\Property(property: "checked_in_at",   type: "string",  format: "date-time", nullable: true,
             example: "2026-06-15T08:30:00+07:00"),

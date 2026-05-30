@@ -648,8 +648,8 @@ class BracketController extends Controller
         path: "/api/matches/{id}/checkin",
         operationId: "getMatchCheckin",
         tags: ["Bracket"],
-        summary: "Daftar player kedua tim dengan status checkin",
-        description: "Mengembalikan semua player dari tim A dan tim B beserta status checkin masing-masing untuk pertandingan tertentu. Digunakan admin saat membuka panel checkin pada kotak pertandingan di bagan.",
+        summary: "Daftar player kedua tim beserta status checkin",
+        description: "Mengembalikan semua player dari tim A dan tim B beserta status checkin masing-masing untuk pertandingan tertentu. Player yang belum pernah dicheckin akan memiliki `checked_in: false` dan `checked_in_at: null`. `team_a` atau `team_b` bernilai `null` jika tim belum ditentukan.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(
@@ -661,7 +661,7 @@ class BracketController extends Controller
     )]
     #[OA\Response(
         response: 200,
-        description: "Daftar player kedua tim beserta status checkin berhasil diambil",
+        description: "Berhasil",
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "status", type: "string", example: "success"),
@@ -669,11 +669,9 @@ class BracketController extends Controller
             ]
         )
     )]
-    #[OA\Response(
-        response: 404,
-        description: "Pertandingan tidak ditemukan",
-        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
-    )]
+    #[OA\Response(response: 401, description: "Unauthenticated", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 403, description: "Forbidden — hanya role panitia yang dapat mengakses", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 404, description: "Pertandingan tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function getCheckin($id)
     {
         $game = Game::with([
@@ -728,8 +726,8 @@ class BracketController extends Controller
         path: "/api/matches/{id}/checkin/{player_id}",
         operationId: "checkinPlayer",
         tags: ["Bracket"],
-        summary: "Tandai player sebagai hadir (checkin)",
-        description: "Admin/panitia menandai seorang player dari salah satu tim sebagai hadir dan siap bertanding. Jika player sudah pernah dicheckin sebelumnya, record akan diperbarui (idempoten). Player harus terdaftar di salah satu tim yang bertanding pada pertandingan ini.",
+        summary: "Checkin player — tandai hadir pada pertandingan",
+        description: "Panitia menandai seorang player sebagai hadir dan siap bertanding. Operasi ini **idempoten**: jika player sudah pernah dicheckin sebelumnya, record diperbarui tanpa error. Player wajib terdaftar di salah satu tim (registrasi A atau B) pada pertandingan ini.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(
@@ -748,7 +746,7 @@ class BracketController extends Controller
     )]
     #[OA\Response(
         response: 200,
-        description: "Player berhasil dicheckin — checked_in menjadi true dan checked_in_at diisi waktu sekarang",
+        description: "Player berhasil dicheckin — `checked_in` menjadi `true` dan `checked_in_at` diisi timestamp saat ini",
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: "status",  type: "string", example: "success"),
@@ -757,16 +755,10 @@ class BracketController extends Controller
             ]
         )
     )]
-    #[OA\Response(
-        response: 404,
-        description: "Pertandingan tidak ditemukan",
-        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
-    )]
-    #[OA\Response(
-        response: 422,
-        description: "Player tidak terdaftar dalam pertandingan ini",
-        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
-    )]
+    #[OA\Response(response: 401, description: "Unauthenticated", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 403, description: "Forbidden — hanya role panitia yang dapat mengakses", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 404, description: "Pertandingan tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 422, description: "Player tidak terdaftar dalam pertandingan ini", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function checkinPlayer($id, $playerId)
     {
         $game = Game::with([
@@ -820,8 +812,8 @@ class BracketController extends Controller
         path: "/api/matches/{id}/checkin/{player_id}",
         operationId: "undoCheckinPlayer",
         tags: ["Bracket"],
-        summary: "Batalkan checkin player",
-        description: "Admin/panitia membatalkan status checkin seorang player pada pertandingan tertentu. Nilai checked_in dikembalikan ke false dan checked_in_at dikosongkan.",
+        summary: "Batalkan checkin player pada pertandingan",
+        description: "Panitia membatalkan status kehadiran seorang player pada pertandingan tertentu. `checked_in` dikembalikan ke `false` dan `checked_in_at` dikosongkan. Mengembalikan 404 jika player belum pernah dicheckin sama sekali pada pertandingan ini.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(
@@ -840,14 +832,17 @@ class BracketController extends Controller
     )]
     #[OA\Response(
         response: 200,
-        description: "Checkin player berhasil dibatalkan — checked_in kembali false",
-        content: new OA\JsonContent(ref: "#/components/schemas/SuccessMessage")
+        description: "Checkin berhasil dibatalkan",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Checkin player berhasil dibatalkan."),
+            ]
+        )
     )]
-    #[OA\Response(
-        response: 404,
-        description: "Data checkin tidak ditemukan (player belum pernah dicheckin pada pertandingan ini)",
-        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
-    )]
+    #[OA\Response(response: 401, description: "Unauthenticated", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 403, description: "Forbidden — hanya role panitia yang dapat mengakses", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 404, description: "Data checkin tidak ditemukan — player belum pernah dicheckin pada pertandingan ini", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function undoCheckin($id, $playerId)
     {
         $checkin = GamePlayerCheckin::where('game_id', $id)

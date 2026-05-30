@@ -171,10 +171,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ====================================================================
     Route::middleware(['role:panitia'])->group(function () {
         Route::get('/field/verification', [VerificationController::class, 'index'])->name('field.index');
-        Route::post('/field/checkin/{id}', [VerificationController::class, 'checkIn'])->name('field.checkin');
 
         Route::get('/admin/templates', [\App\Http\Controllers\AdminController::class, 'templates']);
         Route::get('/admin/schedules', [\App\Http\Controllers\AdminController::class, 'schedules']);
+        Route::get('/dashboard/panitia', [\App\Http\Controllers\AdminController::class, 'dashboard']);
 
         // Registrasi tim — pantau, kepatuhan & verifikasi
         Route::get('/registrations', [RegistrationController::class, 'index'])->name('registrations.index');
