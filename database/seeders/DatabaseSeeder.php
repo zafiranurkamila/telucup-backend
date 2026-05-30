@@ -85,7 +85,6 @@ class DatabaseSeeder extends Seeder
             'contingent' => 'Fakultas Industri Kreatif',
             'employee_status' => 'TPA PEGAWAI TETAP',
             'work_location' => 'URUSAN PENCATATAN DAN PENGELOLAAN ASET',
-            'verification_status' => 'verified'
         ]);
 
         // 5. Buat Pertandingan (Gambar 4 & 5 - Dengan Lokasi)

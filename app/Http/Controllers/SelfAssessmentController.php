@@ -433,6 +433,68 @@ class SelfAssessmentController extends Controller
     }
 
     #[OA\Get(
+        path: "/api/self-assessment/player/{playerId}",
+        operationId: "getPlayerSelfAssessment",
+        summary: "Mendapatkan self-assessment terakhir milik player tertentu",
+        security: [["bearerAuth" => []]],
+        tags: ["Self Assessment"],
+        description: "Mengembalikan hasil self-assessment terbaru dari player berdasarkan player ID. Response menyertakan `score_breakdown` dan `form_responses` (jawaban mentah). Dapat diakses oleh panitia dan pic_kontingen."
+    )]
+    #[OA\Parameter(name: "playerId", in: "path", required: true, description: "ID player", schema: new OA\Schema(type: "integer", example: 7))]
+    #[OA\Response(
+        response: 200,
+        description: "Berhasil. `data` berisi hasil assessment jika sudah pernah mengisi, atau `null` disertai `message` jika belum.",
+        content: new OA\JsonContent(
+            oneOf: [
+                new OA\Schema(
+                    description: "Player sudah mengisi self-assessment",
+                    properties: [
+                        new OA\Property(property: "status", type: "string", example: "success"),
+                        new OA\Property(property: "data",   ref: "#/components/schemas/SelfAssessmentResult"),
+                    ]
+                ),
+                new OA\Schema(
+                    description: "Player belum mengisi self-assessment",
+                    properties: [
+                        new OA\Property(property: "status",  type: "string", example: "success"),
+                        new OA\Property(property: "data",    type: "string", nullable: true, example: null),
+                        new OA\Property(property: "message", type: "string", example: "Player ini belum mengisi self-assessment."),
+                    ]
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Player tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function showByPlayer(int $playerId): JsonResponse
+    {
+        $player = Player::find($playerId);
+
+        if (!$player) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Player tidak ditemukan.',
+            ], 404);
+        }
+
+        $assessment = SelfAssessment::where('player_id', $playerId)
+            ->latest()
+            ->first();
+
+        if (!$assessment) {
+            return response()->json([
+                'status'  => 'success',
+                'data'    => null,
+                'message' => 'Player ini belum mengisi self-assessment.',
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $this->formatAssessmentResponse($assessment, true),
+        ]);
+    }
+
+    #[OA\Get(
         path: "/api/self-assessment/{id}",
         operationId: "showSelfAssessment",
         summary: "Detail satu self-assessment berdasarkan ID",

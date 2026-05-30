@@ -11,7 +11,7 @@ class Player extends Model
 {
     protected $fillable = [
         'user_id', 'name', 'nim_nip', 'sport_id', 'sport_category_id',
-        'contingent_id', 'checked_in_at', 'verification_status',
+        'contingent_id', 'checked_in_at',
         'photo_path', 'employee_status', 'work_location'
     ];
 

@@ -660,10 +660,6 @@ components:
           type: integer
           nullable: true
           example: 3
-        verification_status:
-          type: string
-          nullable: true
-          example: "verified"
         photo_path:
           type: string
           nullable: true

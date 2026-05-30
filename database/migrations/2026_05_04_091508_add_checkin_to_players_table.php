@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::table('players', function (Blueprint $table) {
             $table->timestamp('checked_in_at')->nullable();
-            $table->string('verification_status')->default('pending'); // pending, verified, rejected
         });
     }
 

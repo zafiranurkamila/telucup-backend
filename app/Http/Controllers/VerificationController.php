@@ -37,7 +37,6 @@ class VerificationController extends Controller
                                 enum: ["high", "medium", "low", "grey"],
                                 example: "low",
                                 description: "grey = belum mengisi self-assessment"),
-                            new OA\Property(property: "status",      type: "string",  nullable: true, example: "verified"),
                             new OA\Property(property: "checked_in",  type: "boolean", example: false),
                         ]
                     )
@@ -64,7 +63,6 @@ class VerificationController extends Controller
                 'nim_nip'    => $player->nim_nip,
                 'sport'      => $player->sport_id,
                 'risk_color' => $player->selfAssessment->risk_label ?? 'grey',
-                'status'     => $player->verification_status,
                 'checked_in' => (bool) $player->checked_in_at,
             ];
         });
@@ -80,7 +78,7 @@ class VerificationController extends Controller
         operationId: "checkInPlayer",
         tags: ["Verification"],
         summary: "Check-in pemain di lapangan",
-        description: "Menandai pemain sebagai sudah hadir dan terverifikasi secara fisik. Mengisi `checked_in_at` dengan timestamp saat ini dan mengubah `verification_status` menjadi `verified`.",
+        description: "Menandai pemain sebagai sudah hadir secara fisik. Mengisi `checked_in_at` dengan timestamp saat ini.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\Parameter(
@@ -115,8 +113,7 @@ class VerificationController extends Controller
     {
         $player = Player::findOrFail($id);
         $player->update([
-            'checked_in_at'       => now(),
-            'verification_status' => 'verified',
+            'checked_in_at' => now(),
         ]);
 
         return response()->json([

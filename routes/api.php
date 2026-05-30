@@ -84,6 +84,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
                 ->name('self-assessment.review');
         });
 
+        // Assessment terakhir milik player tertentu (panitia & pic_kontingen)
+        Route::middleware(['role:panitia,pic_kontingen'])->group(function () {
+            Route::get('/player/{playerId}', [SelfAssessmentController::class, 'showByPlayer'])
+                ->whereNumber('playerId')
+                ->name('self-assessment.player');
+        });
+
         // Detail (boleh diakses peserta untuk lihat hasilnya sendiri,
         // authorization lebih lanjut di-handle di controller).
         Route::get('/{id}', [SelfAssessmentController::class, 'show'])
@@ -124,8 +131,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/contingents/{id}', [ContingentController::class, 'update'])->name('contingents.update');
         Route::delete('/contingents/{id}', [ContingentController::class, 'destroy'])->name('contingents.destroy');
         Route::put('/contingents/{id}/assign-pic', [ContingentController::class, 'assignPic'])->name('contingents.assign-pic');
-        Route::post('/contingents/{id}/image', [ContingentController::class, 'uploadImage'])->name('contingents.image.upload');
-        Route::delete('/contingents/{id}/image', [ContingentController::class, 'deleteImage'])->name('contingents.image.delete');
+        Route::post('/contingents/{id}/image', [ContingentController::class, 'uploadImage'])->whereNumber('id')->name('contingents.image.upload');
+        Route::delete('/contingents/{id}/image', [ContingentController::class, 'deleteImage'])->whereNumber('id')->name('contingents.image.delete');
     });
 
     // ====================================================================

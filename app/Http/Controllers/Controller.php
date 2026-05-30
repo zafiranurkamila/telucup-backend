@@ -111,7 +111,6 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: "sport_category_id",   type: "integer", nullable: true, example: 2),
         new OA\Property(property: "contingent_id",       type: "integer", nullable: true, example: 3),
         new OA\Property(property: "photo_path",          type: "string",  nullable: true, example: "https://res.cloudinary.com/..."),
-        new OA\Property(property: "verification_status", type: "string",  nullable: true, example: "verified"),
         new OA\Property(property: "checked_in_at",       type: "string",  format: "date-time", nullable: true),
         new OA\Property(property: "employee_status",     type: "string",  nullable: true, example: "Mahasiswa"),
         new OA\Property(property: "work_location",       type: "string",  nullable: true),

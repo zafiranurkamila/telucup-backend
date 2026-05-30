@@ -29,10 +29,12 @@ class ContingentController extends Controller
                 new OA\Property(property: "status", type: "string", example: "success"),
                 new OA\Property(property: "data", type: "array", items: new OA\Items(
                     properties: [
-                        new OA\Property(property: "id", type: "integer", example: 1),
-                        new OA\Property(property: "name", type: "string", example: "Fakultas Informatika"),
-                        new OA\Property(property: "pic", type: "object", nullable: true),
-                        new OA\Property(property: "players_count", type: "integer", example: 12),
+                        new OA\Property(property: "id",                   type: "integer", example: 1),
+                        new OA\Property(property: "name",                 type: "string",  example: "Fakultas Informatika"),
+                        new OA\Property(property: "cloudinary_public_id", type: "string",  nullable: true, example: "telucup/contingents/abc123"),
+                        new OA\Property(property: "image_url",            type: "string",  nullable: true, example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/contingents/abc123.jpg"),
+                        new OA\Property(property: "pic",                  type: "object",  nullable: true),
+                        new OA\Property(property: "players_count",        type: "integer", example: 12),
                     ]
                 )),
             ]
@@ -70,7 +72,7 @@ class ContingentController extends Controller
     {
         $contingent = Contingent::with([
             'pic:id,name,email',
-            'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path,verification_status',
+            'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path',
         ])->findOrFail($id);
 
         return response()->json(['status' => 'success', 'data' => $contingent]);
@@ -341,7 +343,7 @@ class ContingentController extends Controller
 
         $contingent->load([
             'pic:id,name,email',
-            'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path,verification_status',
+            'players:id,contingent_id,name,nim_nip,sport_id,sport_category_id,photo_path',
         ]);
         $contingent->loadCount('players');
 

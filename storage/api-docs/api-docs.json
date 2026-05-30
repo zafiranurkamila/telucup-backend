@@ -1409,6 +1409,16 @@
                                                         "type": "string",
                                                         "example": "Fakultas Informatika"
                                                     },
+                                                    "cloudinary_public_id": {
+                                                        "type": "string",
+                                                        "example": "telucup/contingents/abc123",
+                                                        "nullable": true
+                                                    },
+                                                    "image_url": {
+                                                        "type": "string",
+                                                        "example": "https://res.cloudinary.com/demo/image/upload/v1/telucup/contingents/abc123.jpg",
+                                                        "nullable": true
+                                                    },
                                                     "pic": {
                                                         "type": "object",
                                                         "nullable": true
@@ -4702,6 +4712,88 @@
                 ]
             }
         },
+        "/api/self-assessment/player/{playerId}": {
+            "get": {
+                "tags": [
+                    "Self Assessment"
+                ],
+                "summary": "Mendapatkan self-assessment terakhir milik player tertentu",
+                "description": "Mengembalikan hasil self-assessment terbaru dari player berdasarkan player ID. Response menyertakan `score_breakdown` dan `form_responses` (jawaban mentah). Dapat diakses oleh panitia dan pic_kontingen.",
+                "operationId": "getPlayerSelfAssessment",
+                "parameters": [
+                    {
+                        "name": "playerId",
+                        "in": "path",
+                        "description": "ID player",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 7
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil. `data` berisi hasil assessment jika sudah pernah mengisi, atau `null` disertai `message` jika belum.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "oneOf": [
+                                        {
+                                            "description": "Player sudah mengisi self-assessment",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "success"
+                                                },
+                                                "data": {
+                                                    "$ref": "#/components/schemas/SelfAssessmentResult"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        {
+                                            "description": "Player belum mengisi self-assessment",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "success"
+                                                },
+                                                "data": {
+                                                    "type": "string",
+                                                    "example": null,
+                                                    "nullable": true
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Player ini belum mengisi self-assessment."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Player tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/self-assessment/{id}": {
             "get": {
                 "tags": [
@@ -5446,11 +5538,6 @@
                                                             "grey"
                                                         ]
                                                     },
-                                                    "status": {
-                                                        "type": "string",
-                                                        "example": "verified",
-                                                        "nullable": true
-                                                    },
                                                     "checked_in": {
                                                         "type": "boolean",
                                                         "example": false
@@ -5499,7 +5586,7 @@
                     "Verification"
                 ],
                 "summary": "Check-in pemain di lapangan",
-                "description": "Menandai pemain sebagai sudah hadir dan terverifikasi secara fisik. Mengisi `checked_in_at` dengan timestamp saat ini dan mengubah `verification_status` menjadi `verified`.",
+                "description": "Menandai pemain sebagai sudah hadir secara fisik. Mengisi `checked_in_at` dengan timestamp saat ini.",
                 "operationId": "checkInPlayer",
                 "parameters": [
                     {
@@ -5785,11 +5872,6 @@
                     "photo_path": {
                         "type": "string",
                         "example": "https://res.cloudinary.com/...",
-                        "nullable": true
-                    },
-                    "verification_status": {
-                        "type": "string",
-                        "example": "verified",
                         "nullable": true
                     },
                     "checked_in_at": {
