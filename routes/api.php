@@ -152,6 +152,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // MATCHES — PIC melihat jadwal pertandingan kontingennya
     // ====================================================================
     Route::middleware(['role:pic_kontingen'])->group(function () {
+        Route::get('/my-matches',       [BracketController::class, 'myMatches'])->name('my-matches.all');
         Route::get('/my-matches/today', [BracketController::class, 'myTodayMatches'])->name('my-matches.today');
     });
 
@@ -221,8 +222,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('/my-gallery/{photo_face_id}/validate', [GalleryController::class, 'validate'])->name('gallery.validate');
 });
 
-// Bracket & match detail — publik
-Route::get('/bracket', [BracketController::class, 'bracket'])->name('bracket.view');
+// Bracket & pertandingan — publik (tanpa login)
+Route::get('/matches',      [BracketController::class, 'allMatches'])->name('matches.index');
+Route::get('/bracket',      [BracketController::class, 'bracket'])->name('bracket.view');
 Route::get('/matches/{id}', [BracketController::class, 'matchDetail'])->name('matches.detail');
 
 // Publik / Semua User yang Login

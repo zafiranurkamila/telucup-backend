@@ -73,6 +73,40 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/dashboard/panitia:
+    get:
+      tags:
+        - Admin
+      summary: 'Dashboard ringkasan panitia'
+      description: 'Mengambil data ringkasan untuk dashboard panitia: total kontingen, tim menunggu verifikasi, pertandingan hari ini, peringatan medis, dan daftar pertandingan hari ini.'
+      operationId: getPanitiaDashboard
+      responses:
+        200:
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                properties:
+                  total_kontingen:
+                    type: integer
+                    example: 24
+                  tim_menunggu_verifikasi:
+                    type: integer
+                    example: 12
+                  pertandingan_hari_ini:
+                    type: integer
+                    example: 8
+                  peringatan_medis:
+                    type: integer
+                    example: 3
+                  daftar_pertandingan_hari_ini:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MatchObject'
+                type: object
+      security:
+        -
+          bearerAuth: []
   /api/register:
     post:
       tags:
@@ -220,6 +254,78 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/my-matches:
+    get:
+      tags:
+        - Bracket
+      summary: 'Semua pertandingan kontingen saya'
+      description: "PIC kontingen mengambil **seluruh** pertandingan kontingennya lintas semua cabang olahraga.\n\n**Urutan hasil:** diurutkan berdasarkan `sport_id` → `round` → `match_number` → `match_date` → `match_time`. Pertandingan dengan tanggal belum dijadwalkan muncul di paling akhir.\n\nPertandingan berstatus `bye` selalu dikecualikan.\n\nSemua query param bersifat opsional dan dapat dikombinasikan."
+      operationId: myMatches
+      parameters:
+        -
+          name: sport_id
+          in: query
+          description: 'Filter hanya pertandingan pada cabang olahraga tertentu'
+          required: false
+          schema:
+            type: integer
+            example: 1
+        -
+          name: sport_category_id
+          in: query
+          description: 'Filter berdasarkan sub-kategori (Putra / Putri / Reguler / dll)'
+          required: false
+          schema:
+            type: integer
+            example: 2
+        -
+          name: status
+          in: query
+          description: 'Filter berdasarkan status pertandingan'
+          required: false
+          schema:
+            type: string
+            enum:
+              - scheduled
+              - live
+              - finished
+        -
+          name: date
+          in: query
+          description: 'Filter hanya pertandingan pada tanggal tertentu (format YYYY-MM-DD)'
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2026-06-15'
+      responses:
+        200:
+          description: 'Daftar seluruh pertandingan kontingen berhasil diambil'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyMatchesResponse'
+        401:
+          description: 'Unauthenticated — token tidak diberikan atau sudah kedaluwarsa'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        403:
+          description: 'Forbidden — user login belum ditugaskan sebagai PIC kontingen manapun'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Parameter filter tidak valid (sport_id / sport_category_id tidak ditemukan, format date salah, dll)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
   /api/my-matches/today:
     get:
       tags:
@@ -258,6 +364,95 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/matches:
+    get:
+      tags:
+        - Bracket
+      summary: 'Daftar semua pertandingan (publik)'
+      description: "Mengembalikan daftar semua pertandingan yang dapat diakses tanpa login. Ditujukan untuk penonton atau pengunjung yang ingin memantau jadwal dan hasil pertandingan.\n\nPertandingan `bye` dikecualikan secara default. Hasil diurutkan berdasarkan tanggal/waktu (terjadwal terlebih dahulu), lalu berdasarkan cabang olahraga dan ronde."
+      operationId: listMatches
+      parameters:
+        -
+          name: sport_id
+          in: query
+          description: 'Filter berdasarkan cabang olahraga'
+          required: false
+          schema:
+            type: integer
+            example: 1
+        -
+          name: sport_category_id
+          in: query
+          description: 'Filter berdasarkan sub-kategori (Putra / Putri / Reguler / dll)'
+          required: false
+          schema:
+            type: integer
+            example: 2
+        -
+          name: status
+          in: query
+          description: 'Filter berdasarkan status pertandingan'
+          required: false
+          schema:
+            type: string
+            enum:
+              - scheduled
+              - live
+              - finished
+        -
+          name: date
+          in: query
+          description: 'Filter pertandingan pada tanggal tertentu (YYYY-MM-DD)'
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2026-06-15'
+        -
+          name: contingent_id
+          in: query
+          description: 'Filter pertandingan yang melibatkan kontingen tertentu — berguna bagi pendukung tim'
+          required: false
+          schema:
+            type: integer
+            example: 3
+        -
+          name: round
+          in: query
+          description: 'Filter berdasarkan nomor ronde'
+          required: false
+          schema:
+            type: integer
+            example: 2
+        -
+          name: per_page
+          in: query
+          description: 'Jumlah item per halaman (default: 20, maks: 100)'
+          required: false
+          schema:
+            type: integer
+            example: 20
+        -
+          name: page
+          in: query
+          description: 'Nomor halaman'
+          required: false
+          schema:
+            type: integer
+            example: 1
+      responses:
+        200:
+          description: 'Daftar pertandingan berhasil diambil'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicMatchListResponse'
+        422:
+          description: 'Parameter filter tidak valid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/bracket/generate:
     post:
       tags:
@@ -287,16 +482,7 @@ paths:
           content:
             application/json:
               schema:
-                properties:
-                  status:
-                    type: string
-                    example: success
-                  message:
-                    type: string
-                    example: 'Bagan berhasil digenerate.'
-                  data:
-                    $ref: '#/components/schemas/BracketRound'
-                type: object
+                $ref: '#/components/schemas/BracketGenerateResponse'
         422:
           description: 'Jumlah tim tidak valid atau bagan sudah ada'
           content:
@@ -332,13 +518,7 @@ paths:
           content:
             application/json:
               schema:
-                properties:
-                  status:
-                    type: string
-                    example: success
-                  data:
-                    $ref: '#/components/schemas/BracketRound'
-                type: object
+                $ref: '#/components/schemas/BracketViewResponse'
         404:
           description: 'Bagan belum digenerate'
           content:
@@ -361,17 +541,11 @@ paths:
             type: integer
       responses:
         200:
-          description: 'Detail pertandingan'
+          description: 'Detail pertandingan lengkap beserta informasi cabang olahraga'
           content:
             application/json:
               schema:
-                properties:
-                  status:
-                    type: string
-                    example: success
-                  data:
-                    $ref: '#/components/schemas/MatchObject'
-                type: object
+                $ref: '#/components/schemas/MatchDataResponse'
         404:
           description: 'Pertandingan tidak ditemukan'
           content:
@@ -421,16 +595,7 @@ paths:
           content:
             application/json:
               schema:
-                properties:
-                  status:
-                    type: string
-                    example: success
-                  message:
-                    type: string
-                    example: 'Skor diperbarui dan pemenang dilanjutkan ke babak berikutnya.'
-                  data:
-                    $ref: '#/components/schemas/MatchObject'
-                type: object
+                $ref: '#/components/schemas/MatchActionResponse'
         422:
           description: 'Skor seri tanpa pemenang eksplisit atau pertandingan bye'
           content:
@@ -479,20 +644,11 @@ paths:
               type: object
       responses:
         200:
-          description: 'Jadwal berhasil diperbarui'
+          description: 'Jadwal berhasil diperbarui — response menyertakan state pertandingan terbaru beserta cabang olahraga'
           content:
             application/json:
               schema:
-                properties:
-                  status:
-                    type: string
-                    example: success
-                  message:
-                    type: string
-                    example: 'Jadwal pertandingan berhasil diperbarui.'
-                  data:
-                    $ref: '#/components/schemas/MatchObject'
-                type: object
+                $ref: '#/components/schemas/MatchActionResponse'
       security:
         -
           bearerAuth: []
@@ -527,20 +683,11 @@ paths:
               type: object
       responses:
         200:
-          description: 'Tim berhasil diperbarui'
+          description: 'Tim berhasil diperbarui — response menyertakan state pertandingan terbaru beserta cabang olahraga'
           content:
             application/json:
               schema:
-                properties:
-                  status:
-                    type: string
-                    example: success
-                  message:
-                    type: string
-                    example: 'Tim pertandingan berhasil diperbarui.'
-                  data:
-                    $ref: '#/components/schemas/MatchObject'
-                type: object
+                $ref: '#/components/schemas/MatchActionResponse'
         422:
           description: 'Pertandingan sudah berlangsung atau selesai'
           content:
@@ -566,20 +713,11 @@ paths:
             type: integer
       responses:
         200:
-          description: 'Posisi tim berhasil ditukar'
+          description: 'Posisi tim berhasil ditukar — response menyertakan state pertandingan terbaru beserta cabang olahraga'
           content:
             application/json:
               schema:
-                properties:
-                  status:
-                    type: string
-                    example: success
-                  message:
-                    type: string
-                    example: 'Posisi tim A dan B berhasil ditukar.'
-                  data:
-                    $ref: '#/components/schemas/MatchObject'
-                type: object
+                $ref: '#/components/schemas/MatchActionResponse'
       security:
         -
           bearerAuth: []
@@ -614,20 +752,11 @@ paths:
               type: object
       responses:
         200:
-          description: 'Status pertandingan diperbarui'
+          description: 'Status pertandingan diperbarui — response menyertakan state pertandingan terbaru beserta cabang olahraga'
           content:
             application/json:
               schema:
-                properties:
-                  status:
-                    type: string
-                    example: success
-                  message:
-                    type: string
-                    example: "Status pertandingan diubah menjadi 'live'."
-                  data:
-                    $ref: '#/components/schemas/MatchObject'
-                type: object
+                $ref: '#/components/schemas/MatchActionResponse'
       security:
         -
           bearerAuth: []
@@ -635,8 +764,8 @@ paths:
     get:
       tags:
         - Bracket
-      summary: 'Daftar player kedua tim dengan status checkin'
-      description: 'Mengembalikan semua player dari tim A dan tim B beserta status checkin masing-masing untuk pertandingan tertentu. Digunakan admin saat membuka panel checkin pada kotak pertandingan di bagan.'
+      summary: 'Daftar player kedua tim beserta status checkin'
+      description: 'Mengembalikan semua player dari tim A dan tim B beserta status checkin masing-masing untuk pertandingan tertentu. Player yang belum pernah dicheckin akan memiliki `checked_in: false` dan `checked_in_at: null`. `team_a` atau `team_b` bernilai `null` jika tim belum ditentukan.'
       operationId: getMatchCheckin
       parameters:
         -
@@ -649,7 +778,7 @@ paths:
             example: 12
       responses:
         200:
-          description: 'Daftar player kedua tim beserta status checkin berhasil diambil'
+          description: Berhasil
           content:
             application/json:
               schema:
@@ -660,6 +789,18 @@ paths:
                   data:
                     $ref: '#/components/schemas/MatchCheckinData'
                 type: object
+        401:
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        403:
+          description: 'Forbidden — hanya role panitia yang dapat mengakses'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         404:
           description: 'Pertandingan tidak ditemukan'
           content:
@@ -673,8 +814,8 @@ paths:
     post:
       tags:
         - Bracket
-      summary: 'Tandai player sebagai hadir (checkin)'
-      description: 'Admin/panitia menandai seorang player dari salah satu tim sebagai hadir dan siap bertanding. Jika player sudah pernah dicheckin sebelumnya, record akan diperbarui (idempoten). Player harus terdaftar di salah satu tim yang bertanding pada pertandingan ini.'
+      summary: 'Checkin player — tandai hadir pada pertandingan'
+      description: 'Panitia menandai seorang player sebagai hadir dan siap bertanding. Operasi ini **idempoten**: jika player sudah pernah dicheckin sebelumnya, record diperbarui tanpa error. Player wajib terdaftar di salah satu tim (registrasi A atau B) pada pertandingan ini.'
       operationId: checkinPlayer
       parameters:
         -
@@ -695,7 +836,7 @@ paths:
             example: 7
       responses:
         200:
-          description: 'Player berhasil dicheckin — checked_in menjadi true dan checked_in_at diisi waktu sekarang'
+          description: 'Player berhasil dicheckin — `checked_in` menjadi `true` dan `checked_in_at` diisi timestamp saat ini'
           content:
             application/json:
               schema:
@@ -709,6 +850,18 @@ paths:
                   data:
                     $ref: '#/components/schemas/CheckinRecord'
                 type: object
+        401:
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        403:
+          description: 'Forbidden — hanya role panitia yang dapat mengakses'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         404:
           description: 'Pertandingan tidak ditemukan'
           content:
@@ -727,8 +880,8 @@ paths:
     delete:
       tags:
         - Bracket
-      summary: 'Batalkan checkin player'
-      description: 'Admin/panitia membatalkan status checkin seorang player pada pertandingan tertentu. Nilai checked_in dikembalikan ke false dan checked_in_at dikosongkan.'
+      summary: 'Batalkan checkin player pada pertandingan'
+      description: 'Panitia membatalkan status kehadiran seorang player pada pertandingan tertentu. `checked_in` dikembalikan ke `false` dan `checked_in_at` dikosongkan. Mengembalikan 404 jika player belum pernah dicheckin sama sekali pada pertandingan ini.'
       operationId: undoCheckinPlayer
       parameters:
         -
@@ -749,13 +902,32 @@ paths:
             example: 7
       responses:
         200:
-          description: 'Checkin player berhasil dibatalkan — checked_in kembali false'
+          description: 'Checkin berhasil dibatalkan'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessMessage'
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Checkin player berhasil dibatalkan.'
+                type: object
+        401:
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        403:
+          description: 'Forbidden — hanya role panitia yang dapat mengakses'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         404:
-          description: 'Data checkin tidak ditemukan (player belum pernah dicheckin pada pertandingan ini)'
+          description: 'Data checkin tidak ditemukan — player belum pernah dicheckin pada pertandingan ini'
           content:
             application/json:
               schema:
@@ -1114,7 +1286,7 @@ paths:
       tags:
         - Contingents
       summary: 'Daftar semua PIC kontingen'
-      description: 'Mengembalikan semua user dengan role pic_kontingen beserta data kontingen yang mereka kelola. Hanya dapat diakses oleh admin dan panitia.'
+      description: 'Mengembalikan semua user dengan role `pic_kontingen` beserta kontingen yang mereka kelola dan level risiko kesehatan mereka. Hanya dapat diakses oleh panitia.'
       operationId: listPicKontingen
       responses:
         200:
@@ -1138,8 +1310,19 @@ paths:
                           example: 'Budi Santoso'
                         email:
                           type: string
+                          format: email
                           example: budi@telkomuniversity.ac.id
+                        risk_lvl:
+                          description: "Level risiko kesehatan PIC berdasarkan self-assessment terakhirnya. Bernilai 'not_yet' jika PIC belum pernah mengisi self-assessment."
+                          type: string
+                          example: low
+                          enum:
+                            - low
+                            - medium
+                            - high
+                            - not_yet
                         managed_contingent:
+                          description: 'Kontingen yang dikelola PIC ini. null jika belum ditugaskan ke kontingen manapun.'
                           properties:
                             id:
                               type: integer
@@ -1151,6 +1334,18 @@ paths:
                           nullable: true
                       type: object
                 type: object
+        401:
+          description: 'Unauthenticated — token tidak disertakan atau tidak valid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        403:
+          description: 'Forbidden — hanya role panitia yang dapat mengakses'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       security:
         -
           bearerAuth: []
@@ -2026,7 +2221,7 @@ paths:
       tags:
         - Players
       summary: 'Daftar semua player'
-      description: 'Mengembalikan semua player beserta data user, cabang olahraga, kategori, dan kontingen. Hanya dapat diakses oleh admin dan panitia.'
+      description: 'Mengembalikan semua player beserta data user dan kontingen. Hanya dapat diakses oleh admin dan panitia.'
       operationId: listPlayers
       responses:
         200:
@@ -2117,7 +2312,7 @@ paths:
       tags:
         - Players
       summary: 'Lengkapi atau update profil pemain'
-      description: 'Player yang sedang login melengkapi profilnya: NIM/NIP, cabang olahraga, dan status kacamata. Kontingen dikelola terpisah oleh PIC via `POST /api/contingents/my/players`.'
+      description: 'Player yang sedang login melengkapi profilnya: NIM/NIP dan status kacamata. Kontingen dikelola oleh PIC via `POST /api/contingents/my/players`. Cabang olahraga didaftarkan melalui registrasi tim.'
       operationId: updateProfile
       requestBody:
         required: true
@@ -2129,14 +2324,6 @@ paths:
                   description: 'NIM (mahasiswa) atau NIP (dosen/karyawan). Harus unik.'
                   type: string
                   example: '1301234567'
-                sport_id:
-                  description: 'ID cabang olahraga dari tabel sports'
-                  type: integer
-                  example: 1
-                sport_category_id:
-                  description: 'ID sub-kategori (opsional, hanya untuk sport dengan kategori seperti Putra/Putri)'
-                  type: integer
-                  example: 2
                 is_kacamata:
                   description: 'Penanda pengguna kacamata — disimpan di tabel users untuk pemantauan AI'
                   type: boolean
@@ -2916,7 +3103,7 @@ paths:
       tags:
         - 'Self Assessment'
       summary: 'Submit jawaban self-assessment dan dapatkan klasifikasi risiko'
-      description: 'Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening. Field yang wajib divalidasi server: demo_age, demo_height_cm, demo_weight_kg, demo_activity_level, A1–A5, B1–B3. Selebihnya wajib secara logis untuk scoring lengkap.'
+      description: 'Menerima jawaban kuesioner dalam format key-value (answers), menghitung skor per domain (kardiovaskular 35%, muskuloskeletal 30%, acute readiness 20%, psikososial 15%), mendeteksi red flag dan yellow flag, lalu mengklasifikasikan risiko ke LOW / MEDIUM / HIGH. Algoritma berbasis PAR-Q+ 2024 dan AHA 14-point screening. Field yang wajib divalidasi server: demo_age, demo_height_cm, demo_weight_kg, demo_activity_level, A1–A5, B1–B3. Selebihnya wajib secara logis untuk scoring lengkap. **Side-effect:** setelah assessment berhasil disimpan, field `risk_lvl` pada data player yang bersangkutan akan diperbarui secara otomatis sesuai hasil klasifikasi.'
       operationId: storeSelfAssessment
       requestBody:
         required: true
@@ -3647,8 +3834,8 @@ paths:
     get:
       tags:
         - Verification
-      summary: 'Daftar pemain untuk check-in lapangan'
-      description: 'Panitia lapangan mengambil daftar semua pemain beserta warna risiko kesehatan mereka untuk keperluan verifikasi fisik sebelum pertandingan. Warna Merah (high) wajib melapor ke tim medis terlebih dahulu.'
+      summary: 'Daftar pemain untuk verifikasi lapangan'
+      description: 'Panitia lapangan mengambil daftar semua pemain beserta warna risiko kesehatan mereka. Warna Merah (high) wajib melapor ke tim medis sebelum bertanding. Check-in per pertandingan dikelola via `POST /api/matches/{id}/checkin/{player_id}`.'
       operationId: getVerifications
       responses:
         200:
@@ -3674,12 +3861,8 @@ paths:
                           type: string
                           example: '1301234567'
                           nullable: true
-                        sport:
-                          type: string
-                          example: Badminton
-                          nullable: true
                         risk_color:
-                          description: 'grey = belum mengisi self-assessment'
+                          description: 'Warna risiko kesehatan: grey = belum mengisi self-assessment'
                           type: string
                           example: low
                           enum:
@@ -3687,62 +3870,10 @@ paths:
                             - medium
                             - low
                             - grey
-                        checked_in:
-                          type: boolean
-                          example: false
                       type: object
                 type: object
         401:
           description: Unauthenticated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        403:
-          description: 'Role tidak diizinkan'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-      security:
-        -
-          bearerAuth: []
-  '/api/field/checkin/{id}':
-    post:
-      tags:
-        - Verification
-      summary: 'Check-in pemain di lapangan'
-      description: 'Menandai pemain sebagai sudah hadir secara fisik. Mengisi `checked_in_at` dengan timestamp saat ini.'
-      operationId: checkInPlayer
-      parameters:
-        -
-          name: id
-          in: path
-          description: 'ID player yang akan di-check-in'
-          required: true
-          schema:
-            type: integer
-            example: 7
-      responses:
-        200:
-          description: 'Check-in berhasil'
-          content:
-            application/json:
-              schema:
-                properties:
-                  message:
-                    type: string
-                    example: 'Pemain Ahmad Fauzi berhasil check-in!'
-                  player_id:
-                    type: integer
-                    example: 7
-                  checked_in_at:
-                    type: string
-                    format: date-time
-                    example: '2026-06-15T08:45:00Z'
-                type: object
-        404:
-          description: 'Player tidak ditemukan'
           content:
             application/json:
               schema:
@@ -3905,14 +4036,6 @@ components:
           type: string
           example: '1301234567'
           nullable: true
-        sport_id:
-          type: integer
-          example: 1
-          nullable: true
-        sport_category_id:
-          type: integer
-          example: 2
-          nullable: true
         contingent_id:
           type: integer
           example: 3
@@ -3921,10 +4044,15 @@ components:
           type: string
           example: 'https://res.cloudinary.com/...'
           nullable: true
-        checked_in_at:
+        risk_lvl:
+          description: "Level risiko kesehatan berdasarkan self-assessment terakhir. 'not_yet' jika belum pernah mengisi."
           type: string
-          format: date-time
-          nullable: true
+          example: not_yet
+          enum:
+            - low
+            - medium
+            - high
+            - not_yet
         employee_status:
           type: string
           example: Mahasiswa
@@ -4073,6 +4201,32 @@ components:
         id:
           type: integer
           example: 12
+        sport:
+          description: 'Cabang olahraga yang dipertandingkan'
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: 'Basket Putra'
+            icon_path:
+              type: string
+              example: icons/basket.png
+              nullable: true
+          type: object
+          nullable: true
+        sport_category:
+          description: 'Sub-kategori cabang olahraga (Putra / Putri / Reguler / dll). null jika sport tidak memiliki sub-kategori.'
+          properties:
+            id:
+              type: integer
+              example: 2
+            name:
+              type: string
+              example: Reguler
+          type: object
+          nullable: true
         round:
           type: integer
           example: 2
@@ -4149,7 +4303,7 @@ components:
             - b
       type: object
     CheckinPlayerItem:
-      description: 'Data player beserta status checkin untuk sebuah pertandingan'
+      description: 'Data seorang player beserta status kehadirannya pada satu pertandingan tertentu'
       properties:
         id:
           type: integer
@@ -4166,23 +4320,25 @@ components:
           example: 'https://res.cloudinary.com/example/photo.jpg'
           nullable: true
         checked_in:
-          description: 'true jika player sudah melakukan checkin untuk pertandingan ini'
+          description: 'true jika player sudah dicheckin untuk pertandingan ini. false jika belum hadir atau belum dicheckin.'
           type: boolean
           example: false
         checked_in_at:
+          description: 'Timestamp saat checkin dilakukan. null jika belum dicheckin.'
           type: string
           format: date-time
           example: '2026-06-15T08:30:00+07:00'
           nullable: true
       type: object
     CheckinTeam:
-      description: 'Tim dalam konteks checkin pertandingan, berisi daftar player dengan status kehadiran'
+      description: 'Satu tim dalam konteks checkin pertandingan, berisi daftar player beserta status kehadiran masing-masing'
       properties:
         registration_id:
+          description: 'ID registrasi tim pada cabang olahraga ini'
           type: integer
           example: 4
         slot:
-          description: "Posisi tim dalam pertandingan: 'a' = tim tuan rumah, 'b' = tim tamu"
+          description: "Posisi slot tim dalam bagan: 'a' = slot kiri, 'b' = slot kanan"
           type: string
           example: a
           enum:
@@ -4191,12 +4347,13 @@ components:
         contingent:
           $ref: '#/components/schemas/ContingentObject'
         players:
+          description: 'Daftar seluruh player yang terdaftar di tim ini beserta status checkin masing-masing'
           type: array
           items:
             $ref: '#/components/schemas/CheckinPlayerItem'
       type: object
     MatchCheckinData:
-      description: 'Data checkin sebuah pertandingan, menampilkan semua player kedua tim beserta status kehadiran'
+      description: 'Data kehadiran seluruh player pada sebuah pertandingan, dikelompokkan per tim'
       properties:
         match_id:
           type: integer
@@ -4220,14 +4377,16 @@ components:
             -
               $ref: '#/components/schemas/CheckinTeam'
           nullable: true
+          description: 'Tim slot A. null jika tim belum ditentukan untuk pertandingan ini.'
         team_b:
           oneOf:
             -
               $ref: '#/components/schemas/CheckinTeam'
           nullable: true
+          description: 'Tim slot B. null jika tim belum ditentukan untuk pertandingan ini.'
       type: object
     CheckinRecord:
-      description: 'Record checkin satu player pada satu pertandingan'
+      description: 'Record checkin satu player pada satu pertandingan, dikembalikan setelah operasi checkin berhasil'
       properties:
         game_id:
           type: integer
@@ -4236,7 +4395,7 @@ components:
           type: integer
           example: 7
         registration_id:
-          description: 'ID registrasi tim asal player (tim A atau tim B)'
+          description: 'ID registrasi tim asal player — menunjukkan player ini berasal dari tim A atau tim B'
           type: integer
           example: 4
         checked_in:
@@ -4249,7 +4408,7 @@ components:
           nullable: true
       type: object
     TodayMatchItem:
-      description: 'Pertandingan hari ini milik kontingen PIC. Identik dengan MatchObject ditambah field `my_slot`.'
+      description: 'Pertandingan milik kontingen PIC. Identik dengan MatchObject ditambah field `my_slot`.'
       type: object
       allOf:
         -
@@ -4257,13 +4416,62 @@ components:
         -
           properties:
             my_slot:
-              description: "Slot posisi kontingen PIC dalam pertandingan ini: 'a' atau 'b'"
+              description: "Slot posisi kontingen PIC dalam pertandingan ini: 'a' = slot kiri, 'b' = slot kanan"
               type: string
               example: a
               enum:
                 - a
                 - b
           type: object
+    MyMatchesFilters:
+      description: 'Filter aktif yang diterapkan pada permintaan GET /my-matches. Hanya berisi field yang benar-benar dikirim dalam request.'
+      properties:
+        sport_id:
+          description: 'ID cabang olahraga yang difilter'
+          type: integer
+          example: 1
+        sport_category_id:
+          description: 'ID sub-kategori yang difilter'
+          type: integer
+          example: 2
+        status:
+          description: 'Status pertandingan yang difilter'
+          type: string
+          example: scheduled
+        date:
+          description: 'Tanggal yang difilter'
+          type: string
+          format: date
+          example: '2026-06-15'
+      type: object
+    MyMatchesResponse:
+      description: 'Respons endpoint GET /api/my-matches — seluruh pertandingan kontingen PIC lintas cabang olahraga'
+      properties:
+        status:
+          type: string
+          example: success
+        contingent:
+          description: 'Identitas kontingen milik PIC yang login'
+          properties:
+            id:
+              type: integer
+              example: 3
+            name:
+              type: string
+              example: 'Fakultas Informatika'
+          type: object
+        filters:
+          $ref: '#/components/schemas/MyMatchesFilters'
+        total:
+          description: 'Jumlah pertandingan yang dikembalikan setelah filter diterapkan'
+          type: integer
+          example: 12
+        data:
+          description: 'Daftar pertandingan, masing-masing menyertakan field `my_slot` yang menunjukkan posisi kontingen'
+          type: array
+          items:
+            $ref: '#/components/schemas/TodayMatchItem'
+      type: object
     BracketRoundItem:
       description: 'Satu ronde dalam bagan pertandingan'
       properties:
@@ -4337,6 +4545,217 @@ components:
           description: 'Pertandingan perebutan Juara 3 (loser Semifinal). null jika belum ada (kurang dari 4 tim).'
         results:
           $ref: '#/components/schemas/BracketResults'
+      type: object
+    MatchDataResponse:
+      description: 'Wrapper response standar yang mengembalikan satu objek pertandingan (digunakan oleh GET detail).'
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/MatchObject'
+      type: object
+    MatchActionResponse:
+      description: 'Wrapper response untuk operasi mutasi pertandingan (PATCH score / schedule / teams / swap / status). Selalu mengembalikan state terbaru pertandingan setelah perubahan diterapkan.'
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: 'Operasi berhasil diterapkan.'
+        data:
+          $ref: '#/components/schemas/MatchObject'
+      type: object
+    BracketViewResponse:
+      description: 'Wrapper response untuk GET /api/bracket — mengembalikan bagan pertandingan lengkap beserta semua ronde.'
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/BracketRound'
+      type: object
+    BracketGenerateResponse:
+      description: 'Wrapper response untuk POST /api/bracket/generate — dikembalikan setelah bagan berhasil digenerate.'
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: 'Bagan berhasil digenerate.'
+        data:
+          $ref: '#/components/schemas/BracketRound'
+      type: object
+    PublicTeamInMatch:
+      description: 'Informasi tim dalam tampilan publik — hanya identitas kontingen, tanpa daftar pemain'
+      properties:
+        registration_id:
+          type: integer
+          example: 4
+        contingent_id:
+          type: integer
+          example: 3
+          nullable: true
+        contingent_name:
+          type: string
+          example: 'Fakultas Informatika'
+          nullable: true
+        image_url:
+          description: 'URL gambar/logo kontingen. null jika belum diunggah.'
+          type: string
+          example: 'https://res.cloudinary.com/demo/image/upload/v1/telucup/contingents/abc123.jpg'
+          nullable: true
+      type: object
+    PublicMatchItem:
+      description: 'Data satu pertandingan untuk tampilan publik (penonton). Tidak menyertakan daftar pemain individual.'
+      properties:
+        id:
+          type: integer
+          example: 12
+        sport:
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: 'Basket Putra'
+            icon_path:
+              type: string
+              nullable: true
+          type: object
+          nullable: true
+        sport_category:
+          properties:
+            id:
+              type: integer
+              example: 2
+            name:
+              type: string
+              example: Reguler
+          type: object
+          nullable: true
+        round:
+          type: integer
+          example: 2
+        round_name:
+          type: string
+          example: Semifinal
+        match_number:
+          type: integer
+          example: 1
+        is_third_place_match:
+          type: boolean
+          example: false
+        status:
+          type: string
+          example: scheduled
+          enum:
+            - scheduled
+            - live
+            - finished
+        match_date:
+          type: string
+          format: date
+          example: '2026-06-15'
+          nullable: true
+        match_time:
+          type: string
+          example: '09:00'
+          nullable: true
+        location:
+          type: string
+          example: 'Gedung Sport Center Lt. 2'
+          nullable: true
+        score_a:
+          type: integer
+          example: 3
+          nullable: true
+        score_b:
+          type: integer
+          example: 1
+          nullable: true
+        team_a:
+          oneOf:
+            -
+              $ref: '#/components/schemas/PublicTeamInMatch'
+          nullable: true
+        team_b:
+          oneOf:
+            -
+              $ref: '#/components/schemas/PublicTeamInMatch'
+          nullable: true
+        winner:
+          description: 'Diisi setelah pertandingan selesai. null jika belum ada pemenang.'
+          properties:
+            registration_id:
+              type: integer
+              example: 4
+            contingent_id:
+              type: integer
+              example: 3
+              nullable: true
+            contingent_name:
+              type: string
+              example: 'Fakultas Informatika'
+              nullable: true
+          type: object
+          nullable: true
+      type: object
+    PublicMatchListMeta:
+      description: 'Metadata paginasi dan filter aktif untuk endpoint daftar pertandingan publik'
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        last_page:
+          type: integer
+          example: 5
+        per_page:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 96
+        filters:
+          description: 'Filter aktif yang diterapkan. Object kosong jika tidak ada filter.'
+          properties:
+            sport_id:
+              type: integer
+              example: 1
+            sport_category_id:
+              type: integer
+              example: 2
+            status:
+              type: string
+              example: live
+            date:
+              type: string
+              format: date
+              example: '2026-06-15'
+            contingent_id:
+              type: integer
+              example: 3
+            round:
+              type: integer
+              example: 2
+          type: object
+      type: object
+    PublicMatchListResponse:
+      description: 'Respons endpoint GET /api/matches — daftar pertandingan yang dapat diakses tanpa login'
+      properties:
+        status:
+          type: string
+          example: success
+        meta:
+          $ref: '#/components/schemas/PublicMatchListMeta'
+        data:
+          description: 'Daftar pertandingan sesuai filter dan halaman yang diminta'
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicMatchItem'
       type: object
     PaginationMeta:
       description: 'Metadata paginasi Laravel'

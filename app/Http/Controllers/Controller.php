@@ -205,7 +205,28 @@ use OpenApi\Attributes as OA;
     schema: "MatchObject",
     description: "Pertandingan dalam bagan gugur",
     properties: [
-        new OA\Property(property: "id",             type: "integer", example: 12),
+        new OA\Property(property: "id",           type: "integer", example: 12),
+        new OA\Property(
+            property: "sport",
+            type: "object",
+            nullable: true,
+            description: "Cabang olahraga yang dipertandingkan",
+            properties: [
+                new OA\Property(property: "id",        type: "integer", example: 1),
+                new OA\Property(property: "name",      type: "string",  example: "Basket Putra"),
+                new OA\Property(property: "icon_path", type: "string",  nullable: true, example: "icons/basket.png"),
+            ]
+        ),
+        new OA\Property(
+            property: "sport_category",
+            type: "object",
+            nullable: true,
+            description: "Sub-kategori cabang olahraga (Putra / Putri / Reguler / dll). null jika sport tidak memiliki sub-kategori.",
+            properties: [
+                new OA\Property(property: "id",   type: "integer", example: 2),
+                new OA\Property(property: "name", type: "string",  example: "Reguler"),
+            ]
+        ),
         new OA\Property(property: "round",          type: "integer", example: 2),
         new OA\Property(property: "round_name",     type: "string",  example: "Semifinal"),
         new OA\Property(property: "match_number",   type: "integer", example: 1),
@@ -290,11 +311,58 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: "TodayMatchItem",
-    description: "Pertandingan hari ini milik kontingen PIC. Identik dengan MatchObject ditambah field `my_slot`.",
+    description: "Pertandingan milik kontingen PIC. Identik dengan MatchObject ditambah field `my_slot`.",
     allOf: [new OA\Schema(ref: "#/components/schemas/MatchObject")],
     properties: [
         new OA\Property(property: "my_slot", type: "string", enum: ["a", "b"], example: "a",
-            description: "Slot posisi kontingen PIC dalam pertandingan ini: 'a' atau 'b'"),
+            description: "Slot posisi kontingen PIC dalam pertandingan ini: 'a' = slot kiri, 'b' = slot kanan"),
+    ]
+)]
+#[OA\Schema(
+    schema: "MyMatchesFilters",
+    description: "Filter aktif yang diterapkan pada permintaan GET /my-matches. Hanya berisi field yang benar-benar dikirim dalam request.",
+    properties: [
+        new OA\Property(property: "sport_id",          type: "integer", example: 1,            description: "ID cabang olahraga yang difilter"),
+        new OA\Property(property: "sport_category_id", type: "integer", example: 2,            description: "ID sub-kategori yang difilter"),
+        new OA\Property(property: "status",            type: "string",  example: "scheduled",  description: "Status pertandingan yang difilter"),
+        new OA\Property(property: "date",              type: "string",  format: "date", example: "2026-06-15", description: "Tanggal yang difilter"),
+    ]
+)]
+#[OA\Schema(
+    schema: "MyMatchesResponse",
+    description: "Respons endpoint GET /api/my-matches — seluruh pertandingan kontingen PIC lintas cabang olahraga",
+    properties: [
+        new OA\Property(
+            property: "status",
+            type: "string",
+            example: "success"
+        ),
+        new OA\Property(
+            property: "contingent",
+            type: "object",
+            description: "Identitas kontingen milik PIC yang login",
+            properties: [
+                new OA\Property(property: "id",   type: "integer", example: 3),
+                new OA\Property(property: "name", type: "string",  example: "Fakultas Informatika"),
+            ]
+        ),
+        new OA\Property(
+            property: "filters",
+            ref: "#/components/schemas/MyMatchesFilters",
+            description: "Filter aktif yang diterapkan. Object kosong `{}` jika tidak ada filter."
+        ),
+        new OA\Property(
+            property: "total",
+            type: "integer",
+            example: 12,
+            description: "Jumlah pertandingan yang dikembalikan setelah filter diterapkan"
+        ),
+        new OA\Property(
+            property: "data",
+            type: "array",
+            description: "Daftar pertandingan, masing-masing menyertakan field `my_slot` yang menunjukkan posisi kontingen",
+            items: new OA\Items(ref: "#/components/schemas/TodayMatchItem")
+        ),
     ]
 )]
 #[OA\Schema(
@@ -349,6 +417,144 @@ use OpenApi\Attributes as OA;
             description: "Pertandingan perebutan Juara 3 (loser Semifinal). null jika belum ada (kurang dari 4 tim)."),
         new OA\Property(property: "results",           ref: "#/components/schemas/BracketResults",
             description: "Hasil akhir: Juara 1, 2, dan 3. Diisi bertahap seiring pertandingan selesai."),
+    ]
+)]
+// ── Match Response Wrappers ──────────────────────────────────────────────────
+#[OA\Schema(
+    schema: "MatchDataResponse",
+    description: "Wrapper response standar yang mengembalikan satu objek pertandingan (digunakan oleh GET detail).",
+    properties: [
+        new OA\Property(property: "status", type: "string", example: "success"),
+        new OA\Property(property: "data",   ref: "#/components/schemas/MatchObject",
+            description: "Data pertandingan lengkap beserta informasi cabang olahraga, kedua tim, pemain, skor, dan jadwal."),
+    ]
+)]
+#[OA\Schema(
+    schema: "MatchActionResponse",
+    description: "Wrapper response untuk operasi mutasi pertandingan (PATCH score / schedule / teams / swap / status). Selalu mengembalikan state terbaru pertandingan setelah perubahan diterapkan.",
+    properties: [
+        new OA\Property(property: "status",  type: "string", example: "success"),
+        new OA\Property(property: "message", type: "string", example: "Operasi berhasil diterapkan."),
+        new OA\Property(property: "data",    ref: "#/components/schemas/MatchObject",
+            description: "State terbaru pertandingan setelah perubahan, termasuk cabang olahraga, skor, dan kedua tim."),
+    ]
+)]
+#[OA\Schema(
+    schema: "BracketViewResponse",
+    description: "Wrapper response untuk GET /api/bracket — mengembalikan bagan pertandingan lengkap beserta semua ronde.",
+    properties: [
+        new OA\Property(property: "status", type: "string", example: "success"),
+        new OA\Property(property: "data",   ref: "#/components/schemas/BracketRound",
+            description: "Bagan pertandingan lengkap: sport, kategori, semua ronde, pertandingan juara 3, dan hasil akhir."),
+    ]
+)]
+#[OA\Schema(
+    schema: "BracketGenerateResponse",
+    description: "Wrapper response untuk POST /api/bracket/generate — dikembalikan setelah bagan berhasil digenerate.",
+    properties: [
+        new OA\Property(property: "status",  type: "string", example: "success"),
+        new OA\Property(property: "message", type: "string", example: "Bagan berhasil digenerate."),
+        new OA\Property(property: "data",    ref: "#/components/schemas/BracketRound",
+            description: "Bagan yang baru saja digenerate, termasuk semua ronde dan pertandingan awal."),
+    ]
+)]
+
+#[OA\Schema(
+    schema: "PublicTeamInMatch",
+    description: "Informasi tim dalam tampilan publik — hanya identitas kontingen, tanpa daftar pemain",
+    properties: [
+        new OA\Property(property: "registration_id",  type: "integer", example: 4),
+        new OA\Property(property: "contingent_id",    type: "integer", nullable: true, example: 3),
+        new OA\Property(property: "contingent_name",  type: "string",  nullable: true, example: "Fakultas Informatika"),
+        new OA\Property(property: "image_url",        type: "string",  nullable: true,
+            example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/contingents/abc123.jpg",
+            description: "URL gambar/logo kontingen. null jika belum diunggah."),
+    ]
+)]
+#[OA\Schema(
+    schema: "PublicMatchItem",
+    description: "Data satu pertandingan untuk tampilan publik (penonton). Tidak menyertakan daftar pemain individual.",
+    properties: [
+        new OA\Property(property: "id",             type: "integer", example: 12),
+        new OA\Property(
+            property: "sport",
+            type: "object",
+            nullable: true,
+            properties: [
+                new OA\Property(property: "id",        type: "integer", example: 1),
+                new OA\Property(property: "name",      type: "string",  example: "Basket Putra"),
+                new OA\Property(property: "icon_path", type: "string",  nullable: true),
+            ]
+        ),
+        new OA\Property(
+            property: "sport_category",
+            type: "object",
+            nullable: true,
+            properties: [
+                new OA\Property(property: "id",   type: "integer", example: 2),
+                new OA\Property(property: "name", type: "string",  example: "Reguler"),
+            ]
+        ),
+        new OA\Property(property: "round",                type: "integer", example: 2),
+        new OA\Property(property: "round_name",           type: "string",  example: "Semifinal"),
+        new OA\Property(property: "match_number",         type: "integer", example: 1),
+        new OA\Property(property: "is_third_place_match", type: "boolean", example: false),
+        new OA\Property(property: "status",   type: "string", enum: ["scheduled", "live", "finished"], example: "scheduled"),
+        new OA\Property(property: "match_date", type: "string", format: "date",   nullable: true, example: "2026-06-15"),
+        new OA\Property(property: "match_time", type: "string",                   nullable: true, example: "09:00"),
+        new OA\Property(property: "location",   type: "string",                   nullable: true, example: "Gedung Sport Center Lt. 2"),
+        new OA\Property(property: "score_a",    type: "integer", nullable: true,  example: 3),
+        new OA\Property(property: "score_b",    type: "integer", nullable: true,  example: 1),
+        new OA\Property(property: "team_a", nullable: true, ref: "#/components/schemas/PublicTeamInMatch"),
+        new OA\Property(property: "team_b", nullable: true, ref: "#/components/schemas/PublicTeamInMatch"),
+        new OA\Property(
+            property: "winner",
+            type: "object",
+            nullable: true,
+            description: "Diisi setelah pertandingan selesai. null jika belum ada pemenang.",
+            properties: [
+                new OA\Property(property: "registration_id",  type: "integer", example: 4),
+                new OA\Property(property: "contingent_id",    type: "integer", nullable: true, example: 3),
+                new OA\Property(property: "contingent_name",  type: "string",  nullable: true, example: "Fakultas Informatika"),
+            ]
+        ),
+    ]
+)]
+#[OA\Schema(
+    schema: "PublicMatchListMeta",
+    description: "Metadata paginasi dan filter aktif untuk endpoint daftar pertandingan publik",
+    properties: [
+        new OA\Property(property: "current_page", type: "integer", example: 1),
+        new OA\Property(property: "last_page",    type: "integer", example: 5),
+        new OA\Property(property: "per_page",     type: "integer", example: 20),
+        new OA\Property(property: "total",        type: "integer", example: 96),
+        new OA\Property(
+            property: "filters",
+            type: "object",
+            description: "Filter aktif yang diterapkan. Object kosong jika tidak ada filter.",
+            properties: [
+                new OA\Property(property: "sport_id",          type: "integer", example: 1),
+                new OA\Property(property: "sport_category_id", type: "integer", example: 2),
+                new OA\Property(property: "status",            type: "string",  example: "live"),
+                new OA\Property(property: "date",              type: "string",  format: "date", example: "2026-06-15"),
+                new OA\Property(property: "contingent_id",     type: "integer", example: 3),
+                new OA\Property(property: "round",             type: "integer", example: 2),
+            ]
+        ),
+    ]
+)]
+#[OA\Schema(
+    schema: "PublicMatchListResponse",
+    description: "Respons endpoint GET /api/matches — daftar pertandingan yang dapat diakses tanpa login",
+    properties: [
+        new OA\Property(property: "status", type: "string", example: "success"),
+        new OA\Property(property: "meta",   ref: "#/components/schemas/PublicMatchListMeta"),
+        new OA\Property(
+            property: "data",
+            type: "array",
+            description: "Daftar pertandingan sesuai filter dan halaman yang diminta",
+            items: new OA\Items(ref: "#/components/schemas/PublicMatchItem")
+        ),
     ]
 )]
 #[OA\Schema(

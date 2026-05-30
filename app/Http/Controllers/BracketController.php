@@ -16,6 +16,139 @@ use Illuminate\Support\Facades\DB;
 class BracketController extends Controller
 {
     // ──────────────────────────────────────────────────────────────
+    //  SEMUA PERTANDINGAN KONTINGEN (PIC KONTINGEN)
+    // ──────────────────────────────────────────────────────────────
+
+    #[OA\Get(
+        path: "/api/my-matches",
+        operationId: "myMatches",
+        tags: ["Bracket"],
+        summary: "Semua pertandingan kontingen saya",
+        description: "PIC kontingen mengambil **seluruh** pertandingan kontingennya lintas semua cabang olahraga.\n\n**Urutan hasil:** diurutkan berdasarkan `sport_id` → `round` → `match_number` → `match_date` → `match_time`. Pertandingan dengan tanggal belum dijadwalkan muncul di paling akhir.\n\nPertandingan berstatus `bye` selalu dikecualikan.\n\nSemua query param bersifat opsional dan dapat dikombinasikan.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(
+        name: "sport_id",
+        in: "query",
+        required: false,
+        description: "Filter hanya pertandingan pada cabang olahraga tertentu",
+        schema: new OA\Schema(type: "integer", example: 1)
+    )]
+    #[OA\Parameter(
+        name: "sport_category_id",
+        in: "query",
+        required: false,
+        description: "Filter berdasarkan sub-kategori (Putra / Putri / Reguler / dll)",
+        schema: new OA\Schema(type: "integer", example: 2)
+    )]
+    #[OA\Parameter(
+        name: "status",
+        in: "query",
+        required: false,
+        description: "Filter berdasarkan status pertandingan",
+        schema: new OA\Schema(type: "string", enum: ["scheduled", "live", "finished"])
+    )]
+    #[OA\Parameter(
+        name: "date",
+        in: "query",
+        required: false,
+        description: "Filter hanya pertandingan pada tanggal tertentu (format YYYY-MM-DD)",
+        schema: new OA\Schema(type: "string", format: "date", example: "2026-06-15")
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Daftar seluruh pertandingan kontingen berhasil diambil",
+        content: new OA\JsonContent(ref: "#/components/schemas/MyMatchesResponse")
+    )]
+    #[OA\Response(
+        response: 401,
+        description: "Unauthenticated — token tidak diberikan atau sudah kedaluwarsa",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 403,
+        description: "Forbidden — user login belum ditugaskan sebagai PIC kontingen manapun",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 422,
+        description: "Parameter filter tidak valid (sport_id / sport_category_id tidak ditemukan, format date salah, dll)",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    public function myMatches(Request $request)
+    {
+        $contingent = $request->user()->managedContingent;
+
+        if (!$contingent) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Anda belum ditugaskan sebagai PIC kontingen manapun.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'sport_id'          => 'nullable|integer|exists:sports,id',
+            'sport_category_id' => 'nullable|integer|exists:sport_categories,id',
+            'status'            => 'nullable|in:scheduled,live,finished',
+            'date'              => 'nullable|date',
+        ]);
+
+        $registrationIds = Registration::where('contingent_id', $contingent->id)->pluck('id');
+
+        $query = Game::with([
+            'sport',
+            'sportCategory',
+            'registrationA.contingent',
+            'registrationA.players',
+            'registrationB.contingent',
+            'registrationB.players',
+            'winner.contingent',
+        ])
+        ->where('status', '!=', 'bye')
+        ->where(function ($q) use ($registrationIds) {
+            $q->whereIn('registration_a_id', $registrationIds)
+              ->orWhereIn('registration_b_id', $registrationIds);
+        });
+
+        if (!empty($validated['sport_id'])) {
+            $query->where('sport_id', $validated['sport_id']);
+        }
+        if (!empty($validated['sport_category_id'])) {
+            $query->where('sport_category_id', $validated['sport_category_id']);
+        }
+        if (!empty($validated['status'])) {
+            $query->where('status', $validated['status']);
+        }
+        if (!empty($validated['date'])) {
+            $query->whereDate('match_date', $validated['date']);
+        }
+
+        $matches = $query
+            ->orderBy('sport_id')
+            ->orderBy('round')
+            ->orderBy('match_number')
+            ->orderByRaw('match_date IS NULL, match_date')
+            ->orderByRaw('match_time IS NULL, match_time')
+            ->get();
+
+        $data = $matches->map(function (Game $game) use ($registrationIds) {
+            $mySlot = $registrationIds->contains($game->registration_a_id) ? 'a' : 'b';
+            return array_merge($this->formatMatch($game), ['my_slot' => $mySlot]);
+        })->values();
+
+        return response()->json([
+            'status'     => 'success',
+            'contingent' => [
+                'id'   => $contingent->id,
+                'name' => $contingent->name,
+            ],
+            'filters' => array_filter($validated, fn ($v) => !is_null($v)),
+            'total'   => $data->count(),
+            'data'    => $data,
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────
     //  JADWAL HARI INI (PIC KONTINGEN)
     // ──────────────────────────────────────────────────────────────
 
@@ -84,6 +217,155 @@ class BracketController extends Controller
     }
 
     // ──────────────────────────────────────────────────────────────
+    //  SEMUA PERTANDINGAN — PUBLIK (PENONTON)
+    // ──────────────────────────────────────────────────────────────
+
+    #[OA\Get(
+        path: "/api/matches",
+        operationId: "listMatches",
+        tags: ["Bracket"],
+        summary: "Daftar semua pertandingan (publik)",
+        description: "Mengembalikan daftar semua pertandingan yang dapat diakses tanpa login. Ditujukan untuk penonton atau pengunjung yang ingin memantau jadwal dan hasil pertandingan.\n\nPertandingan `bye` dikecualikan secara default. Hasil diurutkan berdasarkan tanggal/waktu (terjadwal terlebih dahulu), lalu berdasarkan cabang olahraga dan ronde.",
+    )]
+    #[OA\Parameter(
+        name: "sport_id",
+        in: "query",
+        required: false,
+        description: "Filter berdasarkan cabang olahraga",
+        schema: new OA\Schema(type: "integer", example: 1)
+    )]
+    #[OA\Parameter(
+        name: "sport_category_id",
+        in: "query",
+        required: false,
+        description: "Filter berdasarkan sub-kategori (Putra / Putri / Reguler / dll)",
+        schema: new OA\Schema(type: "integer", example: 2)
+    )]
+    #[OA\Parameter(
+        name: "status",
+        in: "query",
+        required: false,
+        description: "Filter berdasarkan status pertandingan",
+        schema: new OA\Schema(type: "string", enum: ["scheduled", "live", "finished"])
+    )]
+    #[OA\Parameter(
+        name: "date",
+        in: "query",
+        required: false,
+        description: "Filter pertandingan pada tanggal tertentu (YYYY-MM-DD)",
+        schema: new OA\Schema(type: "string", format: "date", example: "2026-06-15")
+    )]
+    #[OA\Parameter(
+        name: "contingent_id",
+        in: "query",
+        required: false,
+        description: "Filter pertandingan yang melibatkan kontingen tertentu — berguna bagi pendukung tim",
+        schema: new OA\Schema(type: "integer", example: 3)
+    )]
+    #[OA\Parameter(
+        name: "round",
+        in: "query",
+        required: false,
+        description: "Filter berdasarkan nomor ronde",
+        schema: new OA\Schema(type: "integer", example: 2)
+    )]
+    #[OA\Parameter(
+        name: "per_page",
+        in: "query",
+        required: false,
+        description: "Jumlah item per halaman (default: 20, maks: 100)",
+        schema: new OA\Schema(type: "integer", example: 20)
+    )]
+    #[OA\Parameter(
+        name: "page",
+        in: "query",
+        required: false,
+        description: "Nomor halaman",
+        schema: new OA\Schema(type: "integer", example: 1)
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Daftar pertandingan berhasil diambil",
+        content: new OA\JsonContent(ref: "#/components/schemas/PublicMatchListResponse")
+    )]
+    #[OA\Response(
+        response: 422,
+        description: "Parameter filter tidak valid",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    public function allMatches(Request $request)
+    {
+        $validated = $request->validate([
+            'sport_id'          => 'nullable|integer|exists:sports,id',
+            'sport_category_id' => 'nullable|integer|exists:sport_categories,id',
+            'status'            => 'nullable|in:scheduled,live,finished',
+            'date'              => 'nullable|date',
+            'contingent_id'     => 'nullable|integer|exists:contingents,id',
+            'round'             => 'nullable|integer|min:1',
+            'per_page'          => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 20);
+
+        $query = Game::with([
+            'sport',
+            'sportCategory',
+            'registrationA.contingent',
+            'registrationB.contingent',
+            'winner.contingent',
+        ])
+        ->where('status', '!=', 'bye');
+
+        if (!empty($validated['sport_id'])) {
+            $query->where('sport_id', $validated['sport_id']);
+        }
+        if (!empty($validated['sport_category_id'])) {
+            $query->where('sport_category_id', $validated['sport_category_id']);
+        }
+        if (!empty($validated['status'])) {
+            $query->where('status', $validated['status']);
+        }
+        if (!empty($validated['date'])) {
+            $query->whereDate('match_date', $validated['date']);
+        }
+        if (!empty($validated['round'])) {
+            $query->where('round', $validated['round']);
+        }
+        if (!empty($validated['contingent_id'])) {
+            $contingentId = $validated['contingent_id'];
+            $regIds = Registration::where('contingent_id', $contingentId)->pluck('id');
+            $query->where(function ($q) use ($regIds) {
+                $q->whereIn('registration_a_id', $regIds)
+                  ->orWhereIn('registration_b_id', $regIds);
+            });
+        }
+
+        $query->orderByRaw('match_date IS NULL, match_date')
+              ->orderByRaw('match_time IS NULL, match_time')
+              ->orderBy('sport_id')
+              ->orderBy('round')
+              ->orderBy('match_number');
+
+        $paginated = $query->paginate($perPage);
+
+        $data = collect($paginated->items())->map(
+            fn (Game $game) => $this->formatPublicMatch($game)
+        )->values();
+
+        return response()->json([
+            'status' => 'success',
+            'meta'   => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+                'filters'      => array_filter($validated, fn ($v) => !is_null($v) && $v !== 'per_page'),
+            ],
+            'data'   => $data,
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────
     //  GENERATE
     // ──────────────────────────────────────────────────────────────
 
@@ -108,13 +390,7 @@ class BracketController extends Controller
     #[OA\Response(
         response: 201,
         description: "Bagan berhasil digenerate",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "status",  type: "string", example: "success"),
-                new OA\Property(property: "message", type: "string", example: "Bagan berhasil digenerate."),
-                new OA\Property(property: "data",    ref: "#/components/schemas/BracketRound"),
-            ]
-        )
+        content: new OA\JsonContent(ref: "#/components/schemas/BracketGenerateResponse")
     )]
     #[OA\Response(
         response: 422,
@@ -196,12 +472,7 @@ class BracketController extends Controller
     #[OA\Response(
         response: 200,
         description: "Bagan berhasil diambil",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "status", type: "string", example: "success"),
-                new OA\Property(property: "data",   ref: "#/components/schemas/BracketRound"),
-            ]
-        )
+        content: new OA\JsonContent(ref: "#/components/schemas/BracketViewResponse")
     )]
     #[OA\Response(
         response: 404,
@@ -244,13 +515,8 @@ class BracketController extends Controller
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(
         response: 200,
-        description: "Detail pertandingan",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "status", type: "string", example: "success"),
-                new OA\Property(property: "data",   ref: "#/components/schemas/MatchObject"),
-            ]
-        )
+        description: "Detail pertandingan lengkap beserta informasi cabang olahraga",
+        content: new OA\JsonContent(ref: "#/components/schemas/MatchDataResponse")
     )]
     #[OA\Response(
         response: 404,
@@ -305,13 +571,7 @@ class BracketController extends Controller
     #[OA\Response(
         response: 200,
         description: "Skor diperbarui dan pemenang dilanjutkan ke babak berikutnya",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "status",  type: "string", example: "success"),
-                new OA\Property(property: "message", type: "string", example: "Skor diperbarui dan pemenang dilanjutkan ke babak berikutnya."),
-                new OA\Property(property: "data",    ref: "#/components/schemas/MatchObject"),
-            ]
-        )
+        content: new OA\JsonContent(ref: "#/components/schemas/MatchActionResponse")
     )]
     #[OA\Response(
         response: 422,
@@ -396,7 +656,7 @@ class BracketController extends Controller
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Skor diperbarui dan pemenang dilanjutkan ke babak berikutnya.',
-                'data'    => $game->fresh(['registrationA.contingent', 'registrationB.contingent', 'winner.contingent', 'nextMatch']),
+                'data'    => $this->formatMatch($game->fresh()),
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -434,14 +694,8 @@ class BracketController extends Controller
     )]
     #[OA\Response(
         response: 200,
-        description: "Jadwal berhasil diperbarui",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "status",  type: "string", example: "success"),
-                new OA\Property(property: "message", type: "string", example: "Jadwal pertandingan berhasil diperbarui."),
-                new OA\Property(property: "data",    ref: "#/components/schemas/MatchObject"),
-            ]
-        )
+        description: "Jadwal berhasil diperbarui — response menyertakan state pertandingan terbaru beserta cabang olahraga",
+        content: new OA\JsonContent(ref: "#/components/schemas/MatchActionResponse")
     )]
     public function updateSchedule(Request $request, $id)
     {
@@ -488,14 +742,8 @@ class BracketController extends Controller
     )]
     #[OA\Response(
         response: 200,
-        description: "Tim berhasil diperbarui",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "status",  type: "string", example: "success"),
-                new OA\Property(property: "message", type: "string", example: "Tim pertandingan berhasil diperbarui."),
-                new OA\Property(property: "data",    ref: "#/components/schemas/MatchObject"),
-            ]
-        )
+        description: "Tim berhasil diperbarui — response menyertakan state pertandingan terbaru beserta cabang olahraga",
+        content: new OA\JsonContent(ref: "#/components/schemas/MatchActionResponse")
     )]
     #[OA\Response(
         response: 422,
@@ -551,14 +799,8 @@ class BracketController extends Controller
     #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(
         response: 200,
-        description: "Posisi tim berhasil ditukar",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "status",  type: "string", example: "success"),
-                new OA\Property(property: "message", type: "string", example: "Posisi tim A dan B berhasil ditukar."),
-                new OA\Property(property: "data",    ref: "#/components/schemas/MatchObject"),
-            ]
-        )
+        description: "Posisi tim berhasil ditukar — response menyertakan state pertandingan terbaru beserta cabang olahraga",
+        content: new OA\JsonContent(ref: "#/components/schemas/MatchActionResponse")
     )]
     public function swapTeams($id)
     {
@@ -607,14 +849,8 @@ class BracketController extends Controller
     )]
     #[OA\Response(
         response: 200,
-        description: "Status pertandingan diperbarui",
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: "status",  type: "string", example: "success"),
-                new OA\Property(property: "message", type: "string", example: "Status pertandingan diubah menjadi 'live'."),
-                new OA\Property(property: "data",    ref: "#/components/schemas/MatchObject"),
-            ]
-        )
+        description: "Status pertandingan diperbarui — response menyertakan state pertandingan terbaru beserta cabang olahraga",
+        content: new OA\JsonContent(ref: "#/components/schemas/MatchActionResponse")
     )]
     public function setStatus(Request $request, $id)
     {
@@ -1080,6 +1316,8 @@ class BracketController extends Controller
         $category = $categoryId ? SportCategory::find($categoryId) : null;
 
         $games = Game::with([
+            'sport',
+            'sportCategory',
             'registrationA.contingent',
             'registrationA.players',
             'registrationB.contingent',
@@ -1156,10 +1394,80 @@ class BracketController extends Controller
     //  HELPER: FORMAT MATCH
     // ──────────────────────────────────────────────────────────────
 
-    private function formatMatch(Game $game): array
+    /**
+     * Format ringkas untuk tampilan publik (penonton).
+     * Tidak menyertakan daftar pemain individual agar response tetap ringan.
+     */
+    private function formatPublicMatch(Game $game): array
     {
         return [
             'id'                   => $game->id,
+            'sport'                => $game->sport ? [
+                'id'       => $game->sport->id,
+                'name'     => $game->sport->name,
+                'icon_path'=> $game->sport->icon_path,
+            ] : null,
+            'sport_category'       => $game->sportCategory ? [
+                'id'   => $game->sportCategory->id,
+                'name' => $game->sportCategory->name,
+            ] : null,
+            'round'                => $game->round,
+            'round_name'           => $game->round_name,
+            'match_number'         => $game->match_number,
+            'is_third_place_match' => (bool) $game->is_third_place_match,
+            'status'               => $game->status,
+            'match_date'           => $game->match_date?->format('Y-m-d'),
+            'match_time'           => $game->match_time,
+            'location'             => $game->location,
+            'score_a'              => $game->score_a,
+            'score_b'              => $game->score_b,
+            'team_a'               => $game->registrationA ? [
+                'registration_id' => $game->registration_a_id,
+                'contingent_id'   => $game->registrationA->contingent?->id,
+                'contingent_name' => $game->registrationA->contingent?->name,
+                'image_url'       => $game->registrationA->contingent?->image_url,
+            ] : null,
+            'team_b'               => $game->registrationB ? [
+                'registration_id' => $game->registration_b_id,
+                'contingent_id'   => $game->registrationB->contingent?->id,
+                'contingent_name' => $game->registrationB->contingent?->name,
+                'image_url'       => $game->registrationB->contingent?->image_url,
+            ] : null,
+            'winner'               => $game->winner_registration_id ? [
+                'registration_id' => $game->winner_registration_id,
+                'contingent_id'   => $game->winner?->contingent?->id,
+                'contingent_name' => $game->winner?->contingent?->name,
+            ] : null,
+        ];
+    }
+
+    private function formatMatch(Game $game): array
+    {
+        // Pastikan semua relasi tersedia, baik dari eager load maupun fresh()
+        $game->loadMissing([
+            'sport',
+            'sportCategory',
+            'registrationA.contingent',
+            'registrationA.players',
+            'registrationB.contingent',
+            'registrationB.players',
+            'winner.contingent',
+        ]);
+
+        return [
+            'id'                   => $game->id,
+
+            // Cabang olahraga
+            'sport' => $game->sport ? [
+                'id'        => $game->sport->id,
+                'name'      => $game->sport->name,
+                'icon_path' => $game->sport->icon_path,
+            ] : null,
+            'sport_category' => $game->sportCategory ? [
+                'id'   => $game->sportCategory->id,
+                'name' => $game->sportCategory->name,
+            ] : null,
+
             'round'                => $game->round,
             'round_name'           => $game->round_name,
             'match_number'         => $game->match_number,
