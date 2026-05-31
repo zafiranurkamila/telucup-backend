@@ -7,6 +7,7 @@ use OpenApi\Attributes as OA;
 use App\Models\Player;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Cloudinary\Cloudinary;
@@ -126,7 +127,7 @@ class PlayerController extends Controller
         operationId: "storePlayer",
         tags: ["Players"],
         summary: "Buat akun player baru",
-        description: "Admin, panitia, atau PIC kontingen membuat akun player baru. Dibuat dengan data minimal — profil lengkap diisi kemudian oleh player sendiri via `PATCH /api/player/profile`.",
+        description: "Admin, panitia, atau PIC kontingen membuat akun player baru. Field `password` dipakai sekaligus sebagai NIM/NIP player — harus unik. Profil lengkap diisi kemudian oleh player sendiri via `PATCH /api/player/profile`.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
@@ -136,24 +137,30 @@ class PlayerController extends Controller
             properties: [
                 new OA\Property(property: "name",     type: "string", maxLength: 255, example: "Ahmad Fauzi"),
                 new OA\Property(property: "email",    type: "string", format: "email", example: "ahmad@telkomuniversity.ac.id"),
-                new OA\Property(property: "password", type: "string", format: "password", minLength: 8, example: "rahasia123"),
+                new OA\Property(property: "password", type: "string", format: "password", minLength: 8, example: "1301234567",
+                    description: "Password login sekaligus NIM/NIP player. Harus unik di seluruh data player."),
             ]
         )
     )]
     #[OA\Response(
-        response: 200,
+        response: 201,
         description: "Player berhasil dibuat",
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: "message", type: "string", example: "Player and user account created successfully"),
-                new OA\Property(property: "player",  ref: "#/components/schemas/PlayerObject"),
-                new OA\Property(property: "user",    ref: "#/components/schemas/UserObject"),
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Akun Ahmad Fauzi berhasil dibuat."),
+                new OA\Property(property: "data",    type: "object",
+                    properties: [
+                        new OA\Property(property: "player", ref: "#/components/schemas/PlayerObject"),
+                        new OA\Property(property: "user",   ref: "#/components/schemas/UserObject"),
+                    ]
+                ),
             ]
         )
     )]
     #[OA\Response(
         response: 422,
-        description: "Validasi gagal — email sudah digunakan",
+        description: "Validasi gagal — email sudah digunakan atau NIM/NIP (password) sudah terpakai",
         content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
     )]
     #[OA\Response(
@@ -169,35 +176,39 @@ class PlayerController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'     => 'required|string',
-            'email'    => 'required|string|email|unique:users',
-            'password' => 'required|string|min:8',
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|email|unique:users,email',
+            'password' => 'required|string|min:8|unique:players,nim_nip',
         ]);
 
         DB::beginTransaction();
         try {
             $user = \App\Models\User::create([
-                'name'     => $request->name,
-                'email'    => $request->email,
-                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'name'     => $validated['name'],
+                'email'    => $validated['email'],
+                'password' => Hash::make($validated['password']),
                 'role'     => 'player',
             ]);
 
             $player = Player::create([
                 'user_id' => $user->id,
-                'name'    => $user->name,
+                'name'    => $validated['name'],
+                'nim_nip' => $validated['password'],
             ]);
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Player and user account created successfully',
-                'player'  => $player,
-                'user'    => $user,
-            ]);
+                'status'  => 'success',
+                'message' => "Akun {$validated['name']} berhasil dibuat.",
+                'data'    => [
+                    'player' => $player->load(['user:id,name,email,role,is_kacamata', 'contingent:id,name']),
+                    'user'   => $user->only(['id', 'name', 'email', 'role', 'is_kacamata', 'created_at']),
+                ],
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to create player', 'error' => $e->getMessage()], 500);
+            return response()->json(['status' => 'error', 'message' => 'Gagal membuat akun player: ' . $e->getMessage()], 500);
         }
     }
 
@@ -206,17 +217,27 @@ class PlayerController extends Controller
         operationId: "updateProfile",
         tags: ["Players"],
         summary: "Lengkapi atau update profil pemain",
-        description: "Player yang sedang login melengkapi profilnya: NIM/NIP dan status kacamata. Kontingen dikelola oleh PIC via `POST /api/contingents/my/players`. Cabang olahraga didaftarkan melalui registrasi tim.",
+        description: "Player yang sedang login melengkapi profilnya: NIM/NIP, status kacamata, status kepegawaian, lokasi kerja, dan password. Kontingen dikelola oleh PIC via `POST /api/contingents/my/players`. Cabang olahraga didaftarkan melalui registrasi tim.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: "nim_nip",     type: "string", example: "1301234567",
+                new OA\Property(property: "nim_nip",         type: "string",  example: "1301234567",
                     description: "NIM (mahasiswa) atau NIP (dosen/karyawan). Harus unik."),
-                new OA\Property(property: "is_kacamata", type: "boolean", example: false,
+                new OA\Property(property: "is_kacamata",     type: "boolean", example: false,
                     description: "Penanda pengguna kacamata — disimpan di tabel users untuk pemantauan AI"),
+                new OA\Property(property: "employee_status", type: "string",  example: "Pegawai Tetap", nullable: true,
+                    description: "Status kepegawaian pemain, mis. Mahasiswa, Pegawai Tetap, TPA."),
+                new OA\Property(property: "work_location",   type: "string",  example: "Kampus A", nullable: true,
+                    description: "Lokasi kerja/unit pemain."),
+                new OA\Property(property: "current_password", type: "string", example: "oldpassword",
+                    description: "Password saat ini — wajib diisi jika ingin mengganti password."),
+                new OA\Property(property: "password",         type: "string", example: "newpassword",
+                    description: "Password baru (minimal 8 karakter). Wajib disertai current_password dan password_confirmation."),
+                new OA\Property(property: "password_confirmation", type: "string", example: "newpassword",
+                    description: "Konfirmasi password baru — harus sama dengan password."),
             ]
         )
     )]
@@ -243,7 +264,7 @@ class PlayerController extends Controller
     )]
     #[OA\Response(
         response: 422,
-        description: "Validasi gagal — NIM/NIP sudah dipakai",
+        description: "Validasi gagal — NIM/NIP sudah dipakai atau password tidak sesuai",
         content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
     )]
     public function updateProfile(Request $request)
@@ -256,7 +277,11 @@ class PlayerController extends Controller
         }
 
         $rules = [
-            'is_kacamata' => 'nullable|boolean',
+            'is_kacamata'          => 'nullable|boolean',
+            'employee_status'      => 'nullable|string|max:100',
+            'work_location'        => 'nullable|string|max:255',
+            'current_password'     => 'required_with:password|string',
+            'password'             => 'nullable|string|min:8|confirmed',
         ];
 
         if ($request->has('nim_nip') && $request->nim_nip !== $player->nim_nip) {
@@ -267,12 +292,30 @@ class PlayerController extends Controller
 
         $validated = $request->validate($rules);
 
-        if (array_key_exists('is_kacamata', $validated)) {
-            $user->update(['is_kacamata' => (bool) $validated['is_kacamata']]);
-            unset($validated['is_kacamata']);
+        if (!empty($validated['password'])) {
+            if (!Hash::check($validated['current_password'], $user->password)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Password saat ini tidak sesuai.',
+                    'errors'  => ['current_password' => ['Password saat ini tidak sesuai.']],
+                ], 422);
+            }
+            $user->update(['password' => $validated['password']]);
         }
 
-        $player->update($validated);
+        if (array_key_exists('is_kacamata', $validated)) {
+            $user->update(['is_kacamata' => (bool) $validated['is_kacamata']]);
+        }
+
+        $playerFields = array_filter(
+            $validated,
+            fn($key) => in_array($key, ['nim_nip', 'employee_status', 'work_location']),
+            ARRAY_FILTER_USE_KEY
+        );
+
+        if (!empty($playerFields)) {
+            $player->update($playerFields);
+        }
 
         return response()->json([
             'status'  => 'success',

@@ -429,7 +429,7 @@ class ContingentController extends Controller
         operationId: "registerPlayerToContingent",
         tags: ["Contingents"],
         summary: "PIC membuat akun player baru dan langsung masuk ke kontingennya",
-        description: "PIC kontingen membuat akun User + Player baru sekaligus langsung menambahkan player tersebut ke kontingennya. Berbeda dengan `POST /api/contingents/my/players` yang hanya menambahkan player yang sudah ada.",
+        description: "PIC kontingen membuat akun User + Player baru sekaligus langsung menambahkan player tersebut ke kontingennya. Field `password` dipakai sekaligus sebagai NIM/NIP player — harus unik. Berbeda dengan `POST /api/contingents/my/players` yang hanya menambahkan player yang sudah ada.",
         security: [["bearerAuth" => []]]
     )]
     #[OA\RequestBody(
@@ -439,7 +439,8 @@ class ContingentController extends Controller
             properties: [
                 new OA\Property(property: "name",     type: "string",  maxLength: 255, example: "Ahmad Fauzi"),
                 new OA\Property(property: "email",    type: "string",  format: "email", example: "ahmad@telkomuniversity.ac.id"),
-                new OA\Property(property: "password", type: "string",  format: "password", minLength: 8, example: "rahasia123"),
+                new OA\Property(property: "password", type: "string",  format: "password", minLength: 8, example: "1301234567",
+                    description: "Password login sekaligus NIM/NIP player. Harus unik di seluruh data player."),
             ]
         )
     )]
@@ -460,7 +461,7 @@ class ContingentController extends Controller
         )
     )]
     #[OA\Response(response: 403, description: "Belum ditugaskan sebagai PIC", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
-    #[OA\Response(response: 422, description: "Email sudah digunakan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 422, description: "Email sudah digunakan atau NIM/NIP (password) sudah terpakai", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     #[OA\Response(response: 500, description: "Server error", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
     public function registerPlayer(Request $request)
     {
@@ -473,7 +474,7 @@ class ContingentController extends Controller
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|unique:users,email',
-            'password' => 'required|string|min:8',
+            'password' => 'required|string|min:8|unique:players,nim_nip',
         ]);
 
         DB::beginTransaction();
@@ -488,6 +489,7 @@ class ContingentController extends Controller
             $player = Player::create([
                 'user_id'       => $user->id,
                 'name'          => $validated['name'],
+                'nim_nip'       => $validated['password'],
                 'contingent_id' => $contingent->id,
             ]);
 
