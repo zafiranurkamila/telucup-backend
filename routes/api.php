@@ -15,6 +15,7 @@ use App\Http\Controllers\SportController;
 use App\Http\Controllers\ContingentController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\BracketController;
+use App\Http\Controllers\GalleryFolderController;
 
 // Auth Routes (API)
 Route::post('/register', [AuthController::class, 'register']);
@@ -207,6 +208,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/event-photos', [EventPhotoController::class, 'index']);
         Route::post('/event-photos', [EventPhotoController::class, 'store']);
         Route::delete('/event-photos/{id}', [EventPhotoController::class, 'destroy']);
+        Route::patch('/event-photos/{id}/move-folder', [EventPhotoController::class, 'moveFolder']);
+
+        // Panitia: Folder galeri dokumentasi
+        Route::get('/gallery-folders', [GalleryFolderController::class, 'index']);
+        Route::post('/gallery-folders', [GalleryFolderController::class, 'store']);
+        Route::get('/gallery-folders/{id}', [GalleryFolderController::class, 'show']);
+        Route::patch('/gallery-folders/{id}', [GalleryFolderController::class, 'update']);
+        Route::delete('/gallery-folders/{id}', [GalleryFolderController::class, 'destroy']);
+        Route::get('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'photos']);
+        Route::post('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'storePhoto']);
     });
 
     // ====================================================================

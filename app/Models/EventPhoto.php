@@ -12,17 +12,21 @@ class EventPhoto extends Model
         'cloudinary_public_id',
         'image_url',
         'uploaded_by',
+        'gallery_folder_id',
     ];
 
-    // Relasi ke panitia (User) yang mengupload foto lapangan
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
-    // Relasi ke banyak wajah yang terdeteksi di foto ini
     public function photoFaces(): HasMany
     {
         return $this->hasMany(PhotoFace::class);
+    }
+
+    public function folder(): BelongsTo
+    {
+        return $this->belongsTo(GalleryFolder::class, 'gallery_folder_id');
     }
 }

@@ -23,9 +23,37 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Verification",    description: "Check-in pemain di lapangan")]
 #[OA\Tag(name: "Event Photo",     description: "Upload foto event untuk AI face recognition")]
 #[OA\Tag(name: "Gallery",         description: "Galeri foto pemain hasil deteksi AI")]
+#[OA\Tag(name: "Gallery Folder",  description: "Manajemen folder/album galeri dokumentasi event")]
 #[OA\Tag(name: "Admin",           description: "Endpoint administrasi internal")]
 
 // ── Reusable Schemas ────────────────────────────────────────────────────────
+#[OA\Schema(
+    schema: "GalleryFolderObject",
+    description: "Folder galeri dokumentasi event",
+    properties: [
+        new OA\Property(property: "id",             type: "integer", example: 3),
+        new OA\Property(property: "name",           type: "string",  example: "Pembukaan"),
+        new OA\Property(property: "parent_id",      type: "integer", nullable: true, example: null),
+        new OA\Property(property: "created_by",     type: "integer", nullable: true, example: 2),
+        new OA\Property(property: "children_count", type: "integer", example: 2),
+        new OA\Property(property: "photos_count",   type: "integer", example: 15),
+        new OA\Property(property: "created_at",     type: "string",  format: "date-time"),
+        new OA\Property(property: "updated_at",     type: "string",  format: "date-time"),
+    ]
+)]
+#[OA\Schema(
+    schema: "EventPhotoObject",
+    description: "Foto event dokumentasi",
+    properties: [
+        new OA\Property(property: "id",                   type: "integer", example: 15),
+        new OA\Property(property: "cloudinary_public_id", type: "string",  example: "telucup/event_photos/abc123"),
+        new OA\Property(property: "image_url",            type: "string",  example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/event_photos/abc123.jpg"),
+        new OA\Property(property: "uploaded_by",          type: "integer", nullable: true, example: 2),
+        new OA\Property(property: "gallery_folder_id",    type: "integer", nullable: true, example: 3),
+        new OA\Property(property: "created_at",           type: "string",  format: "date-time"),
+        new OA\Property(property: "updated_at",           type: "string",  format: "date-time"),
+    ]
+)]
 #[OA\Schema(
     schema: "ErrorResponse",
     description: "Format respon error standar",

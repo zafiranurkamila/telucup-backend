@@ -24,6 +24,13 @@ class GalleryController extends Controller
         description: "Filter berdasarkan status validasi pemain",
         schema: new OA\Schema(type: "string", enum: ["pending", "accepted", "rejected"])
     )]
+    #[OA\Parameter(
+        name: "folder_id",
+        in: "query",
+        required: false,
+        description: "Filter foto berdasarkan folder galeri tertentu",
+        schema: new OA\Schema(type: "integer")
+    )]
     #[OA\Response(
         response: 200,
         description: "Berhasil",
@@ -83,10 +90,14 @@ class GalleryController extends Controller
         }
 
         $query = PhotoFace::where('matched_player_id', $player->id)
-            ->with(['eventPhoto:id,image_url,cloudinary_public_id,created_at']);
+            ->with(['eventPhoto:id,image_url,cloudinary_public_id,gallery_folder_id,created_at']);
 
         if ($request->has('status') && in_array($request->status, ['pending', 'accepted', 'rejected'])) {
             $query->where('validation_status', $request->status);
+        }
+
+        if ($request->filled('folder_id')) {
+            $query->whereHas('eventPhoto', fn($q) => $q->where('gallery_folder_id', $request->input('folder_id')));
         }
 
         $gallery = $query->orderByDesc('created_at')->get();

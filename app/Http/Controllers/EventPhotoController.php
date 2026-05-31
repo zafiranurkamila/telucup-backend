@@ -40,15 +40,19 @@ class EventPhotoController extends Controller
             ]
         )
     )]
-    public function index()
+    public function index(Request $request)
     {
-        $photos = EventPhoto::orderBy('created_at', 'desc')->get();
-        
+        $query = EventPhoto::orderByDesc('created_at');
+
+        if ($request->has('folder_id')) {
+            $query->where('gallery_folder_id', $request->input('folder_id'));
+        }
+
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Berhasil mengambil data foto event',
-            'data' => $photos
-        ], 200);
+            'data'    => $query->get(),
+        ]);
     }
 
     #[OA\Post(
@@ -110,7 +114,8 @@ class EventPhotoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+            'image'             => 'required|image|mimes:jpeg,png,jpg|max:5120',
+            'gallery_folder_id' => 'nullable|integer|exists:gallery_folders,id',
         ]);
 
         try {
@@ -124,7 +129,8 @@ class EventPhotoController extends Controller
             $eventPhoto = EventPhoto::create([
                 'cloudinary_public_id' => $uploadResult['public_id'],
                 'image_url'            => $uploadResult['secure_url'],
-                'uploaded_by'          => auth()->id() ?? 1,
+                'uploaded_by'          => $request->user()->id,
+                'gallery_folder_id'    => $request->input('gallery_folder_id'),
             ]);
 
             ProcessEventPhoto::dispatch($eventPhoto);
@@ -213,9 +219,63 @@ class EventPhotoController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal menghapus foto: ' . $e->getMessage()
+                'status'  => 'error',
+                'message' => 'Gagal menghapus foto: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    #[OA\Patch(
+        path: "/api/event-photos/{id}/move-folder",
+        operationId: "moveEventPhotoFolder",
+        tags: ["Event Photo"],
+        summary: "Pindahkan foto ke folder lain",
+        description: "Panitia memindahkan foto event ke folder galeri yang berbeda. Kirim `gallery_folder_id: null` untuk mengeluarkan foto dari semua folder (tanpa folder).",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, description: "ID foto event",
+        schema: new OA\Schema(type: "integer"))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "gallery_folder_id", type: "integer", nullable: true, example: 3,
+                    description: "ID folder tujuan. null untuk melepas foto dari folder manapun."),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Foto berhasil dipindahkan",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Foto berhasil dipindahkan ke folder Penutupan."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/EventPhotoObject"),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: "Foto tidak ditemukan", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    #[OA\Response(response: 422, description: "Validasi gagal", content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse"))]
+    public function moveFolder(Request $request, $id)
+    {
+        $eventPhoto = EventPhoto::findOrFail($id);
+
+        $validated = $request->validate([
+            'gallery_folder_id' => 'nullable|integer|exists:gallery_folders,id',
+        ]);
+
+        $eventPhoto->update(['gallery_folder_id' => $validated['gallery_folder_id']]);
+
+        $folderId = $validated['gallery_folder_id'];
+        $message  = $folderId
+            ? 'Foto berhasil dipindahkan ke folder ' . $eventPhoto->folder()->value('name') . '.'
+            : 'Foto berhasil dikeluarkan dari folder.';
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => $message,
+            'data'    => $eventPhoto->fresh(),
+        ]);
     }
 }
