@@ -11,15 +11,17 @@ class PhotoFace extends Model
     protected $fillable = [
         'event_photo_id',
         'matched_player_id',
-        'validation_status', // 'pending', 'accepted', 'rejected'
+        'validation_status',
         'similarity_score',
         'bounding_box',
         'face_encoding',
     ];
 
+    protected $hidden = ['face_encoding'];
+
     protected $casts = [
-        'bounding_box' => 'array', // Supaya otomatis jadi array saat dipanggil, json di DB
-        'face_encoding' => Vector::class,
+        'bounding_box'    => 'array',
+        'face_encoding'   => Vector::class,
         'similarity_score' => 'float',
     ];
 
