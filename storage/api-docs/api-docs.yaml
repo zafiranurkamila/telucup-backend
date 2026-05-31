@@ -1527,7 +1527,7 @@ paths:
       tags:
         - Contingents
       summary: 'PIC membuat akun player baru dan langsung masuk ke kontingennya'
-      description: 'PIC kontingen membuat akun User + Player baru sekaligus langsung menambahkan player tersebut ke kontingennya. Berbeda dengan `POST /api/contingents/my/players` yang hanya menambahkan player yang sudah ada.'
+      description: 'PIC kontingen membuat akun User + Player baru sekaligus langsung menambahkan player tersebut ke kontingennya. Field `password` dipakai sekaligus sebagai NIM/NIP player — harus unik. Berbeda dengan `POST /api/contingents/my/players` yang hanya menambahkan player yang sudah ada.'
       operationId: registerPlayerToContingent
       requestBody:
         required: true
@@ -1548,9 +1548,10 @@ paths:
                   format: email
                   example: ahmad@telkomuniversity.ac.id
                 password:
+                  description: 'Password login sekaligus NIM/NIP player. Harus unik di seluruh data player.'
                   type: string
                   format: password
-                  example: rahasia123
+                  example: '1301234567'
                   minLength: 8
               type: object
       responses:
@@ -1581,7 +1582,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         422:
-          description: 'Email sudah digunakan'
+          description: 'Email sudah digunakan atau NIM/NIP (password) sudah terpakai'
           content:
             application/json:
               schema:
@@ -1961,6 +1962,64 @@ paths:
       security:
         -
           bearerAuth: []
+  '/api/event-photos/{id}/move-folder':
+    patch:
+      tags:
+        - 'Event Photo'
+      summary: 'Pindahkan foto ke folder lain'
+      description: 'Panitia memindahkan foto event ke folder galeri yang berbeda. Kirim `gallery_folder_id: null` untuk mengeluarkan foto dari semua folder (tanpa folder).'
+      operationId: moveEventPhotoFolder
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'ID foto event'
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                gallery_folder_id:
+                  description: 'ID folder tujuan. null untuk melepas foto dari folder manapun.'
+                  type: integer
+                  example: 3
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: 'Foto berhasil dipindahkan'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Foto berhasil dipindahkan ke folder Penutupan.'
+                  data:
+                    $ref: '#/components/schemas/EventPhotoObject'
+                type: object
+        404:
+          description: 'Foto tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Validasi gagal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
   /api/my-gallery:
     get:
       tags:
@@ -1980,6 +2039,13 @@ paths:
               - pending
               - accepted
               - rejected
+        -
+          name: folder_id
+          in: query
+          description: 'Filter foto berdasarkan folder galeri tertentu'
+          required: false
+          schema:
+            type: integer
       responses:
         200:
           description: Berhasil
@@ -2144,6 +2210,344 @@ paths:
       security:
         -
           bearerAuth: []
+  /api/gallery-folders:
+    get:
+      tags:
+        - 'Gallery Folder'
+      summary: 'Daftar folder galeri'
+      description: 'Mengembalikan folder galeri. Default hanya folder root (parent_id = null). Gunakan query `parent_id` untuk mendapatkan sub-folder dari folder tertentu.'
+      operationId: listGalleryFolders
+      parameters:
+        -
+          name: parent_id
+          in: query
+          description: 'Tampilkan sub-folder dari folder ini. Kosongkan untuk folder root.'
+          required: false
+          schema:
+            type: integer
+            nullable: true
+      responses:
+        200:
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GalleryFolderObject'
+                type: object
+      security:
+        -
+          bearerAuth: []
+    post:
+      tags:
+        - 'Gallery Folder'
+      summary: 'Buat folder galeri baru'
+      description: 'Panitia membuat folder galeri baru. Opsional isi `parent_id` untuk membuat sub-folder.'
+      operationId: createGalleryFolder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: Pembukaan
+                parent_id:
+                  description: 'ID folder induk. null atau tidak diisi = folder root.'
+                  type: integer
+                  example: null
+                  nullable: true
+              type: object
+      responses:
+        201:
+          description: 'Folder berhasil dibuat'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Folder berhasil dibuat.'
+                  data:
+                    $ref: '#/components/schemas/GalleryFolderObject'
+                type: object
+        404:
+          description: 'parent_id tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Validasi gagal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+  '/api/gallery-folders/{id}':
+    get:
+      tags:
+        - 'Gallery Folder'
+      summary: 'Detail folder galeri'
+      description: 'Menampilkan detail folder beserta daftar sub-folder langsung di bawahnya.'
+      operationId: showGalleryFolder
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/GalleryFolderObject'
+                type: object
+        404:
+          description: 'Folder tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+    delete:
+      tags:
+        - 'Gallery Folder'
+      summary: 'Hapus folder galeri'
+      description: 'Hapus folder. Folder tidak dapat dihapus jika masih memiliki foto atau sub-folder di dalamnya.'
+      operationId: deleteGalleryFolder
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Folder berhasil dihapus'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Folder berhasil dihapus.'
+                type: object
+        404:
+          description: 'Folder tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Folder masih memiliki foto atau sub-folder'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+    patch:
+      tags:
+        - 'Gallery Folder'
+      summary: 'Rename atau pindah folder'
+      description: 'Ganti nama folder dan/atau pindahkan ke folder induk lain. Sistem mencegah circular reference (folder tidak bisa dipindah ke dirinya sendiri atau ke turunannya).'
+      operationId: updateGalleryFolder
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                  example: Penutupan
+                parent_id:
+                  description: 'ID folder induk baru. Kirim null untuk jadikan folder root.'
+                  type: integer
+                  example: 2
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: 'Folder berhasil diperbarui'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Folder berhasil diperbarui.'
+                  data:
+                    $ref: '#/components/schemas/GalleryFolderObject'
+                type: object
+        404:
+          description: 'Folder tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Validasi gagal atau circular reference terdeteksi'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+  '/api/gallery-folders/{id}/photos':
+    get:
+      tags:
+        - 'Gallery Folder'
+      summary: 'Daftar foto dalam folder'
+      description: 'Mengembalikan semua foto event yang berada di dalam folder tertentu.'
+      operationId: listFolderPhotos
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Berhasil
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  folder:
+                    properties:
+                      id:
+                        type: integer
+                        example: 3
+                      name:
+                        type: string
+                        example: Pembukaan
+                    type: object
+                  total:
+                    type: integer
+                    example: 12
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventPhotoObject'
+                type: object
+        404:
+          description: 'Folder tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
+    post:
+      tags:
+        - 'Gallery Folder'
+      summary: 'Upload foto ke folder tertentu'
+      description: 'Panitia mengunggah foto langsung ke dalam folder galeri tertentu. Foto diupload ke Cloudinary dan job AI face detection langsung dikirim.'
+      operationId: uploadPhotoToFolder
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - image
+              properties:
+                image:
+                  description: 'File foto event. Format: jpeg/png/jpg. Maksimal 5MB.'
+                  type: string
+                  format: binary
+              type: object
+      responses:
+        201:
+          description: 'Foto berhasil diunggah ke folder'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: 'Foto berhasil diunggah ke folder Pembukaan.'
+                  data:
+                    $ref: '#/components/schemas/EventPhotoObject'
+                type: object
+        404:
+          description: 'Folder tidak ditemukan'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Validasi gagal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: 'Gagal upload ke Cloudinary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          bearerAuth: []
   /api/summary/contingent:
     get:
       tags:
@@ -2245,7 +2649,7 @@ paths:
       tags:
         - Players
       summary: 'Buat akun player baru'
-      description: 'Admin, panitia, atau PIC kontingen membuat akun player baru. Dibuat dengan data minimal — profil lengkap diisi kemudian oleh player sendiri via `PATCH /api/player/profile`.'
+      description: 'Admin, panitia, atau PIC kontingen membuat akun player baru. Field `password` dipakai sekaligus sebagai NIM/NIP player — harus unik. Profil lengkap diisi kemudian oleh player sendiri via `PATCH /api/player/profile`.'
       operationId: storePlayer
       requestBody:
         required: true
@@ -2266,28 +2670,35 @@ paths:
                   format: email
                   example: ahmad@telkomuniversity.ac.id
                 password:
+                  description: 'Password login sekaligus NIM/NIP player. Harus unik di seluruh data player.'
                   type: string
                   format: password
-                  example: rahasia123
+                  example: '1301234567'
                   minLength: 8
               type: object
       responses:
-        200:
+        201:
           description: 'Player berhasil dibuat'
           content:
             application/json:
               schema:
                 properties:
+                  status:
+                    type: string
+                    example: success
                   message:
                     type: string
-                    example: 'Player and user account created successfully'
-                  player:
-                    $ref: '#/components/schemas/PlayerObject'
-                  user:
-                    $ref: '#/components/schemas/UserObject'
+                    example: 'Akun Ahmad Fauzi berhasil dibuat.'
+                  data:
+                    properties:
+                      player:
+                        $ref: '#/components/schemas/PlayerObject'
+                      user:
+                        $ref: '#/components/schemas/UserObject'
+                    type: object
                 type: object
         422:
-          description: 'Validasi gagal — email sudah digunakan'
+          description: 'Validasi gagal — email sudah digunakan atau NIM/NIP (password) sudah terpakai'
           content:
             application/json:
               schema:
@@ -2312,7 +2723,7 @@ paths:
       tags:
         - Players
       summary: 'Lengkapi atau update profil pemain'
-      description: 'Player yang sedang login melengkapi profilnya: NIM/NIP dan status kacamata. Kontingen dikelola oleh PIC via `POST /api/contingents/my/players`. Cabang olahraga didaftarkan melalui registrasi tim.'
+      description: 'Player yang sedang login melengkapi profilnya: NIM/NIP, status kacamata, status kepegawaian, lokasi kerja, dan password. Kontingen dikelola oleh PIC via `POST /api/contingents/my/players`. Cabang olahraga didaftarkan melalui registrasi tim.'
       operationId: updateProfile
       requestBody:
         required: true
@@ -2328,6 +2739,28 @@ paths:
                   description: 'Penanda pengguna kacamata — disimpan di tabel users untuk pemantauan AI'
                   type: boolean
                   example: false
+                employee_status:
+                  description: 'Status kepegawaian pemain, mis. Mahasiswa, Pegawai Tetap, TPA.'
+                  type: string
+                  example: 'Pegawai Tetap'
+                  nullable: true
+                work_location:
+                  description: 'Lokasi kerja/unit pemain.'
+                  type: string
+                  example: 'Kampus A'
+                  nullable: true
+                current_password:
+                  description: 'Password saat ini — wajib diisi jika ingin mengganti password.'
+                  type: string
+                  example: oldpassword
+                password:
+                  description: 'Password baru (minimal 8 karakter). Wajib disertai current_password dan password_confirmation.'
+                  type: string
+                  example: newpassword
+                password_confirmation:
+                  description: 'Konfirmasi password baru — harus sama dengan password.'
+                  type: string
+                  example: newpassword
               type: object
       responses:
         200:
@@ -2358,7 +2791,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         422:
-          description: 'Validasi gagal — NIM/NIP sudah dipakai'
+          description: 'Validasi gagal — NIM/NIP sudah dipakai atau password tidak sesuai'
           content:
             application/json:
               schema:
@@ -3889,6 +4322,63 @@ paths:
           bearerAuth: []
 components:
   schemas:
+    GalleryFolderObject:
+      description: 'Folder galeri dokumentasi event'
+      properties:
+        id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: Pembukaan
+        parent_id:
+          type: integer
+          example: null
+          nullable: true
+        created_by:
+          type: integer
+          example: 2
+          nullable: true
+        children_count:
+          type: integer
+          example: 2
+        photos_count:
+          type: integer
+          example: 15
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      type: object
+    EventPhotoObject:
+      description: 'Foto event dokumentasi'
+      properties:
+        id:
+          type: integer
+          example: 15
+        cloudinary_public_id:
+          type: string
+          example: telucup/event_photos/abc123
+        image_url:
+          type: string
+          example: 'https://res.cloudinary.com/demo/image/upload/v1/telucup/event_photos/abc123.jpg'
+        uploaded_by:
+          type: integer
+          example: 2
+          nullable: true
+        gallery_folder_id:
+          type: integer
+          example: 3
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      type: object
     ErrorResponse:
       description: 'Format respon error standar'
       properties:
@@ -4319,6 +4809,16 @@ components:
           type: string
           example: 'https://res.cloudinary.com/example/photo.jpg'
           nullable: true
+        risk_lvl:
+          description: 'Level risiko kesehatan player berdasarkan self-assessment terakhir.'
+          type: string
+          example: low
+          nullable: true
+          enum:
+            - low
+            - medium
+            - high
+            - not_yet
         checked_in:
           description: 'true jika player sudah dicheckin untuk pertandingan ini. false jika belum hadir atau belum dicheckin.'
           type: boolean
@@ -4935,6 +5435,9 @@ tags:
   -
     name: Gallery
     description: 'Galeri foto pemain hasil deteksi AI'
+  -
+    name: 'Gallery Folder'
+    description: 'Manajemen folder/album galeri dokumentasi event'
   -
     name: Admin
     description: 'Endpoint administrasi internal'
