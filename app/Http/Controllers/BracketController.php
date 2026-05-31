@@ -934,6 +934,7 @@ class BracketController extends Controller
                         'name'          => $player->name,
                         'nim_nip'       => $player->nim_nip,
                         'photo_path'    => $player->photo_path,
+                        'risk_lvl'      => $player->risk_lvl,
                         'checked_in'    => $checkin?->checked_in ?? false,
                         'checked_in_at' => $checkin?->checked_in_at?->toIso8601String(),
                     ];
