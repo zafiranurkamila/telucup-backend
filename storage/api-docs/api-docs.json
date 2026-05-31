@@ -6412,6 +6412,756 @@
                 ]
             }
         },
+        "/api/sportsmanship-posters": {
+            "get": {
+                "tags": [
+                    "Sportsmanship Posters"
+                ],
+                "summary": "Daftar semua poster sportifitas",
+                "description": "Panitia mengambil semua poster sportifitas. Mendukung filter `is_active`, pencarian `search`, dan pagination via `per_page`.",
+                "operationId": "listSportsmanshipPosters",
+                "parameters": [
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filter berdasarkan status aktif",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Cari berdasarkan judul atau deskripsi poster",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Jumlah item per halaman. Jika tidak diisi, mengembalikan semua data tanpa pagination.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil data poster sportifitas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Berhasil mengambil data poster sportifitas."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/SportsmanshipPosterObject"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Akses ditolak",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Sportsmanship Posters"
+                ],
+                "summary": "Upload poster sportifitas baru",
+                "description": "Panitia mengunggah poster sportifitas baru ke Cloudinary. Field `image` wajib diisi.",
+                "operationId": "storeSportsmanshipPoster",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "image"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Junjung Tinggi Sportifitas",
+                                        "maxLength": 150
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Hormati lawan, wasit, dan keputusan pertandingan.",
+                                        "nullable": true,
+                                        "maxLength": 1000
+                                    },
+                                    "image": {
+                                        "description": "File gambar poster. Format: jpeg/png/jpg/webp. Maksimal 5MB.",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "is_active": {
+                                        "description": "Status aktif poster. Default true.",
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "sort_order": {
+                                        "description": "Urutan tampil poster. Default 0.",
+                                        "type": "integer",
+                                        "example": 0,
+                                        "minimum": 0
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Poster sportifitas berhasil diunggah",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Poster sportifitas berhasil diunggah."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SportsmanshipPosterObject"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Akses ditolak",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Gagal upload ke Cloudinary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sportsmanship-posters/{id}": {
+            "get": {
+                "tags": [
+                    "Sportsmanship Posters"
+                ],
+                "summary": "Detail poster sportifitas",
+                "description": "Panitia mengambil detail satu poster sportifitas berdasarkan ID.",
+                "operationId": "showSportsmanshipPoster",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SportsmanshipPosterObject"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Akses ditolak",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Poster tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Sportsmanship Posters"
+                ],
+                "summary": "Hapus poster sportifitas",
+                "description": "Panitia menghapus poster. Gambar dihapus terlebih dahulu dari Cloudinary sebelum record dihapus dari database.",
+                "operationId": "deleteSportsmanshipPoster",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Poster berhasil dihapus",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Poster sportifitas berhasil dihapus."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Akses ditolak",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Poster tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Gagal menghapus dari Cloudinary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Sportsmanship Posters"
+                ],
+                "summary": "Update poster sportifitas",
+                "description": "Panitia memperbarui data poster. Jika field `image` dikirim, gambar lama dihapus dari Cloudinary dan diganti dengan gambar baru. Field yang tidak dikirim tidak akan diubah.",
+                "operationId": "updateSportsmanshipPoster",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Junjung Tinggi Sportifitas",
+                                        "maxLength": 150
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 1000
+                                    },
+                                    "image": {
+                                        "description": "Gambar baru (opsional). Jika dikirim, gambar lama otomatis dihapus.",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "sort_order": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "minimum": 0
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Poster berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Poster sportifitas berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SportsmanshipPosterObject"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Akses ditolak",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Poster tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Gagal memperbarui poster",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sportsmanship-posters/{id}/toggle": {
+            "patch": {
+                "tags": [
+                    "Sportsmanship Posters"
+                ],
+                "summary": "Aktifkan atau nonaktifkan poster",
+                "description": "Panitia mengubah status aktif poster sportifitas.",
+                "operationId": "toggleSportsmanshipPoster",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "is_active"
+                                ],
+                                "properties": {
+                                    "is_active": {
+                                        "description": "true untuk mengaktifkan, false untuk menonaktifkan poster.",
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status poster berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Status poster sportifitas berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SportsmanshipPosterObject"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Akses ditolak",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Poster tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sportsmanship-posters/reorder": {
+            "patch": {
+                "tags": [
+                    "Sportsmanship Posters"
+                ],
+                "summary": "Atur ulang urutan poster",
+                "description": "Panitia memperbarui `sort_order` beberapa poster sekaligus untuk mengatur urutan tampilan carousel.",
+                "operationId": "reorderSportsmanshipPosters",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "items"
+                                ],
+                                "properties": {
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "id",
+                                                "sort_order"
+                                            ],
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "sort_order": {
+                                                    "type": "integer",
+                                                    "example": 1,
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "example": [
+                                            {
+                                                "id": 1,
+                                                "sort_order": 1
+                                            },
+                                            {
+                                                "id": 2,
+                                                "sort_order": 2
+                                            }
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Urutan berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Urutan poster sportifitas berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/SportsmanshipPosterObject"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Akses ditolak",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal — ID tidak ditemukan atau sort_order tidak valid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sportsmanship-posters/active": {
+            "get": {
+                "tags": [
+                    "Sportsmanship Posters"
+                ],
+                "summary": "Daftar poster sportifitas aktif",
+                "description": "Mengambil poster sportifitas yang aktif (`is_active = true`), diurutkan berdasarkan `sort_order`. Endpoint ini ditujukan untuk ditampilkan kepada peserta setelah selesai mengisi self-assessment.",
+                "operationId": "getActiveSportsmanshipPosters",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mengambil poster aktif",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Berhasil mengambil poster sportifitas aktif."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "title": {
+                                                        "type": "string",
+                                                        "example": "Junjung Tinggi Sportifitas"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "example": "Hormati lawan, wasit, dan keputusan pertandingan.",
+                                                        "nullable": true
+                                                    },
+                                                    "image_url": {
+                                                        "type": "string",
+                                                        "example": "https://res.cloudinary.com/demo/image/upload/v1/telucup/sportsmanship_posters/abc.jpg"
+                                                    },
+                                                    "sort_order": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/field/verification": {
             "get": {
                 "tags": [
@@ -6500,6 +7250,54 @@
     },
     "components": {
         "schemas": {
+            "SportsmanshipPosterObject": {
+                "description": "Data poster sportifitas",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Junjung Tinggi Sportifitas"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Hormati lawan, wasit, dan keputusan pertandingan.",
+                        "nullable": true
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "example": "https://res.cloudinary.com/demo/image/upload/v1/telucup/sportsmanship_posters/abc.jpg"
+                    },
+                    "cloudinary_public_id": {
+                        "type": "string",
+                        "example": "telucup/sportsmanship_posters/abc"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "uploaded_by": {
+                        "type": "integer",
+                        "example": 2,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
             "GalleryFolderObject": {
                 "description": "Folder galeri dokumentasi event",
                 "properties": {
@@ -8025,6 +8823,10 @@
         {
             "name": "Gallery Folder",
             "description": "Manajemen folder/album galeri dokumentasi event"
+        },
+        {
+            "name": "Sportsmanship Posters",
+            "description": "Manajemen poster sportifitas untuk carousel peserta"
         },
         {
             "name": "Admin",

@@ -16,6 +16,7 @@ use App\Http\Controllers\ContingentController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\BracketController;
 use App\Http\Controllers\GalleryFolderController;
+use App\Http\Controllers\SportsmanshipPosterController;
 
 // Auth Routes (API)
 Route::post('/register', [AuthController::class, 'register']);
@@ -218,6 +219,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/gallery-folders/{id}', [GalleryFolderController::class, 'destroy']);
         Route::get('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'photos']);
         Route::post('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'storePhoto']);
+
+        // Panitia: CRUD poster sportifitas
+        // reorder & active harus di atas {id} agar tidak ditangkap sebagai parameter
+        Route::get('/sportsmanship-posters', [SportsmanshipPosterController::class, 'index']);
+        Route::post('/sportsmanship-posters', [SportsmanshipPosterController::class, 'store']);
+        Route::patch('/sportsmanship-posters/reorder', [SportsmanshipPosterController::class, 'reorder']);
+        Route::get('/sportsmanship-posters/{id}', [SportsmanshipPosterController::class, 'show'])->whereNumber('id');
+        Route::patch('/sportsmanship-posters/{id}', [SportsmanshipPosterController::class, 'update'])->whereNumber('id');
+        Route::patch('/sportsmanship-posters/{id}/toggle', [SportsmanshipPosterController::class, 'toggle'])->whereNumber('id');
+        Route::delete('/sportsmanship-posters/{id}', [SportsmanshipPosterController::class, 'destroy'])->whereNumber('id');
+    });
+
+    // ====================================================================
+    // Sportsmanship Posters — semua user login (player, pic_kontingen, panitia)
+    // ====================================================================
+    Route::middleware(['role:player,panitia'])->group(function () {
+        Route::get('/sportsmanship-posters/active', [SportsmanshipPosterController::class, 'active'])
+            ->name('sportsmanship-posters.active');
     });
 
     // ====================================================================

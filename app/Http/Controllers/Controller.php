@@ -23,10 +23,29 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Verification",    description: "Check-in pemain di lapangan")]
 #[OA\Tag(name: "Event Photo",     description: "Upload foto event untuk AI face recognition")]
 #[OA\Tag(name: "Gallery",         description: "Galeri foto pemain hasil deteksi AI")]
-#[OA\Tag(name: "Gallery Folder",  description: "Manajemen folder/album galeri dokumentasi event")]
-#[OA\Tag(name: "Admin",           description: "Endpoint administrasi internal")]
+#[OA\Tag(name: "Gallery Folder",       description: "Manajemen folder/album galeri dokumentasi event")]
+#[OA\Tag(name: "Sportsmanship Posters", description: "Manajemen poster sportifitas untuk carousel peserta")]
+#[OA\Tag(name: "Admin",                description: "Endpoint administrasi internal")]
 
 // ── Reusable Schemas ────────────────────────────────────────────────────────
+#[OA\Schema(
+    schema: "SportsmanshipPosterObject",
+    description: "Data poster sportifitas",
+    properties: [
+        new OA\Property(property: "id",                   type: "integer", example: 1),
+        new OA\Property(property: "title",                type: "string",  example: "Junjung Tinggi Sportifitas"),
+        new OA\Property(property: "description",          type: "string",  nullable: true,
+            example: "Hormati lawan, wasit, dan keputusan pertandingan."),
+        new OA\Property(property: "image_url",            type: "string",
+            example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/sportsmanship_posters/abc.jpg"),
+        new OA\Property(property: "cloudinary_public_id", type: "string",  example: "telucup/sportsmanship_posters/abc"),
+        new OA\Property(property: "is_active",            type: "boolean", example: true),
+        new OA\Property(property: "sort_order",           type: "integer", example: 1),
+        new OA\Property(property: "uploaded_by",          type: "integer", nullable: true, example: 2),
+        new OA\Property(property: "created_at",           type: "string",  format: "date-time"),
+        new OA\Property(property: "updated_at",           type: "string",  format: "date-time"),
+    ]
+)]
 #[OA\Schema(
     schema: "GalleryFolderObject",
     description: "Folder galeri dokumentasi event",
