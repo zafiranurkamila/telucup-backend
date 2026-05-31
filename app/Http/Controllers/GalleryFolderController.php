@@ -40,7 +40,12 @@ class GalleryFolderController extends Controller
         $query = GalleryFolder::withCount(['children', 'photos']);
 
         if ($request->has('parent_id')) {
-            $query->where('parent_id', $request->input('parent_id'));
+            $parentId = $request->input('parent_id');
+            if ($parentId === null || $parentId === 'null') {
+                $query->whereNull('parent_id');
+            } else {
+                $query->where('parent_id', (int) $parentId);
+            }
         } else {
             $query->whereNull('parent_id');
         }

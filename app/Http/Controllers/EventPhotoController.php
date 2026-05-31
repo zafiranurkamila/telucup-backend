@@ -45,7 +45,12 @@ class EventPhotoController extends Controller
         $query = EventPhoto::orderByDesc('created_at');
 
         if ($request->has('folder_id')) {
-            $query->where('gallery_folder_id', $request->input('folder_id'));
+            $folderId = $request->input('folder_id');
+            if ($folderId === null || $folderId === 'null') {
+                $query->whereNull('gallery_folder_id');
+            } else {
+                $query->where('gallery_folder_id', (int) $folderId);
+            }
         }
 
         return response()->json([

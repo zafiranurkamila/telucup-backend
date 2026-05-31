@@ -206,18 +206,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/players/{id}/assign-contingent', [PlayerController::class, 'assignContingent'])->name('players.assign-contingent');
 
         // Panitia: Upload, Ambil & Hapus foto event
-        Route::get('/event-photos', [EventPhotoController::class, 'index']);
         Route::post('/event-photos', [EventPhotoController::class, 'store']);
         Route::delete('/event-photos/{id}', [EventPhotoController::class, 'destroy']);
         Route::patch('/event-photos/{id}/move-folder', [EventPhotoController::class, 'moveFolder']);
 
         // Panitia: Folder galeri dokumentasi
-        Route::get('/gallery-folders', [GalleryFolderController::class, 'index']);
         Route::post('/gallery-folders', [GalleryFolderController::class, 'store']);
-        Route::get('/gallery-folders/{id}', [GalleryFolderController::class, 'show']);
         Route::patch('/gallery-folders/{id}', [GalleryFolderController::class, 'update']);
         Route::delete('/gallery-folders/{id}', [GalleryFolderController::class, 'destroy']);
-        Route::get('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'photos']);
         Route::post('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'storePhoto']);
 
         // Panitia: CRUD poster sportifitas
@@ -234,9 +230,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ====================================================================
     // Sportsmanship Posters — semua user login (player, pic_kontingen, panitia)
     // ====================================================================
-    Route::middleware(['role:player,panitia'])->group(function () {
+    Route::middleware(['role:player,pic_kontingen,panitia'])->group(function () {
         Route::get('/sportsmanship-posters/active', [SportsmanshipPosterController::class, 'active'])
             ->name('sportsmanship-posters.active');
+    });
+
+    // ====================================================================
+    // Shared Gallery (Viewer) — semua user login (player, pic_kontingen, panitia)
+    // ====================================================================
+    Route::middleware(['role:player,pic_kontingen,panitia'])->group(function () {
+        Route::get('/event-photos', [EventPhotoController::class, 'index']);
+        Route::get('/gallery-folders', [GalleryFolderController::class, 'index']);
+        Route::get('/gallery-folders/{id}', [GalleryFolderController::class, 'show']);
+        Route::get('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'photos']);
     });
 
     // ====================================================================

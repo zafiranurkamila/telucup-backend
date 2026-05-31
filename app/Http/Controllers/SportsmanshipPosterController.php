@@ -8,10 +8,11 @@ use App\Models\SportsmanshipPoster;
 use Cloudinary\Cloudinary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SportsmanshipPosterController extends Controller
 {
-    private function upload(string $filePath): array
+    private function upload(string $filePath): \Cloudinary\Api\ApiResponse
     {
         $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
         return $cloudinary->uploadApi()->upload($filePath, [
@@ -164,6 +165,7 @@ class SportsmanshipPosterController extends Controller
             ], 201);
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('SportsmanshipPoster store failed', ['error' => $e->getMessage(), 'class' => get_class($e)]);
             return response()->json(['status' => 'error', 'message' => 'Gagal mengunggah poster sportifitas.'], 500);
         }
     }
