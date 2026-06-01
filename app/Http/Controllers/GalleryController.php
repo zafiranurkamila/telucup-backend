@@ -86,7 +86,12 @@ class GalleryController extends Controller
         $player = $user->player;
 
         if (!$player) {
-            return response()->json(['status' => 'error', 'message' => 'Profil player belum tersedia untuk akun ini.'], 404);
+            // Auto create player profile so they don't get 404 error
+            $player = \App\Models\Player::create([
+                'user_id' => $user->id,
+                'name'    => $user->name,
+                'nim_nip' => null,
+            ]);
         }
 
         $query = PhotoFace::where('matched_player_id', $player->id)

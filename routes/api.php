@@ -236,16 +236,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // ====================================================================
-    // Shared Gallery (Viewer) — semua user login (player, pic_kontingen, panitia)
-    // ====================================================================
-    Route::middleware(['role:player,pic_kontingen,panitia'])->group(function () {
-        Route::get('/event-photos', [EventPhotoController::class, 'index']);
-        Route::get('/gallery-folders', [GalleryFolderController::class, 'index']);
-        Route::get('/gallery-folders/{id}', [GalleryFolderController::class, 'show']);
-        Route::get('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'photos']);
-    });
-
-    // ====================================================================
     // Phase 1: Face Enrollment (Pemain mengunggah foto profil untuk AI)
     // ====================================================================
     Route::patch('/player/profile', [PlayerController::class, 'updateProfile'])->name('player.profile.update');
@@ -266,3 +256,11 @@ Route::get('/matches/{id}', [BracketController::class, 'matchDetail'])->name('ma
 // Publik / Semua User yang Login
 Route::get('/summary/contingent', [PlayerController::class, 'contingentSummary'])->name('summary.contingent');
 Route::post('/chatbot/ask', [ChatbotController::class, 'ask'])->name('chatbot.ask');
+
+// ====================================================================
+// Shared Gallery (Viewer) — Publik
+// ====================================================================
+Route::get('/event-photos', [EventPhotoController::class, 'index']);
+Route::get('/gallery-folders', [GalleryFolderController::class, 'index']);
+Route::get('/gallery-folders/{id}', [GalleryFolderController::class, 'show']);
+Route::get('/gallery-folders/{id}/photos', [GalleryFolderController::class, 'photos']);
