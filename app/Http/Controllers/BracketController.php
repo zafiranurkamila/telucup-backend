@@ -1237,19 +1237,6 @@ class BracketController extends Controller
                             $game->update(['registration_b_id' => $prevB->winner_registration_id]);
                         }
                     }
-
-                    // Cek apakah match ini juga jadi bye (kedua slot terisi dari bye sebelumnya)
-                    $game->refresh();
-                    $isChainedBye = $game->registration_a_id && !$game->registration_b_id
-                                 || !$game->registration_a_id && $game->registration_b_id;
-
-                    if ($isChainedBye) {
-                        $chainedWinner = $game->registration_a_id ?? $game->registration_b_id;
-                        $game->update([
-                            'winner_registration_id' => $chainedWinner,
-                            'status'                 => 'bye',
-                        ]);
-                    }
                 }
 
                 $currentRoundGames[] = $game->fresh();
