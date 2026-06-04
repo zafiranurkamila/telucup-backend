@@ -31,7 +31,8 @@ class ProcessEventPhoto implements ShouldQueue
     public function handle(): void
     {
         // Asumsi: URL FastAPI Anda berjalan di port 8000
-        $fastApiUrl = env('FASTAPI_URL', 'http://127.0.0.1:8000/api/process-photo');
+        $fastApiBaseUrl = rtrim(env('FASTAPI_URL', 'http://127.0.0.1:8002'), '/');
+        $fastApiUrl = $fastApiBaseUrl . '/api/process-photo';
 
         try {
             // Mengirim request ke FastAPI

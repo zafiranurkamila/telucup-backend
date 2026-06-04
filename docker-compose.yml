@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  pgsql:
+    image: pgvector/pgvector:pg16
+    container_name: telucup-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: telucup
+      POSTGRES_USER: telucup_user
+      POSTGRES_PASSWORD: telucup_password
+    volumes:
+      - telucup-pgdata:/var/lib/postgresql/data
+
+volumes:
+  telucup-pgdata:
