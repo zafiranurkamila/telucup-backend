@@ -13,14 +13,20 @@ class AuthenticatedSessionController extends Controller
 {
     /**
      * Display the login view.
+     * Jika user sudah login, redirect ke dashboard sesuai role.
      */
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
+        if (Auth::check()) {
+            return redirect()->to($this->dashboardForRole(Auth::user()->role));
+        }
+
         return view('auth.login');
     }
 
     /**
      * Handle an incoming authentication request.
+     * Setelah login berhasil, redirect ke dashboard berdasarkan role user.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
@@ -28,7 +34,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $role = Auth::user()->role;
+
+        return redirect()->intended($this->dashboardForRole($role));
     }
 
     /**
@@ -42,6 +50,19 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect('/login');
+    }
+
+    /**
+     * Tentukan path dashboard berdasarkan role user.
+     */
+    protected function dashboardForRole(string $role): string
+    {
+        return match ($role) {
+            'admin', 'panitia' => '/dashboard/panitia',
+            'player'           => '/dashboard/player',
+            'pic_kontingen', 'pic' => '/dashboard/pic-kontingen',
+            default            => '/',
+        };
     }
 }

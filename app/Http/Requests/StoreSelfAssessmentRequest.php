@@ -42,6 +42,7 @@ class StoreSelfAssessmentRequest extends FormRequest
             'answers.B1_currently_recovering'      => 'required|boolean',
             'answers.B2_current_pain_worsens'      => 'required|boolean',
             'answers.B3_pain_score'                => 'required|integer|min:0|max:10',
+            'answers.C4_using_glasses'             => 'required|boolean',
         ];
     }
 

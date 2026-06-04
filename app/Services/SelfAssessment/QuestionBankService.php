@@ -352,6 +352,14 @@ class QuestionBankService
                     'required' => true,
                     'weight' => 1,
                 ],
+                [
+                    'code' => 'C4_using_glasses',
+                    'type' => 'boolean',
+                    'text' => 'Apakah Anda menggunakan kacamata dalam aktivitas sehari-hari?',
+                    'is_yellow_flag' => false,
+                    'weight' => 0, // Dihitung sebagai modifier di ScoringService
+                    'required' => true,
+                ],
             ],
         ];
     }

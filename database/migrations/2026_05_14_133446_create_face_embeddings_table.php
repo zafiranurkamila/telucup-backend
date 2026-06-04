@@ -9,21 +9,38 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Pastikan ekstensi pgvector aktif di database
-        DB::statement('CREATE EXTENSION IF NOT EXISTS vector;');
+        // Periksa secara aman apakah pgvector tersedia di PostgreSQL
+        $hasVector = false;
+        try {
+            $connection = DB::connection()->getDriverName();
+            if ($connection === 'pgsql') {
+                $available = DB::select("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'");
+                if (!empty($available)) {
+                    DB::statement('CREATE EXTENSION IF NOT EXISTS vector;');
+                    $hasVector = true;
+                }
+            }
+        } catch (\Exception $e) {
+            // Abaikan error koneksi atau metadata
+        }
 
-        Schema::create('face_embeddings', function (Blueprint $table) {
+        Schema::create('face_embeddings', function (Blueprint $table) use ($hasVector) {
             $table->id();
             $table->foreignId('player_id')->constrained('players')->cascadeOnDelete();
+            if (!$hasVector) {
+                $table->json('embedding')->nullable();
+            }
             $table->timestamps();
         });
 
-        // Menambahkan kolom vector 512 dimensi (Sesuai output model AdaFace)
-        DB::statement('ALTER TABLE face_embeddings ADD COLUMN embedding vector(512)');
-        
-        // Indeks HNSW di tabel referensi sangat penting untuk mempercepat 
-        // proses pencarian (1-to-N) dari sisi AI nantinya
-        DB::statement('CREATE INDEX face_embeddings_embedding_hnsw_idx ON face_embeddings USING hnsw (embedding vector_cosine_ops)');
+        if ($hasVector) {
+            // Menambahkan kolom vector 512 dimensi (Sesuai output model AdaFace)
+            DB::statement('ALTER TABLE face_embeddings ADD COLUMN embedding vector(512)');
+            
+            // Indeks HNSW di tabel referensi sangat penting untuk mempercepat 
+            // proses pencarian (1-to-N) dari sisi AI nantinya
+            DB::statement('CREATE INDEX face_embeddings_embedding_hnsw_idx ON face_embeddings USING hnsw (embedding vector_cosine_ops)');
+        }
     }
 
     public function down(): void

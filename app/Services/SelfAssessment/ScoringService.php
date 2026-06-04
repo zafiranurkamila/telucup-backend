@@ -135,7 +135,9 @@ class ScoringService
         $riskLabel = $this->classify($totalScore, count($redFlags) > 0, count($yellowFlags));
 
         // === Step 6: Modifier — faktor mitra (kacamata) ===
-        $isKacamata = (bool) $user->is_kacamata;
+        // Kacamata diambil langsung dari jawaban kuesioner terkini (bukan profil lama)
+        $isKacamata = (bool) $this->parseBoolean($answers['C4_using_glasses'] ?? false);
+        
         $kacamataNote = null;
         if ($isKacamata && $riskLabel === 'low') {
             // Kacamata bukan red flag medis, tapi mitra ingin pemantauan ekstra.

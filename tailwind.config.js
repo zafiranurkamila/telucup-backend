@@ -12,7 +12,15 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Inter', 'Figtree', ...defaultTheme.fontFamily.sans],
+            },
+            colors: {
+                brand: {
+                    DEFAULT: '#b71c1c',
+                    hover: '#9b1818',
+                    light: '#fce4e4',
+                    bg: '#fffcfc',
+                },
             },
         },
     },
