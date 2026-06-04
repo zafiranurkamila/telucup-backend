@@ -167,118 +167,290 @@
         {{-- Bracket rounds --}}
         <template x-if="bracketData && !isLoading">
             <div class="space-y-6">
+                <style>
+                    /* Tournament Bracket CSS */
+                    .bracket-container {
+                        display: flex;
+                        gap: 40px; /* Space for the 40px connector (20px left + 20px right) */
+                    }
+                    
+                    .bracket-round-col {
+                        display: flex;
+                        flex-direction: column;
+                        width: 280px;
+                        flex-shrink: 0;
+                        position: relative;
+                    }
+
+                    .bracket-round {
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        flex: 1 1 auto;
+                        position: relative;
+                    }
+                    /* Force stretch on direct children */
+                    .bracket-round > * {
+                        flex: 1 1 0%;
+                    }
+
+                    .match-wrapper {
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        position: relative;
+                        padding: 12px 0;
+                        width: 100%;
+                    }
+
+                    .match-wrapper::after, .match-wrapper::before {
+                        content: '';
+                        position: absolute;
+                        border-color: #cbd5e1;
+                        z-index: 0;
+                    }
+
+                    /* Connectors pointing RIGHT (out from left round) */
+                    .match-wrapper:not(.is-last-round)::after {
+                        right: -21px;
+                        width: 21px;
+                        border-right-width: 2px;
+                        border-right-style: solid;
+                    }
+                    
+                    /* Top match (odd): line goes DOWN */
+                    .match-wrapper:not(.is-last-round).is-top-match::after {
+                        top: 50%;
+                        height: 50%;
+                        border-top-width: 2px;
+                        border-top-style: solid;
+                        border-right-width: 2px;
+                        border-right-style: solid;
+                    }
+
+                    /* Bottom match (even): line goes UP */
+                    .match-wrapper:not(.is-last-round).is-bottom-match::after {
+                        top: 0;
+                        height: 50%;
+                        border-bottom-width: 2px;
+                        border-bottom-style: solid;
+                        border-right-width: 2px;
+                        border-right-style: solid;
+                    }
+                    
+                    /* Bye handling: if a top match doesn't have a bottom pair */
+                    .match-wrapper:not(.is-last-round).is-bye-match::after {
+                        height: 0;
+                        border-right: none;
+                    }
+
+                    /* Connectors pointing LEFT (in to right round) */
+                    .bracket-round-col:not(:first-child) .match-wrapper::before {
+                        left: -20px;
+                        top: 50%;
+                        width: 21px;
+                        border-top-width: 2px;
+                        border-top-style: solid;
+                    }
+</style>
                 {{-- Legend --}}
-                <div class="flex flex-wrap gap-3 text-xs">
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-gray-200"></span> Terjadwal</span>
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span> Live</span>
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Selesai</span>
+                <div class="flex items-center gap-4 text-xs font-medium text-gray-500 mb-6 px-6">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-brand"></span> Selesai</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400"></span> Sedang Bermain</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-gray-300"></span> Menunggu</span>
                     <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-gray-100"></span> Bye</span>
                 </div>
 
                 {{-- Scrollable bracket container --}}
                 <div class="overflow-x-auto -mx-6 px-6 pb-4">
-                    <div class="flex gap-6 items-start" style="min-width: fit-content;">
-                        <template x-for="round in bracketData.rounds" :key="round.round">
-                            <div class="shrink-0" style="min-width: 260px;">
-                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-center" x-text="round.name"></h3>
-                                <div class="space-y-3">
-                                    <template x-for="match in round.matches" :key="match.id">
-                                        <div
-                                            @click="openMatchEdit(match)"
-                                            :class="{
-                                                'ring-2 ring-brand': editingMatchId === match.id,
-                                                'opacity-50': match.status === 'bye',
-                                                'cursor-pointer hover:shadow-md': match.status !== 'bye',
-                                            }"
-                                            class="bg-white rounded-xl border border-gray-200 shadow-sm transition-all duration-150 overflow-hidden"
-                                        >
-                                            {{-- Match header --}}
-                                            <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 bg-gray-50/50">
-                                                <span class="text-[10px] font-bold text-gray-400 uppercase" x-text="'#' + match.match_number"></span>
-                                                <span
+                    <div class="bracket-container" :style="'min-width: fit-content; padding-top: 20px; padding-bottom: ' + (bracketData.third_place_match ? '260px' : '20px') + ';'">
+                        <template x-for="(round, rIndex) in bracketData.rounds" :key="round.round">
+                            <div class="bracket-round-col">
+                                
+                                <!-- Header Ronde Normal -->
+                                <template x-if="rIndex !== bracketData.rounds.length - 1">
+                                    <div class="h-20 shrink-0 flex flex-col items-center justify-end pb-6 text-center">
+                                        <span class="inline-block bg-white border border-gray-200 text-gray-700 text-[11px] font-extrabold px-4 py-1.5 rounded-full uppercase tracking-widest shadow-sm" x-text="round.name"></span>
+                                        <div class="text-[9px] text-gray-400 mt-1 font-semibold uppercase" x-text="(round.matches.length * 2) + ' TEAMS'"></div>
+                                    </div>
+                                </template>
+
+                                <!-- Header Grand Finals -->
+                                <template x-if="rIndex === bracketData.rounds.length - 1">
+                                    <div class="h-20 shrink-0 flex flex-col items-center justify-end pb-6 text-center">
+                                        <span class="inline-flex items-center gap-1.5 bg-[#a81d22] text-white text-sm font-black px-5 py-2 rounded-full uppercase tracking-widest shadow-md">
+                                            🏆 GRAND FINALS
+                                        </span>
+                                    </div>
+                                </template>
+
+                                <div class="bracket-round">
+                                    <template x-for="(match, mIndex) in round.matches" :key="match.id">
+                                        <div class="match-wrapper" :class="{
+                                            'is-last-round': rIndex === bracketData.rounds.length - 1,
+                                            'is-top-match': mIndex % 2 === 0,
+                                            'is-bottom-match': mIndex % 2 === 1,
+                                            'is-bye-match': (mIndex % 2 === 0) && (mIndex === round.matches.length - 1)
+                                        }">
+                                            <div class="relative w-full">
+                                                <!-- Background highlight untuk Grand Finals -->
+                                                <template x-if="rIndex === bracketData.rounds.length - 1">
+                                                    <div class="absolute inset-0 bg-red-50/50 border-2 border-red-100 rounded-3xl -m-4 pointer-events-none z-0">
+                                                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-white border border-red-100 text-red-600 text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">CHAMPIONSHIP ARENA</div>
+                                                    </div>
+                                                </template>
+
+                                                <div
+                                                    @click="openMatchEdit(match)"
                                                     :class="{
-                                                        'bg-gray-100 text-gray-500': match.status === 'scheduled',
-                                                        'bg-green-100 text-green-700': match.status === 'live',
-                                                        'bg-blue-100 text-blue-700': match.status === 'finished',
-                                                        'bg-gray-50 text-gray-400': match.status === 'bye',
+                                                        'ring-2 ring-brand': editingMatchId === match.id,
+                                                        'opacity-50': match.status === 'bye',
+                                                        'cursor-pointer hover:shadow-md hover:-translate-y-0.5': match.status !== 'bye',
                                                     }"
-                                                    class="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
-                                                    x-text="match.status"
-                                                ></span>
-                                            </div>
+                                                    class="bg-white rounded-xl border border-gray-200 shadow-sm transition-all duration-150 overflow-hidden relative z-10"
+                                                >
+                                                    {{-- Status bar --}}
+                                                    <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 bg-gray-50/50">
+                                                        <span class="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
+                                                            <svg class="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                                            <span x-text="'MATCH #' + match.match_number"></span>
+                                                        </span>
+                                                        <span
+                                                            :class="{
+                                                                'text-gray-500': match.status === 'scheduled',
+                                                                'text-red-600 flex items-center gap-1': match.status === 'live',
+                                                                'text-gray-900': match.status === 'finished',
+                                                                'text-gray-400': match.status === 'bye',
+                                                            }"
+                                                            class="text-[10px] font-bold uppercase"
+                                                        >
+                                                            <template x-if="match.status === 'live'">
+                                                                <span class="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                                                            </template>
+                                                            <span x-text="match.status === 'finished' ? 'SELESAI' : match.status"></span>
+                                                        </span>
+                                                    </div>
 
-                                            {{-- Team A --}}
-                                            <div
-                                                :class="{
-                                                    'bg-brand/5 border-l-2 border-brand': match.winner && match.winner.registration_id === match.team_a?.registration_id,
-                                                    'border-l-2 border-transparent': !match.winner || match.winner.registration_id !== match.team_a?.registration_id,
-                                                }"
-                                                class="px-3 py-2 flex items-center justify-between"
-                                            >
-                                                <span class="text-sm font-semibold text-gray-800 truncate" x-text="match.team_a?.contingent?.name ?? 'TBD'"></span>
-                                                <span class="text-sm font-bold text-gray-900 ml-2 tabular-nums" x-text="match.score_a ?? 0"></span>
-                                            </div>
+                                                    {{-- Team A --}}
+                                                    <div
+                                                        :class="{
+                                                            'bg-brand/5': match.winner && match.winner.registration_id === match.team_a?.registration_id,
+                                                        }"
+                                                        class="px-3 py-2.5 flex items-center justify-between"
+                                                        :draggable="['scheduled', 'bye'].includes(match.status)"
+                                                        @dragstart="dragStartMatch($event, match, 'a')"
+                                                        @dragover.prevent="if(['scheduled', 'bye'].includes(match.status)) { $event.dataTransfer.dropEffect = 'move'; $event.target.closest('.px-3').classList.add('ring-2', 'ring-brand', 'ring-inset'); }"
+                                                        @dragleave="$event.target.closest('.px-3')?.classList.remove('ring-2', 'ring-brand', 'ring-inset')"
+                                                        @dragend="$event.target.classList.remove('opacity-50')"
+                                                        @drop="dropMatch($event, match, 'a')"
+                                                    >
+                                                        <div class="flex items-center gap-2 overflow-hidden pointer-events-none">
+                                                            <img :src="match.team_a?.contingent?.logo_url || 'https://ui-avatars.com/api/?name=' + (match.team_a?.contingent?.name || 'A') + '&background=f3f4f6&color=9ca3af'" class="w-6 h-6 rounded-full object-cover shrink-0">
+                                                            <span class="text-sm font-bold text-gray-800 truncate" x-text="match.team_a?.contingent?.name ?? 'TBD'"></span>
+                                                        </div>
+                                                        <span :class="{'text-brand': match.winner && match.winner.registration_id === match.team_a?.registration_id, 'text-gray-900': !match.winner}" class="text-sm font-black ml-2 tabular-nums" x-text="match.score_a ?? ''"></span>
+                                                    </div>
 
-                                            <div class="border-t border-gray-100"></div>
+                                                    <div class="border-t border-gray-100 mx-3"></div>
 
-                                            {{-- Team B --}}
-                                            <div
-                                                :class="{
-                                                    'bg-brand/5 border-l-2 border-brand': match.winner && match.winner.registration_id === match.team_b?.registration_id,
-                                                    'border-l-2 border-transparent': !match.winner || match.winner.registration_id !== match.team_b?.registration_id,
-                                                }"
-                                                class="px-3 py-2 flex items-center justify-between"
-                                            >
-                                                <span class="text-sm font-semibold text-gray-800 truncate" x-text="match.team_b?.contingent?.name ?? 'TBD'"></span>
-                                                <span class="text-sm font-bold text-gray-900 ml-2 tabular-nums" x-text="match.score_b ?? 0"></span>
-                                            </div>
+                                                    {{-- Team B --}}
+                                                    <div
+                                                        :class="{
+                                                            'bg-brand/5': match.winner && match.winner.registration_id === match.team_b?.registration_id,
+                                                        }"
+                                                        class="px-3 py-2.5 flex items-center justify-between"
+                                                        :draggable="['scheduled', 'bye'].includes(match.status)"
+                                                        @dragstart="dragStartMatch($event, match, 'b')"
+                                                        @dragover.prevent="if(['scheduled', 'bye'].includes(match.status)) { $event.dataTransfer.dropEffect = 'move'; $event.target.closest('.px-3').classList.add('ring-2', 'ring-brand', 'ring-inset'); }"
+                                                        @dragleave="$event.target.closest('.px-3')?.classList.remove('ring-2', 'ring-brand', 'ring-inset')"
+                                                        @dragend="$event.target.classList.remove('opacity-50')"
+                                                        @drop="dropMatch($event, match, 'b')"
+                                                    >
+                                                        <div class="flex items-center gap-2 overflow-hidden pointer-events-none">
+                                                            <img :src="match.team_b?.contingent?.logo_url || 'https://ui-avatars.com/api/?name=' + (match.team_b?.contingent?.name || 'B') + '&background=f3f4f6&color=9ca3af'" class="w-6 h-6 rounded-full object-cover shrink-0">
+                                                            <span class="text-sm font-bold text-gray-800 truncate" x-text="match.team_b?.contingent?.name ?? 'TBD'"></span>
+                                                        </div>
+                                                        <span :class="{'text-brand': match.winner && match.winner.registration_id === match.team_b?.registration_id, 'text-gray-900': !match.winner}" class="text-sm font-black ml-2 tabular-nums" x-text="match.score_b ?? ''"></span>
+                                                    </div>
 
-                                            {{-- Schedule info --}}
-                                            <template x-if="match.match_date || match.location">
-                                                <div class="px-3 py-1.5 border-t border-gray-100 bg-gray-50/30">
-                                                    <p class="text-[10px] text-gray-400 truncate">
-                                                        <span x-text="match.match_date ?? ''"></span>
-                                                        <template x-if="match.match_time"><span x-text="' ' + match.match_time"></span></template>
-                                                        <template x-if="match.location"><span x-text="' · ' + match.location"></span></template>
-                                                    </p>
+                                                    {{-- Schedule info --}}
+                                                    <div class="px-3 py-2 border-t border-gray-100 bg-white flex items-center justify-between mt-1">
+                                                        <div class="flex items-center text-[10px] text-gray-500 font-medium">
+                                                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                            <span x-text="match.match_date ? (new Date(match.match_date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})) : 'TBD'"></span>
+                                                            <template x-if="match.match_time"><span class="ml-1" x-text="match.match_time"></span></template>
+                                                        </div>
+                                                        <div class="text-[9px] font-bold text-gray-800 hover:text-brand transition-colors uppercase cursor-pointer">
+                                                            Detail Pertandingan &gt;
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </template>
+                                            </div>
                                         </div>
                                     </template>
                                 </div>
-                            </div>
-                        </template>
+                                
+                                <!-- Juara 3 (Ditampilkan di bawah Grand Final di kolom terakhir) -->
+                                <template x-if="rIndex === bracketData.rounds.length - 1 && bracketData.third_place_match">
+                                    <div class="absolute top-full left-0 w-full mt-12">
+                                        <div class="text-center mb-6">
+                                            <span class="inline-block bg-[#a81d22] text-white text-[11px] font-bold px-8 py-2 rounded-full uppercase tracking-wider shadow-sm">JUARA 3</span>
+                                        </div>
+                                        <div class="match-wrapper is-last-round pt-0 pb-0 relative z-10">
+                                            <div
+                                                @click="openMatchEdit(bracketData.third_place_match)"
+                                                class="bg-white rounded-xl border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 overflow-hidden"
+                                            >
+                                                <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 bg-gray-50/50">
+                                                    <span class="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
+                                                        <svg class="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                                        <span x-text="'MATCH #' + bracketData.third_place_match.match_number"></span>
+                                                    </span>
+                                                    <span class="text-[10px] font-bold text-gray-500 uppercase" x-text="bracketData.third_place_match.status === 'finished' ? 'SELESAI' : bracketData.third_place_match.status"></span>
+                                                </div>
+                                                <div class="px-3 py-2.5 flex items-center justify-between"
+                                                    :draggable="['scheduled', 'bye'].includes(bracketData.third_place_match.status)"
+                                                    @dragstart="dragStartMatch($event, bracketData.third_place_match, 'a')"
+                                                    @dragover.prevent="if(['scheduled', 'bye'].includes(bracketData.third_place_match.status)) { $event.dataTransfer.dropEffect = 'move'; $event.target.closest('.px-3').classList.add('ring-2', 'ring-brand', 'ring-inset'); }"
+                                                    @dragleave="$event.target.closest('.px-3')?.classList.remove('ring-2', 'ring-brand', 'ring-inset')"
+                                                    @dragend="$event.target.classList.remove('opacity-50')"
+                                                    @drop="dropMatch($event, bracketData.third_place_match, 'a')"
+                                                >
+                                                    <div class="flex items-center gap-2 overflow-hidden pointer-events-none">
+                                                        <img :src="bracketData.third_place_match.team_a?.contingent?.logo_url || 'https://ui-avatars.com/api/?name=' + (bracketData.third_place_match.team_a?.contingent?.name || 'A') + '&background=f3f4f6&color=9ca3af'" class="w-6 h-6 rounded-full object-cover shrink-0">
+                                                        <span class="text-sm font-bold text-gray-800 truncate" x-text="bracketData.third_place_match.team_a?.contingent?.name ?? 'TBD'"></span>
+                                                    </div>
+                                                    <span class="text-sm font-black ml-2 tabular-nums" x-text="bracketData.third_place_match.score_a ?? ''"></span>
+                                                </div>
+                                                <div class="border-t border-gray-100 mx-3"></div>
+                                                <div class="px-3 py-2.5 flex items-center justify-between"
+                                                    :draggable="['scheduled', 'bye'].includes(bracketData.third_place_match.status)"
+                                                    @dragstart="dragStartMatch($event, bracketData.third_place_match, 'b')"
+                                                    @dragover.prevent="if(['scheduled', 'bye'].includes(bracketData.third_place_match.status)) { $event.dataTransfer.dropEffect = 'move'; $event.target.closest('.px-3').classList.add('ring-2', 'ring-brand', 'ring-inset'); }"
+                                                    @dragleave="$event.target.closest('.px-3')?.classList.remove('ring-2', 'ring-brand', 'ring-inset')"
+                                                    @dragend="$event.target.classList.remove('opacity-50')"
+                                                    @drop="dropMatch($event, bracketData.third_place_match, 'b')"
+                                                >
+                                                    <div class="flex items-center gap-2 overflow-hidden pointer-events-none">
+                                                        <img :src="bracketData.third_place_match.team_b?.contingent?.logo_url || 'https://ui-avatars.com/api/?name=' + (bracketData.third_place_match.team_b?.contingent?.name || 'B') + '&background=f3f4f6&color=9ca3af'" class="w-6 h-6 rounded-full object-cover shrink-0">
+                                                        <span class="text-sm font-bold text-gray-800 truncate" x-text="bracketData.third_place_match.team_b?.contingent?.name ?? 'TBD'"></span>
+                                                    </div>
+                                                    <span class="text-sm font-black ml-2 tabular-nums" x-text="bracketData.third_place_match.score_b ?? ''"></span>
+                                                </div>
+                                                <div class="px-3 py-2 border-t border-gray-100 bg-white flex items-center justify-between mt-1">
+                                                    <div class="flex items-center text-[10px] text-gray-500 font-medium">
+                                                        <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                        <span x-text="bracketData.third_place_match.match_date ? (new Date(bracketData.third_place_match.match_date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})) : 'TBD'"></span>
+                                                    </div>
+                                                    <div class="text-[9px] font-bold text-gray-800 hover:text-brand transition-colors uppercase cursor-pointer">
+                                                        Detail Pertandingan &gt;
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
 
-                        {{-- Third place match --}}
-                        <template x-if="bracketData.third_place_match">
-                            <div class="shrink-0" style="min-width: 260px;">
-                                <h3 class="text-xs font-bold text-amber-500 uppercase tracking-wider mb-3 text-center">🏆 Juara 3</h3>
-                                <div
-                                    @click="openMatchEdit(bracketData.third_place_match)"
-                                    class="bg-white rounded-xl border-2 border-amber-200 shadow-sm cursor-pointer hover:shadow-md transition-all duration-150 overflow-hidden"
-                                >
-                                    <div class="flex items-center justify-between px-3 py-1.5 border-b border-amber-100 bg-amber-50/50">
-                                        <span class="text-[10px] font-bold text-amber-500 uppercase">Perebutan Juara 3</span>
-                                        <span
-                                            :class="{
-                                                'bg-gray-100 text-gray-500': bracketData.third_place_match.status === 'scheduled',
-                                                'bg-green-100 text-green-700': bracketData.third_place_match.status === 'live',
-                                                'bg-blue-100 text-blue-700': bracketData.third_place_match.status === 'finished',
-                                            }"
-                                            class="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
-                                            x-text="bracketData.third_place_match.status"
-                                        ></span>
-                                    </div>
-                                    <div class="px-3 py-2 flex items-center justify-between">
-                                        <span class="text-sm font-semibold text-gray-800 truncate" x-text="bracketData.third_place_match.team_a?.contingent?.name ?? 'TBD'"></span>
-                                        <span class="text-sm font-bold text-gray-900 ml-2 tabular-nums" x-text="bracketData.third_place_match.score_a ?? 0"></span>
-                                    </div>
-                                    <div class="border-t border-gray-100"></div>
-                                    <div class="px-3 py-2 flex items-center justify-between">
-                                        <span class="text-sm font-semibold text-gray-800 truncate" x-text="bracketData.third_place_match.team_b?.contingent?.name ?? 'TBD'"></span>
-                                        <span class="text-sm font-bold text-gray-900 ml-2 tabular-nums" x-text="bracketData.third_place_match.score_b ?? 0"></span>
-                                    </div>
-                                </div>
                             </div>
                         </template>
                     </div>
@@ -355,21 +527,49 @@
                         <div class="p-5 space-y-5">
                             {{-- Teams --}}
                             <div class="bg-gray-50 rounded-xl p-4">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="text-center flex-1">
-                                        <div class="text-sm font-bold text-gray-800" x-text="editingMatch.team_a?.contingent?.name ?? 'TBD'"></div>
-                                        <div class="text-[10px] text-gray-400 uppercase">Tim A</div>
+                                <div class="flex items-center justify-between mb-3 gap-3">
+                                    <div class="flex-1">
+                                        <label class="block text-[10px] text-center text-gray-400 uppercase mb-1">Tim A</label>
+                                        <div x-show="editingMatch && ['scheduled', 'bye'].includes(editingMatch.status)">
+                                            <select x-model="editForm.registration_a_id" class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none">
+                                                <option value="">-- TBD --</option>
+                                                <template x-for="reg in registrations" :key="reg.id">
+                                                    <option :value="String(reg.id)" x-text="reg.contingent ? reg.contingent.name : 'Unknown'"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <div x-show="editingMatch && !['scheduled', 'bye'].includes(editingMatch.status)">
+                                            <div class="text-sm font-bold text-gray-800 text-center" x-text="editingMatch?.team_a?.contingent?.name ?? 'TBD'"></div>
+                                        </div>
                                     </div>
-                                    <div class="px-4 text-xl font-black text-gray-900">VS</div>
-                                    <div class="text-center flex-1">
-                                        <div class="text-sm font-bold text-gray-800" x-text="editingMatch.team_b?.contingent?.name ?? 'TBD'"></div>
-                                        <div class="text-[10px] text-gray-400 uppercase">Tim B</div>
+                                    <div class="text-xl font-black text-gray-900 shrink-0">VS</div>
+                                    <div class="flex-1">
+                                        <label class="block text-[10px] text-center text-gray-400 uppercase mb-1">Tim B</label>
+                                        <div x-show="editingMatch && ['scheduled', 'bye'].includes(editingMatch.status)">
+                                            <select x-model="editForm.registration_b_id" class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none">
+                                                <option value="">-- TBD --</option>
+                                                <template x-for="reg in registrations" :key="reg.id">
+                                                    <option :value="String(reg.id)" x-text="reg.contingent ? reg.contingent.name : 'Unknown'"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <div x-show="editingMatch && !['scheduled', 'bye'].includes(editingMatch.status)">
+                                            <div class="text-sm font-bold text-gray-800 text-center" x-text="editingMatch?.team_b?.contingent?.name ?? 'TBD'"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- Schedule fields --}}
+                            {{-- Schedule fields & Status --}}
                             <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Status Pertandingan</label>
+                                    <select x-model="editForm.status" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none" :disabled="['bye'].includes(editingMatch.status)">
+                                        <option value="scheduled">Terjadwal</option>
+                                        <option value="live">Sedang Bermain (Live)</option>
+                                        <option value="finished">Selesai</option>
+                                    </select>
+                                </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-gray-500 mb-1">Tanggal</label>
                                     <input type="date" x-model="editForm.match_date" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none">
@@ -378,11 +578,10 @@
                                     <label class="block text-xs font-semibold text-gray-500 mb-1">Waktu</label>
                                     <input type="time" x-model="editForm.match_time" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none">
                                 </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">Lokasi</label>
-                                <input type="text" x-model="editForm.location" placeholder="Gedung Sport Center Lt. 2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Lokasi</label>
+                                    <input type="text" x-model="editForm.location" placeholder="Gedung Sport Center Lt. 2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none">
+                                </div>
                             </div>
 
                             <div>
@@ -410,9 +609,14 @@
                                     <template x-if="editForm.score_a === editForm.score_b && editForm.score_a >= 0 && editingMatch.team_a && editingMatch.team_b">
                                         <div class="mt-3">
                                             <label class="block text-xs font-semibold text-amber-600 mb-1">⚠ Skor seri — pilih pemenang:</label>
-                                            <select x-model.number="editForm.winner_id" class="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm bg-amber-50 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:outline-none">
-                                                <option :value="editingMatch.team_a?.registration_id" x-text="editingMatch.team_a?.contingent?.name"></option>
-                                                <option :value="editingMatch.team_b?.registration_id" x-text="editingMatch.team_b?.contingent?.name"></option>
+                                            <select x-model="editForm.winner_id" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:outline-none">
+                                                <option value="">-- Pilih Pemenang --</option>
+                                                <template x-if="editingMatch.team_a">
+                                                    <option :value="String(editingMatch.team_a?.registration_id)" x-text="editingMatch.team_a?.contingent?.name"></option>
+                                                </template>
+                                                <template x-if="editingMatch.team_b">
+                                                    <option :value="String(editingMatch.team_b?.registration_id)" x-text="editingMatch.team_b?.contingent?.name"></option>
+                                                </template>
                                             </select>
                                         </div>
                                     </template>
@@ -467,7 +671,7 @@
                                     :disabled="isSaving"
                                     class="inline-flex items-center gap-1.5 text-sm font-bold text-white bg-brand hover:bg-brand-hover px-5 py-2 rounded-lg transition-colors disabled:opacity-50"
                                 >
-                                    <span x-text="isSaving ? 'Menyimpan...' : 'Simpan'"></span>
+                                    <span x-text="isSaving ? (editForm.finish_mode ? 'Menyelesaikan...' : 'Menyimpan...') : (editForm.finish_mode ? 'Akhiri Pertandingan' : 'Simpan')"></span>
                                 </button>
                             </div>
                         </div>
@@ -507,8 +711,8 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('bracketManager', (initialSports) => ({
         // State
         sports: initialSports,
-        selectedSportId: '',
-        selectedCategoryId: '',
+        selectedSportId: sessionStorage.getItem('bagan_sport_id') || '',
+        selectedCategoryId: sessionStorage.getItem('bagan_category_id') || '',
         registrations: [],
         bracketData: null,
         isGenerating: false,
@@ -519,6 +723,19 @@ document.addEventListener('alpine:init', () => {
         editForm: {},
         toast: { show: false, message: '', type: 'info' },
         refreshInterval: null,
+
+        init() {
+            this.$watch('selectedSportId', val => {
+                sessionStorage.setItem('bagan_sport_id', val);
+            });
+            this.$watch('selectedCategoryId', val => {
+                sessionStorage.setItem('bagan_category_id', val || '');
+            });
+            
+            if (this.selectedSportId) {
+                this.fetchRegistrations().then(() => this.loadBracket());
+            }
+        },
 
         // Computed
         get selectedSport() {
@@ -547,9 +764,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         // API helper
-        async api(method, url, data = null) {
+        async api(method, url, data = null, prefix = '/api') {
             const opts = {
                 method,
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
@@ -561,7 +779,7 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams(Object.entries(data).filter(([,v]) => v != null));
                 url += '?' + params.toString();
             }
-            const res = await fetch('/api' + url, opts);
+            const res = await fetch(prefix + url, opts);
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Request failed');
             return json;
@@ -575,14 +793,29 @@ document.addEventListener('alpine:init', () => {
 
         // Fetch registrations
         async fetchRegistrations() {
-            if (!this.selectedSportId) return;
             try {
-                const params = { sport_id: this.selectedSportId, status: 'verified' };
-                if (this.selectedCategoryId) params.sport_category_id = this.selectedCategoryId;
-                const res = await this.api('GET', '/registrations', params);
-                const raw = res.data;
-                this.registrations = Array.isArray(raw) ? raw : (raw?.data || []);
-            } catch { this.registrations = []; }
+                let url = '/registrations';
+                const params = ['per_page=1000'];
+                if (this.selectedSportId) params.push(`sport_id=${this.selectedSportId}`);
+                if (this.selectedCategoryId) params.push(`sport_category_id=${this.selectedCategoryId}`);
+                url += `?${params.join('&')}`;
+
+                const res = await this.api('GET', url);
+                // The API returns { status: 'success', data: { data: [...], current_page: ... } }
+                let items = [];
+                if (Array.isArray(res)) {
+                    items = res;
+                } else if (res && Array.isArray(res.data)) {
+                    items = res.data;
+                } else if (res && res.data && Array.isArray(res.data.data)) {
+                    items = res.data.data;
+                }
+                
+                this.registrations = items.filter(r => r?.status === 'verified');
+            } catch (e) {
+                console.error('Failed to load registrations', e);
+                this.registrations = [];
+            }
         },
 
         // Load bracket
@@ -615,6 +848,67 @@ document.addEventListener('alpine:init', () => {
         },
 
         // Event handlers
+        dragStartMatch(event, match, slot) {
+            // Only allow dragging if match is scheduled or bye, and there is a team
+            if (!['scheduled', 'bye'].includes(match.status)) {
+                event.preventDefault();
+                return;
+            }
+            
+            const team = slot === 'a' ? match.team_a : match.team_b;
+            if (!team) {
+                event.preventDefault();
+                return;
+            }
+
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', JSON.stringify({
+                sourceMatchId: match.id,
+                sourceSlot: slot,
+                registrationId: team.registration_id
+            }));
+            
+            // Highlight styling during drag
+            event.target.classList.add('opacity-50');
+        },
+
+        async dropMatch(event, targetMatch, targetSlot) {
+            event.target.classList.remove('opacity-50', 'ring-2', 'ring-brand', 'ring-inset');
+            
+            if (!['scheduled', 'bye'].includes(targetMatch.status)) {
+                this.showToast('Hanya bisa memindahkan tim ke pertandingan yang masih terjadwal', 'error');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(event.dataTransfer.getData('text/plain'));
+                if (!data || !data.registrationId) return;
+
+                // If dropping to the exact same slot, do nothing
+                if (data.sourceMatchId === targetMatch.id && data.sourceSlot === targetSlot) return;
+
+                this.isSaving = true;
+                
+                // Call API to set teams on target match.
+                // The backend auto-swap logic will automatically move targetMatch's current team to sourceMatch.
+                const payload = {};
+                if (targetSlot === 'a') {
+                    payload.registration_a_id = data.registrationId;
+                } else {
+                    payload.registration_b_id = data.registrationId;
+                }
+
+                await this.api('PATCH', `/matches/${targetMatch.id}/teams`, payload, '/dashboard/panitia');
+                
+                await this.loadBracket();
+                this.showToast('Tim berhasil ditukar!', 'success');
+            } catch (e) {
+                this.showToast(e.message || 'Gagal menukar tim', 'error');
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
         async onSportChange() {
             this.selectedCategoryId = '';
             this.bracketData = null;
@@ -651,7 +945,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 const payload = { sport_id: parseInt(this.selectedSportId) };
                 if (this.selectedCategoryId) payload.sport_category_id = parseInt(this.selectedCategoryId);
-                await this.api('POST', '/bracket/generate', payload);
+                await this.api('POST', '/bracket/generate', payload, '/dashboard/panitia');
                 await this.loadBracket();
                 this.showToast(`Bagan berhasil digenerate untuk ${this.registrations.length} tim!`, 'success');
                 this.startRefresh();
@@ -666,10 +960,10 @@ document.addEventListener('alpine:init', () => {
             if (!confirm('Ini akan menghapus seluruh jadwal dan skor saat ini. Anda yakin ingin mengacak ulang?')) return;
             this.isGenerating = true;
             try {
-                await this.api('DELETE', '/bracket/reset', { sport_id: parseInt(this.selectedSportId), sport_category_id: this.selectedCategoryId ? parseInt(this.selectedCategoryId) : null });
+                await this.api('DELETE', '/bracket/reset', { sport_id: parseInt(this.selectedSportId), sport_category_id: this.selectedCategoryId ? parseInt(this.selectedCategoryId) : null }, '/dashboard/panitia');
                 const payload = { sport_id: parseInt(this.selectedSportId) };
                 if (this.selectedCategoryId) payload.sport_category_id = parseInt(this.selectedCategoryId);
-                await this.api('POST', '/bracket/generate', payload);
+                await this.api('POST', '/bracket/generate', payload, '/dashboard/panitia');
                 await this.loadBracket();
                 this.showToast('Posisi tim berhasil diacak ulang!', 'info');
             } catch (e) {
@@ -682,7 +976,7 @@ document.addEventListener('alpine:init', () => {
         async handleReset() {
             if (!confirm('Bagan akan dihapus permanen. Anda yakin?')) return;
             try {
-                await this.api('DELETE', '/bracket/reset', { sport_id: parseInt(this.selectedSportId), sport_category_id: this.selectedCategoryId ? parseInt(this.selectedCategoryId) : null });
+                await this.api('DELETE', '/bracket/reset', { sport_id: parseInt(this.selectedSportId), sport_category_id: this.selectedCategoryId ? parseInt(this.selectedCategoryId) : null }, '/dashboard/panitia');
                 this.bracketData = null;
                 this.editingMatch = null;
                 this.stopRefresh();
@@ -693,10 +987,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         openMatchEdit(match) {
-            if (match.status === 'bye') return;
             this.editingMatch = match;
             this.editingMatchId = match.id;
-            this.editForm = {
+            this.$nextTick(() => { this.editForm = {
                 match_date: match.match_date || '',
                 match_time: match.match_time || '',
                 location: match.location || '',
@@ -704,14 +997,17 @@ document.addEventListener('alpine:init', () => {
                 notes: match.notes || '',
                 score_a: match.score_a || 0,
                 score_b: match.score_b || 0,
-                winner_id: match.winner?.registration_id || null,
+                winner_id: match.winner?.registration_id ? String(match.winner.registration_id) : '',
+                registration_a_id: match.team_a?.registration_id ? String(match.team_a.registration_id) : '',
+                registration_b_id: match.team_b?.registration_id ? String(match.team_b.registration_id) : '',
+                status: match.status,
                 finish_mode: false,
-            };
+            }; });
         },
 
         async handleStartMatch(matchId) {
             try {
-                await this.api('PATCH', `/matches/${matchId}/status`, { status: 'live' });
+                await this.api('PATCH', `/matches/${matchId}/status`, { status: 'live' }, '/dashboard/panitia');
                 await this.loadBracket();
                 this.editingMatch = null;
                 this.editingMatchId = null;
@@ -727,33 +1023,53 @@ document.addEventListener('alpine:init', () => {
             const matchId = this.editingMatch.id;
 
             try {
-                // 1. Update schedule
+                // 1. Update teams if scheduled or bye
+                if (['scheduled', 'bye'].includes(this.editingMatch.status)) {
+                    const oldRegA = this.editingMatch.team_a?.registration_id ? String(this.editingMatch.team_a.registration_id) : '';
+                    const oldRegB = this.editingMatch.team_b?.registration_id ? String(this.editingMatch.team_b.registration_id) : '';
+                    
+                    if (this.editForm.registration_a_id !== oldRegA || this.editForm.registration_b_id !== oldRegB) {
+                        await this.api('PATCH', `/matches/${matchId}/teams`, {
+                            registration_a_id: this.editForm.registration_a_id || null,
+                            registration_b_id: this.editForm.registration_b_id || null,
+                        }, '/dashboard/panitia');
+                    }
+                }
+
+                // 2. Update schedule
                 await this.api('PATCH', `/matches/${matchId}/schedule`, {
                     match_date: this.editForm.match_date || null,
                     match_time: this.editForm.match_time || null,
                     location: this.editForm.location || null,
                     referee_name: this.editForm.referee_name || null,
                     notes: this.editForm.notes || null,
-                });
+                }, '/dashboard/panitia');
 
-                // 2. Finish match if in finish mode
+                // 3. Update score if finished
                 if (this.editForm.finish_mode) {
                     const payload = {
-                        score_a: this.editForm.score_a,
-                        score_b: this.editForm.score_b,
+                        score_a: parseInt(this.editForm.score_a) || 0,
+                        score_b: parseInt(this.editForm.score_b) || 0,
                     };
                     if (this.editForm.score_a === this.editForm.score_b) {
                         payload.winner_registration_id = this.editForm.winner_id;
                     }
-                    await this.api('PATCH', `/matches/${matchId}/score`, payload);
+                    await this.api('PATCH', `/matches/${matchId}/score`, payload, '/dashboard/panitia');
+                }
+
+                // 4. Update status if explicitly changed
+                if (!this.editForm.finish_mode && this.editForm.status && this.editForm.status !== this.editingMatch.status) {
+                    await this.api('PATCH', `/matches/${matchId}/status`, { status: this.editForm.status }, '/dashboard/panitia');
                 }
 
                 await this.loadBracket();
-                this.editingMatch = null;
-                this.editingMatchId = null;
-                this.showToast('Pertandingan berhasil diperbarui!', 'success');
+                this.showToast(this.editForm.finish_mode ? 'Pertandingan diselesaikan!' : 'Pertandingan berhasil disimpan!', 'success');
+                
+                if (this.editForm.finish_mode) {
+                    this.editingMatch = null;
+                }
             } catch (e) {
-                this.showToast(e.message || 'Gagal memperbarui pertandingan', 'error');
+                this.showToast(e.message || 'Gagal menyimpan pertandingan', 'error');
             } finally {
                 this.isSaving = false;
             }

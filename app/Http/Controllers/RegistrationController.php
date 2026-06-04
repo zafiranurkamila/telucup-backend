@@ -355,11 +355,13 @@ class RegistrationController extends Controller
     {
         $query = Registration::with(['contingent', 'sport', 'sportCategory', 'players']);
 
-        if ($request->filled('sport_id'))      $query->where('sport_id', $request->sport_id);
-        if ($request->filled('contingent_id')) $query->where('contingent_id', $request->contingent_id);
-        if ($request->filled('status'))        $query->where('status', $request->status);
+        if ($request->filled('sport_id'))          $query->where('sport_id', $request->sport_id);
+        if ($request->filled('sport_category_id')) $query->where('sport_category_id', $request->sport_category_id);
+        if ($request->filled('contingent_id'))     $query->where('contingent_id', $request->contingent_id);
+        if ($request->filled('status'))            $query->where('status', $request->status);
 
-        $registrations = $query->paginate(15);
+        $perPage = $request->input('per_page', 15);
+        $registrations = $query->paginate($perPage);
         $registrations->getCollection()->transform(fn ($r) => $this->formatRegistration($r));
 
         return response()->json(['status' => 'success', 'data' => $registrations]);

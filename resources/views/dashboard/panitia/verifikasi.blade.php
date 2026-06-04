@@ -30,7 +30,7 @@
                     </div>
                     <h2 class="mb-2 text-lg font-bold text-gray-900">Pertandingan Tidak Ditemukan</h2>
                     <p class="mb-6 text-sm text-gray-500" x-text="error || 'Pilih pertandingan dari halaman bagan terlebih dahulu.'"></p>
-                    <a href="{{ route('dashboard.panitia.kelola-bagan') }}" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-hover">
+                    <a href="javascript:history.back()" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-hover">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         Kembali ke Bagan
                     </a>
@@ -45,7 +45,7 @@
             <div class="space-y-5">
                 {{-- Top Navigation Bar --}}
                 <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-                    <a href="{{ route('dashboard.panitia.kelola-bagan') }}" class="flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900 transition">
+                    <a href="javascript:history.back()" class="flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900 transition">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         Kembali ke Bagan
                     </a>
@@ -145,6 +145,31 @@
                                 <button @click="activeTab = 'b'" :class="activeTab === 'b' ? 'border-brand text-brand' : 'border-transparent text-gray-500 hover:text-gray-700'" class="flex-1 py-3.5 px-4 text-sm font-bold transition border-b-2" x-text="matchData.team_b?.contingent?.name || 'Tim B'"></button>
                             </div>
 
+                            {{-- Check-in All Button --}}
+                            <template x-if="activeTeam && matchData?.status === 'scheduled'">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
+                                    <button
+                                        @click="checkinAll(activeTeam)"
+                                        :disabled="activeTeamNotIn === 0 || isCheckingInAll"
+                                        class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                    >
+                                        <template x-if="isCheckingInAll">
+                                            <svg class="h-3.5 w-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                        </template>
+                                        <template x-if="!isCheckingInAll">
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12l-3 3-3-3"/></svg>
+                                        </template>
+                                        <span x-text="'Check-in Semua Tim ' + (activeTeam.contingent?.name?.split(' ')[0] || '')"></span>
+                                    </button>
+                                    <template x-if="activeTeamNotIn > 0">
+                                        <span class="flex items-center gap-1.5 text-xs font-semibold text-red-500">
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                            <span x-text="'Belum hadir semua (' + activeTeamNotIn + ')'"></span>
+                                        </span>
+                                    </template>
+                                </div>
+                            </template>
+
                             <div class="overflow-x-auto">
                                 <table class="w-full min-w-[640px] text-sm">
                                     <thead>
@@ -198,16 +223,12 @@
                                                     </template>
                                                     <template x-if="!player.checked_in">
                                                         <button 
-                                                            @click="toggleCheckin(player)" 
-                                                            :disabled="loadingPlayers[player.id]"
+                                                            @click.prevent="toggleCheckin(player.id, player.checked_in, player.name)" 
+                                                            :disabled="loadingPlayers[player.id] === true"
                                                             class="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-brand hover:bg-red-100 disabled:opacity-50 transition"
                                                         >
-                                                            <template x-if="loadingPlayers[player.id]">
-                                                                <svg class="h-3 w-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                                            </template>
-                                                            <template x-if="!loadingPlayers[player.id]">
-                                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                            </template>
+                                                            <svg x-show="loadingPlayers[player.id] === true" style="display: none;" class="h-3 w-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                                            <svg x-show="loadingPlayers[player.id] !== true" class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                             Check-in
                                                         </button>
                                                     </template>
@@ -219,17 +240,13 @@
                                                     <div class="flex items-center gap-2">
                                                         <template x-if="player.checked_in">
                                                             <button 
-                                                                @click="toggleCheckin(player)" 
-                                                                :disabled="loadingPlayers[player.id]"
+                                                                @click.prevent="toggleCheckin(player.id, player.checked_in, player.name)" 
+                                                                :disabled="loadingPlayers[player.id] === true"
                                                                 title="Batalkan check-in"
                                                                 class="rounded-lg border border-gray-200 bg-white p-1.5 text-gray-400 hover:text-red-500 hover:border-red-200 disabled:opacity-50 transition"
                                                             >
-                                                                <template x-if="loadingPlayers[player.id]">
-                                                                    <svg class="h-3.5 w-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                                                </template>
-                                                                <template x-if="!loadingPlayers[player.id]">
-                                                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                                </template>
+                                                                <svg x-show="loadingPlayers[player.id] === true" style="display: none;" class="h-4 w-4 animate-spin text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                                                <svg x-show="loadingPlayers[player.id] !== true" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                             </button>
                                                         </template>
                                                         <button class="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition">
@@ -341,6 +358,7 @@ document.addEventListener('alpine:init', () => {
         activeTab: 'a',
         loadingPlayers: {},
         isStarting: false,
+        isCheckingInAll: false,
         toast: { show: false, message: '', type: 'info' },
 
         init() {
@@ -358,6 +376,10 @@ document.addEventListener('alpine:init', () => {
 
         get inactiveTeam() {
             return this.activeTab === 'a' ? this.matchData?.team_b : this.matchData?.team_a;
+        },
+
+        get activeTeamNotIn() {
+            return this.activeTeam?.players?.filter(p => !p.checked_in).length || 0;
         },
 
         get totalPlayers() {
@@ -428,7 +450,7 @@ document.addEventListener('alpine:init', () => {
                 },
             };
             if (data && method !== 'GET') opts.body = JSON.stringify(data);
-            const res = await fetch('/api' + url, opts);
+            const res = await fetch('/dashboard/panitia' + url, opts);
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Request failed');
             return json;
@@ -452,26 +474,42 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async toggleCheckin(player) {
-            if (this.loadingPlayers[player.id]) return;
-            this.loadingPlayers[player.id] = true;
+        async toggleCheckin(playerId, isCheckedIn, playerName) {
+            if (this.loadingPlayers[playerId]) return;
+            this.loadingPlayers = { ...this.loadingPlayers, [playerId]: true };
 
             try {
-                if (player.checked_in) {
-                    await this.api('DELETE', `/matches/${this.matchId}/checkin/${player.id}`);
-                    player.checked_in = false;
-                    player.checked_in_at = null;
-                    this.showToast(`${player.name} batal check-in.`, 'info');
+                if (isCheckedIn) {
+                    await this.api('DELETE', `/matches/${this.matchId}/checkin/${playerId}`);
+                    this.showToast(`${playerName} batal check-in.`, 'info');
                 } else {
-                    const res = await this.api('POST', `/matches/${this.matchId}/checkin/${player.id}`);
-                    player.checked_in = true;
-                    player.checked_in_at = res.data?.checked_in_at || new Date().toISOString();
-                    this.showToast(`${player.name} berhasil check-in.`, 'success');
+                    await this.api('POST', `/matches/${this.matchId}/checkin/${playerId}`);
+                    this.showToast(`${playerName} berhasil check-in.`, 'success');
                 }
+                await this.fetchData(true);
             } catch (e) {
+                console.error("Toggle Checkin Error:", e);
                 this.showToast(e.message || "Gagal mengubah check-in.", "error");
             } finally {
-                this.loadingPlayers[player.id] = false;
+                this.loadingPlayers = { ...this.loadingPlayers, [playerId]: false };
+            }
+        },
+
+        async checkinAll(team) {
+            if (!team || !team.players) return;
+            const notIn = team.players.filter(p => !p.checked_in);
+            if (notIn.length === 0) return;
+
+            this.isCheckingInAll = true;
+            try {
+                const promises = notIn.map(p => this.api('POST', `/matches/${this.matchId}/checkin/${p.id}`).catch(e => null));
+                await Promise.all(promises);
+                this.showToast(`Berhasil memproses check-in tim.`, 'success');
+                await this.fetchData(true);
+            } catch (e) {
+                this.showToast("Gagal melakukan check-in semua pemain.", "error");
+            } finally {
+                this.isCheckingInAll = false;
             }
         },
 

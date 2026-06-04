@@ -589,6 +589,31 @@ class BracketController extends Controller
             ], 422);
         }
 
+        if ($game->status === 'scheduled') {
+            if (!$game->registration_a_id || !$game->registration_b_id) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Pertandingan belum memiliki dua tim yang lengkap.',
+                ], 422);
+            }
+
+            $totalPlayers = $game->registrationA->players()->count() + $game->registrationB->players()->count();
+            if ($totalPlayers === 0) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Tidak ada pemain terdaftar di kedua tim.',
+                ], 422);
+            }
+
+            $checkedInCount = $game->playerCheckins()->count();
+            if ($checkedInCount < $totalPlayers) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => "Tidak bisa menyimpan skor. Baru $checkedInCount dari $totalPlayers pemain yang check-in.",
+                ], 422);
+            }
+        }
+
         $validated = $request->validate([
             'score_a'               => 'required|integer|min:0',
             'score_b'               => 'required|integer|min:0',
@@ -766,22 +791,62 @@ class BracketController extends Controller
             'registration_b_id' => 'nullable|integer|exists:registrations,id',
         ]);
 
-        $update = array_filter([
-            'registration_a_id' => array_key_exists('registration_a_id', $validated)
-                                    ? $validated['registration_a_id']
-                                    : $game->registration_a_id,
-            'registration_b_id' => array_key_exists('registration_b_id', $validated)
-                                    ? $validated['registration_b_id']
-                                    : $game->registration_b_id,
-        ], fn($v) => true); // preserve nulls
+        DB::beginTransaction();
+        try {
+            $newRegA = array_key_exists('registration_a_id', $validated) ? $validated['registration_a_id'] : $game->registration_a_id;
+            $newRegB = array_key_exists('registration_b_id', $validated) ? $validated['registration_b_id'] : $game->registration_b_id;
 
-        $game->update($update);
+            \Log::info("setTeams called for game {$game->id}. Old A: {$game->registration_a_id}, New A: {$newRegA}. Old B: {$game->registration_b_id}, New B: {$newRegB}");
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Tim pertandingan berhasil diperbarui.',
-            'data'    => $this->formatMatch($game->fresh()),
-        ]);
+            // Helper for swapping
+            $handleSwap = function ($slotColumn, $newRegId) use ($game) {
+                \Log::info("handleSwap for {$slotColumn} with newRegId: " . ($newRegId ?? 'null'));
+                if ($newRegId && $newRegId != $game->{$slotColumn}) {
+                    $otherGame = Game::where('sport_id', $game->sport_id)
+                        ->where('sport_category_id', $game->sport_category_id)
+                        ->where('id', '!=', $game->id)
+                        ->where(function($q) use ($newRegId) {
+                            $q->where('registration_a_id', $newRegId)
+                              ->orWhere('registration_b_id', $newRegId);
+                        })->first();
+
+                    if ($otherGame) {
+                        \Log::info("Found otherGame {$otherGame->id} which has {$newRegId}. Swapping to {$game->{$slotColumn}}");
+                        if ($otherGame->registration_a_id == $newRegId) {
+                            $otherGame->update(['registration_a_id' => $game->{$slotColumn}]);
+                        } else {
+                            $otherGame->update(['registration_b_id' => $game->{$slotColumn}]);
+                        }
+                    } else {
+                        \Log::info("No otherGame found with {$newRegId}");
+                    }
+                } else {
+                    \Log::info("Skip handleSwap because newRegId is null or unchanged.");
+                }
+            };
+
+            $handleSwap('registration_a_id', $newRegA);
+            $handleSwap('registration_b_id', $newRegB);
+
+            $game->update([
+                'registration_a_id' => $newRegA,
+                'registration_b_id' => $newRegB,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Tim pertandingan berhasil diperbarui.',
+                'data'    => $this->formatMatch($game->fresh()),
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal mengubah tim: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -866,6 +931,31 @@ class BracketController extends Controller
         $validated = $request->validate([
             'status' => 'required|in:scheduled,live,finished',
         ]);
+
+        if (in_array($validated['status'], ['live', 'finished']) && $game->status === 'scheduled') {
+            if (!$game->registration_a_id || !$game->registration_b_id) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Pertandingan belum memiliki dua tim yang lengkap.',
+                ], 422);
+            }
+
+            $totalPlayers = $game->registrationA->players()->count() + $game->registrationB->players()->count();
+            if ($totalPlayers === 0) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Tidak ada pemain terdaftar di kedua tim.',
+                ], 422);
+            }
+
+            $checkedInCount = $game->playerCheckins()->count();
+            if ($checkedInCount < $totalPlayers) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => "Tidak bisa memulai pertandingan. Baru $checkedInCount dari $totalPlayers pemain yang check-in.",
+                ], 422);
+            }
+        }
 
         $game->update(['status' => $validated['status']]);
 

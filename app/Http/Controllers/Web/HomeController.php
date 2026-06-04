@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use Illuminate\View\View;
+use App\Models\Sport;
 
 class HomeController extends Controller
 {
@@ -13,5 +14,14 @@ class HomeController extends Controller
     public function index(): View
     {
         return view('public.home');
+    }
+
+    /**
+     * Halaman bagan publik.
+     */
+    public function bagan(): View
+    {
+        $sports = Sport::with('categories')->orderBy('name')->get();
+        return view('public.bagan', compact('sports'));
     }
 }

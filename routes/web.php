@@ -11,7 +11,8 @@ use App\Http\Controllers\Web\PicKontingen\DashboardController as PicDashboard;
 // PUBLIC ROUTES
 // ====================================================================
 
-Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/', [App\Http\Controllers\Web\HomeController::class, 'index'])->name('home');
+Route::get('/bagan', [App\Http\Controllers\Web\HomeController::class, 'bagan'])->name('bagan');
 
 // ====================================================================
 // AUTH ROUTES (dari Breeze)
@@ -30,6 +31,20 @@ Route::prefix('dashboard/panitia')
         Route::get('/', [PanitiaDashboard::class, 'index'])->name('index');
         Route::get('/kelola-bagan', [App\Http\Controllers\Web\Panitia\BracketController::class, 'index'])->name('kelola-bagan');
         Route::get('/verifikasi', [App\Http\Controllers\Web\Panitia\VerifikasiController::class, 'index'])->name('verifikasi');
+
+        // Bracket API Endpoints (menggunakan web auth agar tidak kena blokir Sanctum)
+        Route::post('/bracket/generate', [\App\Http\Controllers\BracketController::class, 'generate'])->name('bracket.generate');
+        Route::delete('/bracket/reset', [\App\Http\Controllers\BracketController::class, 'reset'])->name('bracket.reset');
+        Route::patch('/matches/{id}/score', [\App\Http\Controllers\BracketController::class, 'updateScore'])->name('matches.score');
+        Route::patch('/matches/{id}/schedule', [\App\Http\Controllers\BracketController::class, 'updateSchedule'])->name('matches.schedule');
+        Route::patch('/matches/{id}/teams', [\App\Http\Controllers\BracketController::class, 'setTeams'])->name('matches.teams');
+        Route::patch('/matches/{id}/swap', [\App\Http\Controllers\BracketController::class, 'swapTeams'])->name('matches.swap');
+        Route::patch('/matches/{id}/status', [\App\Http\Controllers\BracketController::class, 'setStatus'])->name('matches.status');
+
+        // Match Check-in API Endpoints (web auth)
+        Route::get('/matches/{id}/checkin', [\App\Http\Controllers\BracketController::class, 'getCheckin'])->name('matches.checkin.index');
+        Route::post('/matches/{id}/checkin/{player_id}', [\App\Http\Controllers\BracketController::class, 'checkinPlayer'])->name('matches.checkin.store');
+        Route::delete('/matches/{id}/checkin/{player_id}', [\App\Http\Controllers\BracketController::class, 'undoCheckin'])->name('matches.checkin.destroy');
 
         // Tahap 5+: halaman fitur panitia akan ditambahkan di sini
         // Route::get('/kontingen', [KontingenController::class, 'index'])->name('kontingen.index');
