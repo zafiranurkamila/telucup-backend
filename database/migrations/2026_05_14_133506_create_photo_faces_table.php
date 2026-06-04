@@ -8,23 +8,7 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     public function up(): void
-    {
-        // Periksa secara aman apakah pgvector tersedia di PostgreSQL
-        $hasVector = false;
-        try {
-            $connection = DB::connection()->getDriverName();
-            if ($connection === 'pgsql') {
-                $available = DB::select("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'");
-                if (!empty($available)) {
-                    DB::statement('CREATE EXTENSION IF NOT EXISTS vector;');
-                    $hasVector = true;
-                }
-            }
-        } catch (\Exception $e) {
-            // Abaikan error koneksi atau metadata
-        }
-
-        Schema::create('photo_faces', function (Blueprint $table) use ($hasVector) {
+        Schema::create('photo_faces', function (Blueprint $table) {
             $table->id();
             $table->foreignId('event_photo_id')->constrained('event_photos')->cascadeOnDelete();
             $table->foreignId('matched_player_id')->nullable()->constrained('players')->nullOnDelete();
@@ -34,19 +18,9 @@ return new class extends Migration
             
             $table->float('similarity_score')->nullable(); 
             $table->json('bounding_box')->nullable(); // Menyimpan koordinat wajah [x, y, w, h] untuk UI bounding box
-            if (!$hasVector) {
-                $table->json('face_encoding')->nullable();
-            }
+            $table->json('face_encoding')->nullable(); // Menggunakan JSON untuk kompatibilitas MySQL versi lama
             $table->timestamps();
         });
-
-        if ($hasVector) {
-            // Menyimpan vektor ekstraksi dari foto lapangan
-            DB::statement('ALTER TABLE photo_faces ADD COLUMN face_encoding vector(512)');
-            
-            // Indeks HNSW seperti yang Anda minta
-            DB::statement('CREATE INDEX photo_faces_encoding_hnsw_idx ON photo_faces USING hnsw (face_encoding vector_cosine_ops)');
-        }
     }
 
     public function down(): void
