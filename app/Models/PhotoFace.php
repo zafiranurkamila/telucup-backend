@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Pgvector\Laravel\Vector;
 
 class PhotoFace extends Model
 {
@@ -21,7 +20,7 @@ class PhotoFace extends Model
 
     protected $casts = [
         'bounding_box'    => 'array',
-        'face_encoding'   => Vector::class,
+        'face_encoding'   => 'array',
         'similarity_score' => 'float',
     ];
 

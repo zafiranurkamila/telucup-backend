@@ -19,14 +19,9 @@ return new class extends Migration
             
             $table->float('similarity_score')->nullable(); 
             $table->json('bounding_box')->nullable(); // Menyimpan koordinat wajah [x, y, w, h] untuk UI bounding box
+            $table->json('face_encoding')->nullable(); // Menggunakan JSON untuk kompatibilitas MySQL versi lama
             $table->timestamps();
         });
-
-        // Menyimpan vektor ekstraksi dari foto lapangan
-        DB::statement('ALTER TABLE photo_faces ADD COLUMN face_encoding vector(512)');
-        
-        // Indeks HNSW seperti yang Anda minta
-        DB::statement('CREATE INDEX photo_faces_encoding_hnsw_idx ON photo_faces USING hnsw (face_encoding vector_cosine_ops)');
     }
 
     public function down(): void

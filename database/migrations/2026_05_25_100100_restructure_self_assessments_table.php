@@ -102,14 +102,8 @@ return new class extends Migration
         // tapi tambahkan 'medium' sebagai alias yang dipakai sistem baru.
         // PostgreSQL ENUM perlu ditangani via raw SQL.
         if (Schema::hasColumn('self_assessments', 'risk_label')) {
-            // PostgreSQL: drop default → cast ke string → buat constraint baru
-            \DB::statement("ALTER TABLE self_assessments ALTER COLUMN risk_label DROP DEFAULT");
-            \DB::statement("ALTER TABLE self_assessments ALTER COLUMN risk_label TYPE VARCHAR(20) USING risk_label::text");
-            \DB::statement("ALTER TABLE self_assessments ALTER COLUMN risk_label SET DEFAULT 'low'");
-            // Drop check constraint jika ada (nama default Laravel enum)
-            \DB::statement("ALTER TABLE self_assessments DROP CONSTRAINT IF EXISTS self_assessments_risk_label_check");
-            // Constraint baru: low | medium | high (moderate dipetakan ke medium di service)
-            \DB::statement("ALTER TABLE self_assessments ADD CONSTRAINT self_assessments_risk_label_check CHECK (risk_label IN ('low','medium','high'))");
+            // MySQL: ubah enum menjadi low, medium, high
+            \DB::statement("ALTER TABLE self_assessments MODIFY COLUMN risk_label ENUM('low', 'medium', 'high') DEFAULT 'low'");
         }
     }
 
@@ -130,8 +124,9 @@ return new class extends Migration
             }
         });
 
-        // Kembalikan risk_label ke enum lama
-        \DB::statement("ALTER TABLE self_assessments DROP CONSTRAINT IF EXISTS self_assessments_risk_label_check");
-        \DB::statement("ALTER TABLE self_assessments ADD CONSTRAINT self_assessments_risk_label_check CHECK (risk_label IN ('low','moderate','high'))");
+        // Kembalikan risk_label ke enum lama (MySQL)
+        if (Schema::hasColumn('self_assessments', 'risk_label')) {
+            \DB::statement("ALTER TABLE self_assessments MODIFY COLUMN risk_label ENUM('low', 'moderate', 'high') DEFAULT 'low'");
+        }
     }
 };
