@@ -178,6 +178,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/admin/templates', [\App\Http\Controllers\AdminController::class, 'templates']);
         Route::get('/admin/schedules', [\App\Http\Controllers\AdminController::class, 'schedules']);
         Route::get('/dashboard/panitia', [\App\Http\Controllers\AdminController::class, 'dashboard']);
+        
+        Route::put('/admin/users/{id}/promote-to-pic', [\App\Http\Controllers\AdminController::class, 'promoteToPic'])
+            ->whereNumber('id')
+            ->name('users.promote-to-pic');
 
         // Registrasi tim — pantau, kepatuhan & verifikasi
         Route::get('/registrations/compliance', [RegistrationController::class, 'compliance'])->name('registrations.compliance');

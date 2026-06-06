@@ -132,4 +132,22 @@ class AdminController extends Controller
         ]);
     }
 
+    #[OA\Put(
+        path: "/api/admin/users/{id}/promote-to-pic",
+        operationId: "promoteUserToPic",
+        tags: ["Admin"],
+        summary: "Promosikan user menjadi PIC Kontingen",
+        description: "Mengubah role user menjadi pic_kontingen.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))]
+    #[OA\Response(response: 200, description: "Berhasil")]
+    public function promoteToPic($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        $user->role = 'pic_kontingen';
+        $user->save();
+
+        return response()->json(['message' => "User {$user->name} berhasil dipromosikan menjadi PIC."]);
+    }
 }
