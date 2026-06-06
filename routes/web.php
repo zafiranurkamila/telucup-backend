@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\Panitia\DashboardController as PanitiaDashboard;
 use App\Http\Controllers\Web\Panitia\BracketController;
 use App\Http\Controllers\Web\Panitia\VerifikasiTimController;
 use App\Http\Controllers\Web\Panitia\MedisController;
+use App\Http\Controllers\Web\Panitia\PosterController;
 use App\Http\Controllers\Web\Player\DashboardController as PlayerDashboard;
 use App\Http\Controllers\Web\PicKontingen\DashboardController as PicDashboard;
 
@@ -55,7 +56,7 @@ Route::prefix('dashboard/panitia')
         Route::get('/medis', [MedisController::class, 'index'])->name('medis');
         // Route::get('/sports', [SportController::class, 'index'])->name('sports.index');
         Route::get('/verifikasi-tim', [VerifikasiTimController::class, 'index'])->name('verifikasi-tim');
-        // Route::get('/poster-sportifitas', [PosterController::class, 'index'])->name('poster.index');
+        Route::get('/poster-sportifitas', [PosterController::class, 'index'])->name('poster-sportifitas');
     });
 
 // ====================================================================
