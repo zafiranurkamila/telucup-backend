@@ -27,16 +27,22 @@ class DashboardController extends Controller
         $playerCount = 0;
         $registrationCount = 0;
         $todayMatches = collect();
+        $teamRegistrations = collect();
+        $waitingVerificationCount = 0;
 
         if ($contingent) {
             $contingent->loadCount('players');
             $playerCount = $contingent->players_count;
 
-            $registrationCount = \App\Models\Registration::where('contingent_id', $contingent->id)->count();
+            $teamRegistrations = \App\Models\Registration::with(['sport', 'sportCategory'])
+                ->where('contingent_id', $contingent->id)
+                ->get();
+
+            $registrationCount = $teamRegistrations->count();
+            $waitingVerificationCount = $teamRegistrations->whereIn('status', ['submitted', 'pending'])->count();
 
             // Ambil pertandingan hari ini yang melibatkan kontingen ini
-            $registrationIds = \App\Models\Registration::where('contingent_id', $contingent->id)
-                ->pluck('id');
+            $registrationIds = $teamRegistrations->pluck('id');
 
             $todayMatches = Game::with(['sport', 'registrationA.contingent', 'registrationB.contingent'])
                 ->whereDate('match_date', today())
@@ -49,11 +55,13 @@ class DashboardController extends Controller
         }
 
         return view('dashboard.pic-kontingen.index', [
-            'user'              => $user,
-            'contingent'        => $contingent,
-            'playerCount'       => $playerCount,
-            'registrationCount' => $registrationCount,
-            'todayMatches'      => $todayMatches,
+            'user'                     => $user,
+            'contingent'               => $contingent,
+            'playerCount'              => $playerCount,
+            'registrationCount'        => $registrationCount,
+            'waitingVerificationCount' => $waitingVerificationCount,
+            'todayMatches'             => $todayMatches,
+            'teamRegistrations'        => $teamRegistrations,
         ]);
     }
 }
