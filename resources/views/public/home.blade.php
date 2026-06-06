@@ -1,126 +1,106 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Tel-U Cup — Platform pertandingan olahraga Telkom University">
+<x-layout-public>
 
-    <title>Tel-U Cup — Telkom University</title>
-
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet" />
-
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="font-sans antialiased bg-white">
-    {{-- Navbar --}}
-    <nav class="bg-white border-b border-gray-100">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <span class="text-xl font-bold text-brand tracking-wide">TEL-U CUP</span>
-                </div>
-                <div class="flex items-center gap-4">
-                    <a href="/galeri" class="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors">Galeri</a>
-                    @auth
-                        @php
-                            $dashPath = match(Auth::user()->role) {
-                                'admin', 'panitia' => '/dashboard/panitia',
-                                'player' => '/dashboard/player',
-                                'pic_kontingen', 'pic' => '/dashboard/pic-kontingen',
-                                default => '/',
-                            };
-                        @endphp
-                        <a href="{{ $dashPath }}" class="btn-brand text-sm">Dashboard</a>
-                    @else
-                        <a href="{{ route('login') }}" class="btn-brand text-sm">Login</a>
-                    @endauth
-                </div>
+    <!-- Header / Slider Section -->
+    <section class="w-full relative bg-cover bg-center bg-no-repeat py-10" style="background-image: url('{{ asset('assets/home_original/bg_secondary.png') }}');">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
+            <!-- Alpine.js Carousel -->
+            <div x-data="{
+                    activeSlide: 1,
+                    slides: [
+                        { id: 1, image: '{{ asset('assets/home_original/slider_1.jpg') }}' }
+                    ],
+                    next() { this.activeSlide = this.activeSlide === this.slides.length ? 1 : this.activeSlide + 1 },
+                    prev() { this.activeSlide = this.activeSlide === 1 ? this.slides.length : this.activeSlide - 1 },
+                    init() { setInterval(() => { this.next() }, 5000) }
+                }" 
+                class="relative w-full overflow-hidden rounded-lg shadow-lg border-4 border-white">
+                
+                <template x-for="slide in slides" :key="slide.id">
+                    <div x-show="activeSlide === slide.id" 
+                         x-transition:enter="transition ease-out duration-500" 
+                         x-transition:enter-start="opacity-0 transform scale-95" 
+                         x-transition:enter-end="opacity-100 transform scale-100" 
+                         class="w-full">
+                        <img :src="slide.image" class="w-full h-auto object-cover" alt="Slider Image">
+                    </div>
+                </template>
+                
             </div>
         </div>
-    </nav>
+    </section>
 
-    {{-- Hero Section --}}
-    <section class="relative bg-gradient-to-br from-brand via-[#d32f2f] to-[#e53935] text-white overflow-hidden">
-        <div class="absolute inset-0 opacity-10">
-            <div class="absolute top-10 left-10 w-40 h-40 bg-white rounded-full blur-3xl"></div>
-            <div class="absolute bottom-10 right-10 w-60 h-60 bg-white rounded-full blur-3xl"></div>
-        </div>
+    <!-- Potret Tel-U Cup Section -->
+    <section class="w-full relative bg-cover bg-center bg-no-repeat py-16 bg-gray-50" style="background-image: url('{{ asset('assets/home_original/bg_primary.png') }}');">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl font-bold text-[#b6252a] mb-8 bg-white/80 inline-block px-6 py-2 rounded-full shadow-sm">POTRET TEL-U CUP</h2>
+            
+            <!-- Alpine.js Carousel for Potret -->
+            <div x-data="{
+                    activeSlide: 1,
+                    slides: [
+                        { id: 1, image: '{{ asset('assets/home_original/foto_1.jpg') }}' },
+                        { id: 2, image: '{{ asset('assets/home_original/foto_2.jpg') }}' },
+                        { id: 3, image: '{{ asset('assets/home_original/foto_3.jpg') }}' },
+                        { id: 4, image: '{{ asset('assets/home_original/foto_4.jpg') }}' },
+                        { id: 5, image: '{{ asset('assets/home_original/foto_5.jpg') }}' }
+                    ],
+                    next() { this.activeSlide = this.activeSlide === this.slides.length ? 1 : this.activeSlide + 1 },
+                    prev() { this.activeSlide = this.activeSlide === 1 ? this.slides.length : this.activeSlide - 1 },
+                    init() { setInterval(() => { this.next() }, 3000) }
+                }" 
+                class="relative w-full overflow-hidden rounded-lg shadow-xl mx-auto md:w-3/4 lg:w-2/3 border-4 border-white">
+                
+                <template x-for="slide in slides" :key="slide.id">
+                    <div x-show="activeSlide === slide.id" 
+                         x-transition:enter="transition ease-in-out duration-500" 
+                         x-transition:enter-start="opacity-0 translate-x-full" 
+                         x-transition:enter-end="opacity-100 translate-x-0" 
+                         class="w-full">
+                        <img :src="slide.image" class="w-full h-auto object-cover" alt="Potret Image">
+                    </div>
+                </template>
 
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 relative">
-            <div class="text-center max-w-3xl mx-auto">
-                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6">
-                    Tel-U Cup
-                </h1>
-                <p class="text-lg sm:text-xl text-red-100 mb-10 leading-relaxed max-w-2xl mx-auto">
-                    Platform pertandingan olahraga antar fakultas & unit Telkom University.
-                    Ikuti jadwal, lihat hasil pertandingan, dan dukung kontingen kamu!
-                </p>
-
-                <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <a href="/galeri" class="inline-flex items-center justify-center px-8 py-3 bg-white text-brand font-semibold rounded-lg hover:bg-red-50 transition-colors text-sm">
-                        Lihat Galeri
-                    </a>
-                    @guest
-                        <a href="{{ route('login') }}" class="inline-flex items-center justify-center px-8 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors text-sm">
-                            Login Peserta
-                        </a>
-                    @endguest
+                <!-- Controls -->
+                <button @click="prev()" class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-30 text-white p-3 hover:bg-opacity-50 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <button @click="next()" class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-30 text-white p-3 hover:bg-opacity-50 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                
+                <!-- Indicators -->
+                <div class="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
+                    <template x-for="slide in slides" :key="slide.id">
+                        <button @click="activeSlide = slide.id" :class="{'bg-[#b6252a]': activeSlide === slide.id, 'bg-gray-300': activeSlide !== slide.id}" class="w-3 h-3 rounded-full focus:outline-none shadow-sm"></button>
+                    </template>
                 </div>
             </div>
         </div>
     </section>
 
-    {{-- Features Section --}}
-    <section class="py-20 bg-gray-50">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-gray-900 mb-3">Fitur Utama</h2>
-                <p class="text-gray-600 max-w-xl mx-auto">Platform terintegrasi untuk mengelola seluruh aspek pertandingan</p>
+    <!-- Daftar Kompetisi Section -->
+    <section class="bg-white py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-center text-[#b6252a] mb-12">DAFTAR KOMPETISI TEL-U CUP 2025</h2>
+            
+            <h3 class="text-2xl font-semibold mb-6 text-gray-800 border-b-2 border-gray-200 pb-2">OLAHRAGA</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
+                @foreach(['Basket', 'Tenis Lapangan', 'Bulutangkis', 'Voli', 'Futsal', 'Tenis Meja', 'E-Sport', 'Catur', 'Lari'] as $olahraga)
+                <div class="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all p-6 flex flex-col items-center justify-center h-48 group cursor-default">
+                    <img src="{{ asset('assets/home_original/logo_' . $olahraga . '.png') }}" class="w-3/4 object-contain group-hover:scale-105 transition-transform" alt="{{ $olahraga }}">
+                </div>
+                @endforeach
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
-                    <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-5">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Jadwal & Bracket</h3>
-                    <p class="text-sm text-gray-600 leading-relaxed">
-                        Lihat jadwal pertandingan real-time, bagan turnamen, dan hasil pertandingan langsung.
-                    </p>
+            <h3 class="text-2xl font-semibold mb-6 text-gray-800 border-b-2 border-gray-200 pb-2">SENI & HIBURAN</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                @foreach(['Senam Kreasi', 'Lomba Masak', 'Tel-U Idol', 'Sitkom Sketsa', 'Kaulinan Barudak', 'Cerdas Cermat', 'Stand Up Comedy', 'Fun Quiz', 'Berpacu Dalam Melodi'] as $seni)
+                <div class="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all p-6 flex flex-col items-center justify-center h-48 group cursor-default">
+                    <img src="{{ asset('assets/home_original/logo_' . $seni . '.png') }}" class="w-3/4 object-contain group-hover:scale-105 transition-transform" alt="{{ $seni }}">
                 </div>
-
-                <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
-                    <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-5">
-                        <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Self Assessment</h3>
-                    <p class="text-sm text-gray-600 leading-relaxed">
-                        Sistem penilaian risiko cedera untuk memastikan keselamatan seluruh peserta.
-                    </p>
-                </div>
-
-                <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
-                    <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-5">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Smart Gallery</h3>
-                    <p class="text-sm text-gray-600 leading-relaxed">
-                        Galeri foto event dengan teknologi AI untuk menemukan foto kamu secara otomatis.
-                    </p>
-                </div>
+                @endforeach
             </div>
         </div>
     </section>
 
-    {{-- Footer --}}
-    <footer class="bg-white border-t border-gray-100 py-8">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p class="text-sm text-gray-500">
-                &copy; {{ date('Y') }} Tel-U Cup &mdash; Telkom University. All rights reserved.
-            </p>
-        </div>
-    </footer>
-</body>
-</html>
+</x-layout-public>
