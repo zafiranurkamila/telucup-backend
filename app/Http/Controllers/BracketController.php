@@ -1521,7 +1521,6 @@ class BracketController extends Controller
 
     private function formatMatch(Game $game): array
     {
-        // Pastikan semua relasi tersedia, baik dari eager load maupun fresh()
         $game->loadMissing([
             'sport',
             'sportCategory',
@@ -1530,10 +1529,17 @@ class BracketController extends Controller
             'registrationB.contingent',
             'registrationB.players',
             'winner.contingent',
+            'playerCheckins',
         ]);
+
+        $totalPlayers = 0;
+        if ($game->registrationA) $totalPlayers += $game->registrationA->players->count();
+        if ($game->registrationB) $totalPlayers += $game->registrationB->players->count();
 
         return [
             'id'                   => $game->id,
+            'checked_in_count'     => $game->playerCheckins ? $game->playerCheckins->count() : 0,
+            'total_players'        => $totalPlayers,
 
             // Cabang olahraga
             'sport' => $game->sport ? [

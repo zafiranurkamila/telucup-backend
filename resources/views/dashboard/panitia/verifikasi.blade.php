@@ -520,7 +520,13 @@ document.addEventListener('alpine:init', () => {
             try {
                 await this.api('PATCH', `/matches/${this.matchId}/status`, { status: 'live' });
                 this.showToast('Pertandingan berhasil dimulai!', 'success');
-                await this.fetchData(true);
+                
+                setTimeout(() => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sportId = urlParams.get('sport_id') || '';
+                    const categoryId = urlParams.get('category_id') || '';
+                    window.location.href = `/dashboard/panitia/kelola-bagan?sport_id=${sportId}&category_id=${categoryId}&match_id=${this.matchId}`;
+                }, 1000);
             } catch (e) {
                 this.showToast(e.message || "Gagal memulai pertandingan.", "error");
             } finally {
