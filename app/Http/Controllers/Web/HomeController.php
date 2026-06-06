@@ -24,4 +24,12 @@ class HomeController extends Controller
         $sports = Sport::with('categories')->orderBy('name')->get();
         return view('public.bagan', compact('sports'));
     }
+
+    /**
+     * Halaman galeri publik.
+     */
+    public function galeri(): View
+    {
+        return view('public.galeri');
+    }
 }

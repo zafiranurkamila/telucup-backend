@@ -24,6 +24,7 @@ use App\Http\Controllers\Web\PicKontingen\ProfileController;
 
 Route::get('/', [App\Http\Controllers\Web\HomeController::class, 'index'])->name('home');
 Route::get('/bagan', [App\Http\Controllers\Web\HomeController::class, 'bagan'])->name('bagan');
+Route::get('/galeri', [App\Http\Controllers\Web\HomeController::class, 'galeri'])->name('galeri.public');
 
 // ====================================================================
 // AUTH ROUTES (dari Breeze)
