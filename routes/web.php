@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\Panitia\MedisController;
 use App\Http\Controllers\Web\Panitia\PosterController;
 use App\Http\Controllers\Web\Panitia\GaleriController;
 use App\Http\Controllers\Web\Panitia\KontingenController;
+use App\Http\Controllers\Web\Panitia\SportController;
 use App\Http\Controllers\Web\Player\DashboardController as PlayerDashboard;
 use App\Http\Controllers\Web\PicKontingen\DashboardController as PicDashboard;
 
@@ -61,6 +62,7 @@ Route::prefix('dashboard/panitia')
         Route::get('/poster-sportifitas', [PosterController::class, 'index'])->name('poster-sportifitas');
         Route::get('/galeri', [GaleriController::class, 'index'])->name('galeri');
         Route::get('/kontingen', [KontingenController::class, 'index'])->name('kontingen');
+        Route::get('/sports', [SportController::class, 'index'])->name('sports');
     });
 
 // ====================================================================
