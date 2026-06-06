@@ -14,6 +14,7 @@ use App\Http\Controllers\Web\Player\DashboardController as PlayerDashboard;
 use App\Http\Controllers\Web\PicKontingen\DashboardController as PicDashboard;
 use App\Http\Controllers\Web\PicKontingen\AnggotaController;
 use App\Http\Controllers\Web\PicKontingen\RegistrasiController;
+use App\Http\Controllers\Web\PicKontingen\JadwalController;
 
 // ====================================================================
 // PUBLIC ROUTES
@@ -97,7 +98,7 @@ Route::prefix('dashboard/pic-kontingen')
         Route::get('/registrasi', [RegistrasiController::class, 'index'])->name('registrasi');
 
         // Tahap 5+: halaman fitur PIC akan ditambahkan di sini
-        // Route::get('/jadwal', [JadwalController::class, 'index'])->name('jadwal.index');
+        Route::get('/jadwal', [JadwalController::class, 'index'])->name('jadwal');
         // Route::get('/dokumentasi', [DokumentasiController::class, 'index'])->name('dokumentasi.index');
         // Route::get('/profil-saya', [ProfileController::class, 'show'])->name('profil.show');
         // Route::get('/profil-kontingen', [KontingenController::class, 'show'])->name('kontingen.show');
