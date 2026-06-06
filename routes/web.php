@@ -13,6 +13,7 @@ use App\Http\Controllers\Web\Panitia\SportController;
 use App\Http\Controllers\Web\Player\DashboardController as PlayerDashboard;
 use App\Http\Controllers\Web\PicKontingen\DashboardController as PicDashboard;
 use App\Http\Controllers\Web\PicKontingen\AnggotaController;
+use App\Http\Controllers\Web\PicKontingen\RegistrasiController;
 
 // ====================================================================
 // PUBLIC ROUTES
@@ -93,9 +94,9 @@ Route::prefix('dashboard/pic-kontingen')
     ->group(function () {
         Route::get('/', [PicDashboard::class, 'index'])->name('index');
         Route::get('/anggota', [AnggotaController::class, 'index'])->name('anggota');
+        Route::get('/registrasi', [RegistrasiController::class, 'index'])->name('registrasi');
 
         // Tahap 5+: halaman fitur PIC akan ditambahkan di sini
-        // Route::get('/registrasi', [RegistrasiController::class, 'index'])->name('registrasi.index');
         // Route::get('/jadwal', [JadwalController::class, 'index'])->name('jadwal.index');
         // Route::get('/dokumentasi', [DokumentasiController::class, 'index'])->name('dokumentasi.index');
         // Route::get('/profil-saya', [ProfileController::class, 'show'])->name('profil.show');

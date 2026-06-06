@@ -8,6 +8,7 @@ import './panitia/galeri-manager';
 import './panitia/kontingen-manager';
 import './panitia/sports-manager';
 import './pic-kontingen/anggota-manager';
+import './pic-kontingen/registrasi-manager';
 
 // Dispatch alpine:init to allow inline scripts to register components
 document.dispatchEvent(new CustomEvent('alpine:init'));
