@@ -5,7 +5,7 @@
 
     {{-- Alpine.js state container --}}
     <div
-        x-data="bracketManager(@js($sports))"
+        x-data="publicBracketManager(@js($sports))"
         class="space-y-6 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
     >
         {{-- Header --}}
@@ -406,9 +406,9 @@
             </div>
         </template>
 
-        <script>
+<script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('bracketManager', (initialSports) => ({
+        Alpine.data('publicBracketManager', (initialSports) => ({
         sports: initialSports,
         selectedSportId: sessionStorage.getItem('public_bagan_sport_id') || '',
         selectedCategoryId: sessionStorage.getItem('public_bagan_category_id') || '',

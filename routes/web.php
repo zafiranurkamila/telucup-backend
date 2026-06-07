@@ -25,7 +25,10 @@ use App\Http\Controllers\Web\PicKontingen\KontingenController as PicKontingenCon
 
 Route::get('/', [App\Http\Controllers\Web\HomeController::class, 'index'])->name('home');
 Route::get('/bagan', [App\Http\Controllers\Web\HomeController::class, 'bagan'])->name('bagan');
-
+Route::get('/participants', [App\Http\Controllers\Web\HomeController::class, 'participants'])->name('participants');
+Route::get('/participants/{name}', [App\Http\Controllers\Web\HomeController::class, 'participantDetail'])->name('participants.detail');
+Route::get('/galeri', [App\Http\Controllers\Web\HomeController::class, 'galeri'])->name('galeri.public');
+Route::get('/matches', [HomeController::class, 'pertandingan'])->name('matches');
 // ====================================================================
 // AUTH ROUTES (dari Breeze)
 // ====================================================================
@@ -108,3 +111,4 @@ Route::prefix('dashboard/pic-kontingen')
         Route::post('/profil-kontingen/logo', [PicKontingenController::class, 'updateLogo'])->name('kontingen.updateLogo');
         Route::delete('/profil-kontingen/logo', [PicKontingenController::class, 'deleteLogo'])->name('kontingen.deleteLogo');
     });
+

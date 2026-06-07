@@ -235,6 +235,19 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async handleSearch() {
+            if (!this.isReady) return;
+            this.bracketData = null;
+            this.editingMatch = null;
+            this.stopRefresh();
+            
+            this.isLoading = true;
+            await this.fetchRegistrations();
+            await this.loadBracket();
+            this.isLoading = false;
+            this.startRefresh();
+        },
+
         findMatchById(id) {
             if (!this.bracketData || !this.bracketData.rounds) return null;
             
