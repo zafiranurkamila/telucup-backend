@@ -25,6 +25,7 @@ use App\Http\Controllers\Web\PicKontingen\ProfileController;
 Route::get('/', [App\Http\Controllers\Web\HomeController::class, 'index'])->name('home');
 Route::get('/bagan', [App\Http\Controllers\Web\HomeController::class, 'bagan'])->name('bagan');
 Route::get('/galeri', [App\Http\Controllers\Web\HomeController::class, 'galeri'])->name('galeri.public');
+Route::get('/pertandingan/{id}', [App\Http\Controllers\Web\HomeController::class, 'pertandingan'])->name('pertandingan.detail');
 
 // ====================================================================
 // AUTH ROUTES (dari Breeze)
@@ -106,3 +107,4 @@ Route::prefix('dashboard/pic-kontingen')
         Route::get('/profil-saya', [ProfileController::class, 'show'])->name('profil.show');
         // Route::get('/profil-kontingen', [KontingenController::class, 'show'])->name('kontingen.show');
     });
+

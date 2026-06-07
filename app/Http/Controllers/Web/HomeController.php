@@ -32,4 +32,12 @@ class HomeController extends Controller
     {
         return view('public.galeri');
     }
+
+    /**
+     * Halaman detail pertandingan publik.
+     */
+    public function pertandingan($id)
+    {
+        return view('public.pertandingan', compact('id'));
+    }
 }
