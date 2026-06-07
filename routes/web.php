@@ -27,8 +27,7 @@ Route::get('/bagan', [App\Http\Controllers\Web\HomeController::class, 'bagan'])-
 Route::get('/participants', [App\Http\Controllers\Web\HomeController::class, 'participants'])->name('participants');
 Route::get('/participants/{name}', [App\Http\Controllers\Web\HomeController::class, 'participantDetail'])->name('participants.detail');
 Route::get('/galeri', [App\Http\Controllers\Web\HomeController::class, 'galeri'])->name('galeri.public');
-Route::get('/pertandingan/{id}', [App\Http\Controllers\Web\HomeController::class, 'pertandingan'])->name('pertandingan.detail');
-
+Route::get('/matches', [HomeController::class, 'pertandingan'])->name('matches');
 // ====================================================================
 // AUTH ROUTES (dari Breeze)
 // ====================================================================

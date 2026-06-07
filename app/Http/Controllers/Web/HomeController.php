@@ -92,8 +92,8 @@ class HomeController extends Controller
     /**
      * Halaman detail pertandingan publik.
      */
-    public function pertandingan($id)
+    public function pertandingan()
     {
-        return view('public.pertandingan', compact('id'));
+        return view('public.pertandingan');
     }
 }
