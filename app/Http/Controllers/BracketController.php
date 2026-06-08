@@ -798,12 +798,19 @@ class BracketController extends Controller
 
             \Log::info("setTeams called for game {$game->id}. Old A: {$game->registration_a_id}, New A: {$newRegA}. Old B: {$game->registration_b_id}, New B: {$newRegB}");
 
-            // Helper for swapping
-            $handleSwap = function ($slotColumn, $newRegId) use ($game) {
+            $affectedGames = collect([$game]);
+
+            // Helper for swapping. Only look in the same round; later rounds may
+            // already contain auto-advanced bye winners and must be refreshed by
+            // propagation, not treated as the source team slot.
+            $handleSwap = function ($slotColumn, $newRegId) use ($game, $affectedGames) {
                 \Log::info("handleSwap for {$slotColumn} with newRegId: " . ($newRegId ?? 'null'));
                 if ($newRegId && $newRegId != $game->{$slotColumn}) {
                     $otherGame = Game::where('sport_id', $game->sport_id)
                         ->where('sport_category_id', $game->sport_category_id)
+                        ->where('round', $game->round)
+                        ->where('is_third_place_match', false)
+                        ->whereIn('status', ['scheduled', 'bye'])
                         ->where('id', '!=', $game->id)
                         ->where(function($q) use ($newRegId) {
                             $q->where('registration_a_id', $newRegId)
@@ -817,6 +824,7 @@ class BracketController extends Controller
                         } else {
                             $otherGame->update(['registration_b_id' => $game->{$slotColumn}]);
                         }
+                        $affectedGames->push($otherGame->fresh());
                     } else {
                         \Log::info("No otherGame found with {$newRegId}");
                     }
@@ -832,6 +840,9 @@ class BracketController extends Controller
                 'registration_a_id' => $newRegA,
                 'registration_b_id' => $newRegB,
             ]);
+
+            $affectedGames->push($game->fresh());
+            $affectedGames->unique('id')->each(fn (Game $affectedGame) => $this->refreshByeAdvancement($affectedGame));
 
             DB::commit();
 
@@ -1238,6 +1249,48 @@ class BracketController extends Controller
     // ──────────────────────────────────────────────────────────────
     //  HELPER: BUILD BRACKET
     // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Recalculate a mutable match after manual team changes.
+     *
+     * A match with exactly one team is a bye and its single team must become the
+     * winner. That winner also owns the configured slot in the next round.
+     */
+    private function refreshByeAdvancement(Game $game): void
+    {
+        $game->refresh();
+
+        if (in_array($game->status, ['live', 'finished'])) {
+            return;
+        }
+
+        $registrations = array_values(array_filter([
+            $game->registration_a_id,
+            $game->registration_b_id,
+        ]));
+
+        $winnerId = count($registrations) === 1 ? $registrations[0] : null;
+        $status = $winnerId ? 'bye' : 'scheduled';
+
+        $game->update([
+            'winner_registration_id' => $winnerId,
+            'status' => $status,
+            'score_a' => 0,
+            'score_b' => 0,
+        ]);
+
+        if (!$game->next_match_id || !$game->next_match_slot) {
+            return;
+        }
+
+        $nextGame = Game::find($game->next_match_id);
+        if (!$nextGame || in_array($nextGame->status, ['live', 'finished'])) {
+            return;
+        }
+
+        $slotColumn = 'registration_' . $game->next_match_slot . '_id';
+        $nextGame->update([$slotColumn => $winnerId]);
+    }
 
     private function buildBracket(array $teams, int $sportId, ?int $categoryId): void
     {
