@@ -1,11 +1,15 @@
 @props(['role' => 'public', 'matchVar' => 'match'])
 
 <div
-    @if($role === 'panitia') @click="openMatchEdit({{ $matchVar }})" @endif
+    @if($role === 'panitia') 
+        @click="openMatchEdit({{ $matchVar }})" 
+    @else 
+        @click="openMatchDetail({{ $matchVar }})" 
+    @endif
     :class="{
-        'ring-2 ring-brand': editingMatchId === {{ $matchVar }}.id,
+        'ring-2 ring-brand': (typeof editingMatchId !== 'undefined' ? editingMatchId : (typeof detailMatch !== 'undefined' && detailMatch ? detailMatch.id : null)) === {{ $matchVar }}.id,
         'opacity-50': {{ $matchVar }}.status === 'bye',
-        'cursor-pointer hover:shadow-md hover:-translate-y-0.5': {{ $matchVar }}.status !== 'bye' && '{{ $role }}' === 'panitia',
+        'cursor-pointer hover:shadow-md hover:-translate-y-0.5': {{ $matchVar }}.status !== 'bye',
     }"
     class="bg-white rounded-xl border border-gray-200 shadow-sm transition-all duration-150 overflow-hidden relative z-10"
 >
@@ -116,7 +120,7 @@
             <span x-text="{{ $matchVar }}.match_date ? (new Date({{ $matchVar }}.match_date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})) : 'TBD'"></span>
             <template x-if="{{ $matchVar }}.match_time"><span class="ml-1" x-text="{{ $matchVar }}.match_time"></span></template>
         </div>
-        <div class="text-[9px] font-bold text-gray-800 {{ $role === 'panitia' ? 'hover:text-brand cursor-pointer transition-colors' : '' }} uppercase">
+        <div class="text-[9px] font-bold text-gray-800 hover:text-brand cursor-pointer transition-colors uppercase">
             Detail Pertandingan &gt;
         </div>
     </div>

@@ -114,6 +114,9 @@
             <x-bracket.board role="public" />
         </template>
 
+        {{-- Match Detail Modal --}}
+        <x-bracket.detail-modal />
+
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('publicBracketManager', (initialSports) => ({
@@ -123,6 +126,17 @@
         registrations: [],
         bracketData: null,
         isLoading: false,
+        detailMatch: null,
+
+        openMatchDetail(match) {
+            this.detailMatch = JSON.parse(JSON.stringify(match));
+            document.body.style.overflow = 'hidden';
+        },
+        
+        closeMatchDetail() {
+            this.detailMatch = null;
+            document.body.style.overflow = '';
+        },
 
         init() {
             this.$watch('selectedSportId', val => {
