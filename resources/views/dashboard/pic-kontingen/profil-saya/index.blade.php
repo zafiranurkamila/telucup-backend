@@ -392,7 +392,7 @@
                         <p class="text-xs text-amber-700 mt-1">
                             Masa berlaku assessment Anda telah habis. Silakan isi ulang untuk mendapatkan evaluasi kesehatan terbaru sebelum bertanding.
                         </p>
-                        <a href="{{ url('/self-assessment') }}" class="inline-block mt-3 text-xs font-bold text-amber-700 underline">
+                        <a href="{{ route('dashboard.pic.self-assessment.index') }}" class="inline-block mt-3 text-xs font-bold text-amber-700 underline">
                             Isi Ulang Sekarang &rarr;
                         </a>
                     </div>

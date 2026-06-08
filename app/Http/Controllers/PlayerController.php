@@ -273,7 +273,11 @@ class PlayerController extends Controller
         $player = $user->player;
 
         if (!$player) {
-            return response()->json(['status' => 'error', 'message' => 'Profil player belum tersedia untuk akun ini.'], 404);
+            $player = Player::create([
+                'user_id' => $user->id,
+                'name'    => $user->name,
+                'nim_nip' => null,
+            ]);
         }
 
         $rules = [

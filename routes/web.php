@@ -18,6 +18,7 @@ use App\Http\Controllers\Web\PicKontingen\JadwalController;
 use App\Http\Controllers\Web\PicKontingen\DokumentasiController;
 use App\Http\Controllers\Web\PicKontingen\ProfileController;
 use App\Http\Controllers\Web\PicKontingen\KontingenController as PicKontingenController;
+use App\Http\Controllers\Web\AccountSetupController;
 use App\Http\Controllers\Web\SelfAssessmentController;
 
 // ====================================================================
@@ -83,16 +84,20 @@ Route::prefix('dashboard/player')
     ->middleware(['auth', 'role:player'])
     ->name('dashboard.player.')
     ->group(function () {
-        Route::get('/', [PlayerDashboard::class, 'index'])->name('index');
+        Route::get('/lengkapi-akun', [AccountSetupController::class, 'show'])->name('account-setup');
 
-        // Tahap 5+: halaman fitur player akan ditambahkan di sini
-        // Route::get('/profil', [ProfileController::class, 'show'])->name('profil.show');
-        // Route::get('/edit-profil', [ProfileController::class, 'edit'])->name('profil.edit');
-        // Route::put('/profil', [ProfileController::class, 'update'])->name('profil.update');
-        // Route::get('/galeri', [GalleryController::class, 'index'])->name('galeri.index');
-        
-        Route::get('/self-assessment', [SelfAssessmentController::class, 'index'])->name('self-assessment.index');
-        Route::get('/self-assessment/hasil', [SelfAssessmentController::class, 'hasil'])->name('self-assessment.hasil');
+        Route::middleware('player.onboarding')->group(function () {
+            Route::get('/', [PlayerDashboard::class, 'index'])->name('index');
+
+            // Tahap 5+: halaman fitur player akan ditambahkan di sini
+            // Route::get('/profil', [ProfileController::class, 'show'])->name('profil.show');
+            // Route::get('/edit-profil', [ProfileController::class, 'edit'])->name('profil.edit');
+            // Route::put('/profil', [ProfileController::class, 'update'])->name('profil.update');
+            // Route::get('/galeri', [GalleryController::class, 'index'])->name('galeri.index');
+
+            Route::get('/self-assessment', [SelfAssessmentController::class, 'index'])->name('self-assessment.index');
+            Route::get('/self-assessment/hasil', [SelfAssessmentController::class, 'hasil'])->name('self-assessment.hasil');
+        });
     });
 
 // ====================================================================
@@ -103,19 +108,22 @@ Route::prefix('dashboard/pic-kontingen')
     ->middleware(['auth', 'role:pic_kontingen'])
     ->name('dashboard.pic.')
     ->group(function () {
-        Route::get('/', [PicDashboard::class, 'index'])->name('index');
-        Route::get('/anggota', [AnggotaController::class, 'index'])->name('anggota');
-        Route::get('/registrasi', [RegistrasiController::class, 'index'])->name('registrasi');
+        Route::get('/lengkapi-akun', [AccountSetupController::class, 'show'])->name('account-setup');
 
-        // Tahap 5+: halaman fitur PIC akan ditambahkan di sini
-        Route::get('/jadwal', [JadwalController::class, 'index'])->name('jadwal');
-        Route::get('/dokumentasi', [DokumentasiController::class, 'index'])->name('dokumentasi.index');
-        Route::get('/profil-saya', [ProfileController::class, 'show'])->name('profil.show');
-        Route::get('/profil-kontingen', [PicKontingenController::class, 'show'])->name('kontingen.show');
-        Route::post('/profil-kontingen/logo', [PicKontingenController::class, 'updateLogo'])->name('kontingen.updateLogo');
-        Route::delete('/profil-kontingen/logo', [PicKontingenController::class, 'deleteLogo'])->name('kontingen.deleteLogo');
-        
-        Route::get('/self-assessment', [SelfAssessmentController::class, 'index'])->name('self-assessment.index');
-        Route::get('/self-assessment/hasil', [SelfAssessmentController::class, 'hasil'])->name('self-assessment.hasil');
+        Route::middleware('player.onboarding')->group(function () {
+            Route::get('/', [PicDashboard::class, 'index'])->name('index');
+            Route::get('/anggota', [AnggotaController::class, 'index'])->name('anggota');
+            Route::get('/registrasi', [RegistrasiController::class, 'index'])->name('registrasi');
+
+            // Tahap 5+: halaman fitur PIC akan ditambahkan di sini
+            Route::get('/jadwal', [JadwalController::class, 'index'])->name('jadwal');
+            Route::get('/dokumentasi', [DokumentasiController::class, 'index'])->name('dokumentasi.index');
+            Route::get('/profil-saya', [ProfileController::class, 'show'])->name('profil.show');
+            Route::get('/profil-kontingen', [PicKontingenController::class, 'show'])->name('kontingen.show');
+            Route::post('/profil-kontingen/logo', [PicKontingenController::class, 'updateLogo'])->name('kontingen.updateLogo');
+            Route::delete('/profil-kontingen/logo', [PicKontingenController::class, 'deleteLogo'])->name('kontingen.deleteLogo');
+
+            Route::get('/self-assessment', [SelfAssessmentController::class, 'index'])->name('self-assessment.index');
+            Route::get('/self-assessment/hasil', [SelfAssessmentController::class, 'hasil'])->name('self-assessment.hasil');
+        });
     });
-

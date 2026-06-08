@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\OnboardingStatusService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,10 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
+    public function __construct(private OnboardingStatusService $onboarding)
+    {
+    }
+
     /**
      * Display the login view.
      * Jika user sudah login, redirect ke dashboard sesuai role.
@@ -18,7 +23,7 @@ class AuthenticatedSessionController extends Controller
     public function create(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->to($this->dashboardForRole(Auth::user()->role));
+            return redirect()->to($this->onboarding->nextPath(Auth::user()));
         }
 
         return view('auth.login');
@@ -34,9 +39,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $role = Auth::user()->role;
-
-        return redirect()->intended($this->dashboardForRole($role));
+        return redirect()->intended($this->onboarding->nextPath(Auth::user()));
     }
 
     /**
@@ -53,16 +56,4 @@ class AuthenticatedSessionController extends Controller
         return redirect('/login');
     }
 
-    /**
-     * Tentukan path dashboard berdasarkan role user.
-     */
-    protected function dashboardForRole(string $role): string
-    {
-        return match ($role) {
-            'admin', 'panitia' => '/dashboard/panitia',
-            'player'           => '/dashboard/player',
-            'pic_kontingen', 'pic' => '/dashboard/pic-kontingen',
-            default            => '/',
-        };
-    }
 }

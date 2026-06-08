@@ -3,18 +3,10 @@
     $roleLabel = $isPlayer ? 'Player' : 'PIC Kontingen';
 @endphp
 
-<x-layouts.dashboard :roleLabel="$roleLabel">
+<x-layouts.onboarding>
     <x-slot:title>Self Assessment</x-slot:title>
 
-    <x-slot:sidebar>
-        @if($isPlayer)
-            @include('partials.sidebar-player')
-        @else
-            @include('partials.sidebar-pic')
-        @endif
-    </x-slot:sidebar>
-
-<main class="min-h-screen bg-[#f4f7f6] rounded-xl overflow-hidden" x-data="selfAssessmentForm(@js($questionnaire), @js($activePosters))" x-cloak>
+<section class="min-h-screen bg-[#f4f7f6]" x-data="selfAssessmentForm(@js($questionnaire), @js($activePosters))" x-cloak>
     <div class="mx-auto max-w-4xl px-4 py-8 lg:px-8 lg:py-10">
         <button type="button" @click="window.history.back()" class="mb-6 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-[#B41F2A] transition-colors">
             <span class="text-lg leading-none">&larr;</span> Kembali
@@ -51,7 +43,7 @@
         <x-self-assessment.modals.announcement />
         <x-self-assessment.modals.sportsmanship-reminder />
     </div>
-</main>
+</section>
 
 @push('scripts')
 <script>
@@ -195,4 +187,4 @@ document.addEventListener('alpine:init', () => {
 });
 </script>
 @endpush
-</x-layouts.dashboard>
+</x-layouts.onboarding>
