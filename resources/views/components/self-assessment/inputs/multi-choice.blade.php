@@ -1,20 +1,20 @@
 @props(['question'])
 
-<div class="space-y-2.5">
+<div class="grid gap-2.5">
     @foreach($question['options'] as $opt)
     @php
         $val = is_array($opt) ? $opt['value'] : $opt;
         $label = is_array($opt) ? $opt['label'] : $opt;
     @endphp
-    <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:border-[#B41F2A]/40 hover:bg-red-50/40"
-           :class="{ 'border-[#B41F2A] bg-red-50 text-[#B41F2A] ring-1 ring-[#B41F2A]/20': answers['{{ $question['code'] }}'] && answers['{{ $question['code'] }}'].includes('{{ $val }}') }">
+    <label class="flex cursor-pointer items-center gap-3 rounded-md border border-transparent bg-gray-50 px-4 py-3 text-sm font-medium text-gray-800 transition-all hover:bg-red-50/50"
+           :class="{ 'border-red-100 bg-red-50 text-[#B41F2A]': answers['{{ $question['code'] }}'] && answers['{{ $question['code'] }}'].includes('{{ $val }}') }">
         <input type="checkbox"
                name="{{ $question['code'] }}[]"
                x-model="answers['{{ $question['code'] }}']"
                value="{{ $val }}"
                @change="if($el.checked && '{{ $val }}' === 'none') { answers['{{ $question['code'] }}'] = ['none']; } else if($el.checked) { answers['{{ $question['code'] }}'] = answers['{{ $question['code'] }}'].filter(val => val !== 'none'); }"
-               class="h-4 w-4 rounded border-gray-300 accent-[#B41F2A] focus:ring-[#B41F2A]" />
-        <span class="leading-relaxed">{{ $label }}</span>
+               class="h-5 w-5 rounded border-gray-300 accent-[#B41F2A] focus:ring-[#B41F2A]" />
+        {{ $label }}
     </label>
     @endforeach
 </div>
