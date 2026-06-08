@@ -96,7 +96,7 @@ class QuestionBankService
     {
         return [
             'domain' => 'DEMO',
-            'title'  => 'Data Diri & Konteks',
+            'title'  => 'Data Diri',
             'description' => 'Informasi dasar untuk konteks asesmen.',
             'questions' => [
                 [
