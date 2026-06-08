@@ -47,15 +47,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         get filteredPhotos() {
-            let result = this.photos.filter(p => {
-                const uploaderStr = p.uploader ? p.uploader.name : `ID ${p.uploaded_by}`;
-                return p.id.toString().includes(this.searchQuery) || uploaderStr.toLowerCase().includes(this.searchQuery.toLowerCase());
-            });
-            result.sort((a, b) => {
-                return (this.sortOrder === 'Terbaru' || this.sortOrder === 'Nama')
+            let result = this.photos.filter(p =>
+                !this.searchQuery || p.id.toString().includes(this.searchQuery)
+            );
+            result.sort((a, b) =>
+                (this.sortOrder === 'Terbaru' || this.sortOrder === 'Nama')
                     ? new Date(b.created_at) - new Date(a.created_at)
-                    : new Date(a.created_at) - new Date(b.created_at);
-            });
+                    : new Date(a.created_at) - new Date(b.created_at)
+            );
             return result;
         },
 
@@ -223,6 +222,24 @@ document.addEventListener('alpine:init', () => {
                 this.allFolders = res.data || [];
             } catch (e) {
                 this.allFolders = [];
+            }
+        },
+
+        async downloadPhoto(url) {
+            try {
+                const resp = await fetch(url);
+                const blob = await resp.blob();
+                const ext  = blob.type.split('/')[1] || 'jpg';
+                const name = url.split('/').pop().split('?')[0] || `foto-telucup.${ext}`;
+                const a    = document.createElement('a');
+                a.href     = URL.createObjectURL(blob);
+                a.download = name.includes('.') ? name : `${name}.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            } catch (e) {
+                window.open(url, '_blank');
             }
         },
 
