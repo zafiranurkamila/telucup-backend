@@ -277,23 +277,19 @@ class SelfAssessmentController extends Controller
             $player = $user->player;
         }
 
-        if (!$player) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Profil player tidak ditemukan. Lengkapi profil terlebih dahulu.',
-            ], 404);
-        }
-
         $answers = $request->input('answers', []);
 
         try {
             DB::beginTransaction();
 
             $payload = $this->scoringService->score($answers, $user, $player);
-            $payload['player_id'] = $player->id;
+            $payload['player_id'] = $player?->id;
+            $payload['user_id'] = $user->id;
             $assessment = SelfAssessment::create($payload);
 
-            $player->update(['risk_lvl' => $assessment->risk_label]);
+            if ($player) {
+                $player->update(['risk_lvl' => $assessment->risk_label]);
+            }
 
             DB::commit();
 
@@ -337,16 +333,14 @@ class SelfAssessmentController extends Controller
         $user = $request->user();
         $player = $user->player;
 
-        if (!$player) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Profil player tidak ditemukan.',
-            ], 404);
-        }
-
-        $assessment = SelfAssessment::where('player_id', $player->id)
-            ->latest()
-            ->first();
+        $assessment = SelfAssessment::where(function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+            if ($user->player) {
+                $query->orWhere('player_id', $user->player->id);
+            }
+        })
+        ->latest()
+        ->first();
 
         if (!$assessment) {
             return response()->json([

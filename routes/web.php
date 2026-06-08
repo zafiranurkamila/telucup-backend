@@ -17,6 +17,8 @@ use App\Http\Controllers\Web\PicKontingen\RegistrasiController;
 use App\Http\Controllers\Web\PicKontingen\JadwalController;
 use App\Http\Controllers\Web\PicKontingen\DokumentasiController;
 use App\Http\Controllers\Web\PicKontingen\ProfileController;
+use App\Http\Controllers\Web\PicKontingen\KontingenController as PicKontingenController;
+use App\Http\Controllers\Web\SelfAssessmentController;
 use App\Http\Controllers\Web\Player\GaleriController as PlayerGaleriController;
 
 // ====================================================================
@@ -84,6 +86,13 @@ Route::prefix('dashboard/player')
     ->group(function () {
         Route::get('/', [PlayerDashboard::class, 'index'])->name('index');
         // Tahap 5+: halaman fitur player akan ditambahkan di sini
+        // Route::get('/profil', [ProfileController::class, 'show'])->name('profil.show');
+        // Route::get('/edit-profil', [ProfileController::class, 'edit'])->name('profil.edit');
+        // Route::put('/profil', [ProfileController::class, 'update'])->name('profil.update');
+        // Route::get('/galeri', [GalleryController::class, 'index'])->name('galeri.index');
+        
+        Route::get('/self-assessment', [SelfAssessmentController::class, 'index'])->name('self-assessment.index');
+        Route::get('/self-assessment/hasil', [SelfAssessmentController::class, 'hasil'])->name('self-assessment.hasil');
         Route::get('/profil', [ProfileController::class, 'show'])->name('profil.show');
         Route::get('/edit-profil', [ProfileController::class, 'edit'])->name('profil.edit');
         Route::put('/profil', [ProfileController::class, 'update'])->name('profil.update');
@@ -107,6 +116,11 @@ Route::prefix('dashboard/pic-kontingen')
         Route::get('/jadwal', [JadwalController::class, 'index'])->name('jadwal');
         Route::get('/dokumentasi', [DokumentasiController::class, 'index'])->name('dokumentasi.index');
         Route::get('/profil-saya', [ProfileController::class, 'show'])->name('profil.show');
-        // Route::get('/profil-kontingen', [KontingenController::class, 'show'])->name('kontingen.show');
+        Route::get('/profil-kontingen', [PicKontingenController::class, 'show'])->name('kontingen.show');
+        Route::post('/profil-kontingen/logo', [PicKontingenController::class, 'updateLogo'])->name('kontingen.updateLogo');
+        Route::delete('/profil-kontingen/logo', [PicKontingenController::class, 'deleteLogo'])->name('kontingen.deleteLogo');
+        
+        Route::get('/self-assessment', [SelfAssessmentController::class, 'index'])->name('self-assessment.index');
+        Route::get('/self-assessment/hasil', [SelfAssessmentController::class, 'hasil'])->name('self-assessment.hasil');
     });
 

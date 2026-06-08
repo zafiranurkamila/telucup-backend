@@ -25,13 +25,15 @@ class ProfileController extends Controller
         $contingent = $user->managedContingent;
         $playersCount = $contingent ? $contingent->players->count() : 0;
         
-        // Mengambil self assessment terakhir milik PIC ini (berdasarkan player_id-nya)
-        $assessment = null;
-        if ($user->player) {
-            $assessment = SelfAssessment::where('player_id', $user->player->id)
-                ->latest()
-                ->first();
-        }
+        // Mengambil self assessment terakhir milik PIC ini
+        $assessment = SelfAssessment::where(function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+            if ($user->player) {
+                $query->orWhere('player_id', $user->player->id);
+            }
+        })
+        ->latest()
+        ->first();
 
         return view('dashboard.pic-kontingen.profil-saya.index', [
             'user'         => $user,
