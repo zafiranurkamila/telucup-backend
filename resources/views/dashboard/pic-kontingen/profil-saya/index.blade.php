@@ -11,7 +11,7 @@
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Profil Saya</h1>
                 <p class="text-gray-500 text-sm mt-1">
-                    Data pribadi dan status kesehatan Anda sebagai PIC Kontingen.
+                    Data pribadi Anda sebagai PIC Kontingen.
                 </p>
             </div>
             <button onclick="window.location.reload()" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm shrink-0">
@@ -21,10 +21,10 @@
         </div>
 
         {{-- Main Grid --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div class="{{ $assessment ? 'grid grid-cols-1 lg:grid-cols-3 gap-6 items-start' : 'max-w-2xl space-y-5' }}">
             
             {{-- LEFT: Personal Info (1/3) --}}
-            <div class="lg:col-span-1 space-y-5">
+            <div class="{{ $assessment ? 'lg:col-span-1 space-y-5' : 'space-y-5' }}">
                 {{-- Profile card --}}
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                     {{-- Top gradient bar --}}
@@ -106,6 +106,7 @@
             </div>
 
             {{-- RIGHT: Self-Assessment (2/3) --}}
+            @if($assessment)
             <div class="lg:col-span-2 space-y-5">
                 {{-- Assessment header --}}
                 <div class="flex items-center justify-between">
@@ -113,28 +114,8 @@
                         <svg class="w-5 h-5 text-[#b71c1c]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                         Status Self-Assessment
                     </h2>
-                    @if(!$assessment)
-                    <a href="{{ url('/self-assessment') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#b71c1c] text-white text-sm font-bold rounded-lg hover:bg-[#9b1818] transition-colors shadow-sm">
-                        Mulai Assessment &rarr;
-                    </a>
-                    @endif
                 </div>
 
-                @if(!$assessment)
-                {{-- Empty state --}}
-                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center">
-                    <svg class="text-gray-200 w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    <h3 class="text-lg font-bold text-gray-700 mb-2">Belum Ada Assessment</h3>
-                    <p class="text-sm text-gray-500 mb-6 max-w-md mx-auto">
-                        Anda belum pernah mengisi self-assessment kesehatan. Isi sekarang untuk mengetahui
-                        status risiko sebelum bertanding.
-                    </p>
-                    <a href="{{ url('/self-assessment') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-[#b71c1c] text-white text-sm font-bold rounded-lg hover:bg-[#9b1818] transition-colors shadow-sm">
-                        Mulai Self-Assessment &rarr;
-                    </a>
-                </div>
-                @else
-                
                 @php
                     $riskConfig = [
                         'high' => [
@@ -230,7 +211,7 @@
                                 @endif
                             </div>
 
-                            <a href="{{ url('/self-assessment/hasil?id='.$assessment->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 bg-white text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 hover:border-[#b71c1c] hover:text-[#b71c1c] transition-colors">
+                            <a href="{{ url('/dashboard/pic-kontingen/self-assessment/hasil?id='.$assessment->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 bg-white text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 hover:border-[#b71c1c] hover:text-[#b71c1c] transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg> Lihat Detail
                             </a>
                         </div>
@@ -417,9 +398,8 @@
                     </div>
                 </div>
                 @endif
-                
-                @endif
             </div>
+            @endif
         </div>
     </div>
 </x-layouts.dashboard>

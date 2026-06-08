@@ -25,6 +25,7 @@ class SelfAssessment extends Model
 {
     protected $fillable = [
         // Relasi
+        'user_id',
         'player_id',
 
         // Snapshot kondisi peserta

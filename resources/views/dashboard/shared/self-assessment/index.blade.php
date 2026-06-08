@@ -66,6 +66,7 @@ document.addEventListener('alpine:init', () => {
         posters: activePosters || [],
         currentPosterIndex: 0,
         hasReachedEnd: false,
+        submittedId: null,
 
         init() {
             // Initialize array for multi_choice
@@ -156,6 +157,7 @@ document.addEventListener('alpine:init', () => {
                     throw new Error(result.message || 'Terjadi kesalahan saat mengirim assessment.');
                 }
 
+                this.submittedId = result.data.id;
                 this.showAnnouncementModal = true;
             } catch (error) {
                 this.submitError = error.message;
@@ -175,7 +177,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         goToResultPage() {
-            window.location.href = window.location.pathname + '/hasil';
+            window.location.href = window.location.pathname + '/hasil' + (this.submittedId ? '?id=' + this.submittedId : '');
         },
 
         nextPoster() {

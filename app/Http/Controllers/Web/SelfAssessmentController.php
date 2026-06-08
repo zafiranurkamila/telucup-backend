@@ -50,11 +50,13 @@ class SelfAssessmentController extends Controller
 
             // Jika bukan panitia, pastikan hanya bisa lihat miliknya sendiri atau milik anggotanya (jika pic)
             if ($user->role !== 'panitia') {
-                if ($user->role === 'player' && $assessment->player->user_id !== $user->id) {
-                    abort(403, 'Anda tidak memiliki akses ke data ini.');
+                if ($user->role === 'player' && $assessment->player) {
+                    if ($assessment->player->user_id !== $user->id) {
+                        abort(403, 'Anda tidak memiliki akses ke data ini.');
+                    }
                 }
                 
-                if ($user->role === 'pic_kontingen' && $player) {
+                if ($user->role === 'pic_kontingen' && $player && $assessment->player) {
                     // Cek apakah player tersebut di bawah contingent pic
                     if ($assessment->player->contingent_id !== $player->contingent_id && $assessment->player->user_id !== $user->id) {
                         abort(403, 'Anda tidak memiliki akses ke data ini.');
