@@ -56,8 +56,13 @@ document.addEventListener('alpine:init', () => {
             };
             
             const res = await fetch(url, { ...options, headers });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.message || 'Request failed');
+            const contentType = res.headers.get('content-type') || '';
+            const json = contentType.includes('application/json') ? await res.json() : null;
+
+            if (!res.ok) {
+                throw new Error(json?.message || `Request failed (${res.status})`);
+            }
+
             return json;
         },
 

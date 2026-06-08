@@ -6,24 +6,35 @@ use OpenApi\Attributes as OA;
 
 use App\Models\SportsmanshipPoster;
 use Cloudinary\Cloudinary;
+use Cloudinary\Api\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class SportsmanshipPosterController extends Controller
 {
-    private function upload(string $filePath): \Cloudinary\Api\ApiResponse
+    private function cloudinary(): Cloudinary
     {
-        $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
-        return $cloudinary->uploadApi()->upload($filePath, [
+        $cloudinaryUrl = config('services.cloudinary.url');
+
+        if (blank($cloudinaryUrl)) {
+            throw new RuntimeException('Konfigurasi CLOUDINARY_URL belum tersedia.');
+        }
+
+        return new Cloudinary($cloudinaryUrl);
+    }
+
+    private function upload(string $filePath): ApiResponse
+    {
+        return $this->cloudinary()->uploadApi()->upload($filePath, [
             'folder' => 'telucup/sportsmanship_posters',
         ]);
     }
 
     private function delete(string $publicId): void
     {
-        $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
-        $cloudinary->uploadApi()->destroy($publicId);
+        $this->cloudinary()->uploadApi()->destroy($publicId);
     }
 
     #[OA\Get(
@@ -141,22 +152,23 @@ class SportsmanshipPosterController extends Controller
             'sort_order'  => 'nullable|integer|min:0',
         ]);
 
+        $uploadedPublicId = null;
+
         try {
             $uploadResult = $this->upload($request->file('image')->getRealPath());
+            $uploadedPublicId = $uploadResult['public_id'];
 
-            DB::beginTransaction();
-
-            $poster = SportsmanshipPoster::create([
-                'title'                => $validated['title'],
-                'description'          => $validated['description'] ?? null,
-                'image_url'            => $uploadResult['secure_url'],
-                'cloudinary_public_id' => $uploadResult['public_id'],
-                'is_active'            => $validated['is_active'] ?? true,
-                'sort_order'           => $validated['sort_order'] ?? 0,
-                'uploaded_by'          => $request->user()->id,
-            ]);
-
-            DB::commit();
+            $poster = DB::transaction(function () use ($request, $validated, $uploadResult) {
+                return SportsmanshipPoster::create([
+                    'title'                => $validated['title'],
+                    'description'          => $validated['description'] ?? null,
+                    'image_url'            => $uploadResult['secure_url'],
+                    'cloudinary_public_id' => $uploadResult['public_id'],
+                    'is_active'            => $validated['is_active'] ?? true,
+                    'sort_order'           => $validated['sort_order'] ?? 0,
+                    'uploaded_by'          => $request->user()?->id,
+                ]);
+            });
 
             return response()->json([
                 'status'  => 'success',
@@ -164,9 +176,26 @@ class SportsmanshipPosterController extends Controller
                 'data'    => $poster,
             ], 201);
         } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('SportsmanshipPoster store failed', ['error' => $e->getMessage(), 'class' => get_class($e)]);
-            return response()->json(['status' => 'error', 'message' => 'Gagal mengunggah poster sportifitas.'], 500);
+            if ($uploadedPublicId) {
+                try {
+                    $this->delete($uploadedPublicId);
+                } catch (\Throwable $deleteException) {
+                    Log::warning('SportsmanshipPoster cleanup failed', [
+                        'public_id' => $uploadedPublicId,
+                        'error'     => $deleteException->getMessage(),
+                    ]);
+                }
+            }
+
+            Log::error('SportsmanshipPoster store failed', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal mengunggah poster sportifitas. Periksa konfigurasi Cloudinary atau coba lagi.',
+            ], 500);
         }
     }
 
@@ -265,9 +294,7 @@ class SportsmanshipPosterController extends Controller
 
                 $oldPublicId = $poster->cloudinary_public_id;
 
-                DB::beginTransaction();
-                $poster->update($updateData);
-                DB::commit();
+                DB::transaction(fn() => $poster->update($updateData));
 
                 if ($oldPublicId) {
                     try {
@@ -275,11 +302,9 @@ class SportsmanshipPosterController extends Controller
                     } catch (\Throwable) {}
                 }
             } else {
-                DB::beginTransaction();
                 if (!empty($updateData)) {
-                    $poster->update($updateData);
+                    DB::transaction(fn() => $poster->update($updateData));
                 }
-                DB::commit();
             }
 
             return response()->json([
@@ -288,8 +313,16 @@ class SportsmanshipPosterController extends Controller
                 'data'    => $poster->fresh(),
             ]);
         } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json(['status' => 'error', 'message' => 'Gagal memperbarui poster sportifitas.'], 500);
+            Log::error('SportsmanshipPoster update failed', [
+                'id'    => $poster->id,
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal memperbarui poster sportifitas. Periksa konfigurasi Cloudinary atau coba lagi.',
+            ], 500);
         }
     }
 
