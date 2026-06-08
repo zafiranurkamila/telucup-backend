@@ -1,7 +1,7 @@
 <x-layout-public>
     <x-slot:title>Kelola Bagan</x-slot:title>
 
-    
+
 
     {{-- Alpine.js state container --}}
     <div
@@ -68,7 +68,7 @@
 
                 {{-- Cari button --}}
                 <div class="md:col-span-3 flex flex-col items-start md:items-center justify-end">
-                    <button 
+                    <button
                         @click="handleSearch()"
                         :disabled="!isReady"
                         class="w-full bg-[#b6252a] text-white py-2.5 px-4 rounded-lg font-bold hover:bg-[#9a1e22] transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -79,7 +79,7 @@
                 </div>
             </div>
 
-            
+
         </div>
 
         {{-- ============================================================
@@ -107,12 +107,15 @@
             </div>
         </template>
 
-        
+
 
         {{-- Bracket rounds & Results --}}
         <template x-if="bracketData && !isLoading">
             <x-bracket.board role="public" />
         </template>
+
+        {{-- Match Detail Modal --}}
+        <x-bracket.detail-modal />
 
 <script>
     document.addEventListener('alpine:init', () => {
@@ -123,6 +126,17 @@
         registrations: [],
         bracketData: null,
         isLoading: false,
+        detailMatch: null,
+
+        openMatchDetail(match) {
+            this.detailMatch = JSON.parse(JSON.stringify(match));
+            document.body.style.overflow = 'hidden';
+        },
+
+        closeMatchDetail() {
+            this.detailMatch = null;
+            document.body.style.overflow = '';
+        },
 
         init() {
             this.$watch('selectedSportId', val => {
@@ -131,7 +145,7 @@
             this.$watch('selectedCategoryId', val => {
                 sessionStorage.setItem('public_bagan_category_id', val || '');
             });
-            
+
             if (this.selectedSportId) {
                 this.loadBracket();
             }
@@ -210,4 +224,4 @@
     });
 </script>
 </x-layout-public>
-    
+
