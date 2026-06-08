@@ -487,32 +487,35 @@ class PlayerController extends Controller
 
             Log::info("Mengirim face enrollment untuk Player ID {$player->id} ke {$registerUrl}");
 
-            $aiResponse = Http::timeout(30)->post($registerUrl, [
-                'player_id' => $player->id,
-                'image_url' => $imageUrl,
-            ]);
+            // FastAPI sekarang memproses embedding secara async (background task),
+            // sehingga response kembali segera. Timeout 10 detik cukup.
+            try {
+                $aiResponse = Http::timeout(10)->post($registerUrl, [
+                    'player_id' => $player->id,
+                    'image_url' => $imageUrl,
+                ]);
 
-            if (!$aiResponse->successful()) {
-                $errorDetail = $aiResponse->json('detail') ?? 'AI Engine tidak merespon dengan benar.';
-                DB::rollBack();
-                return response()->json(['status' => 'error', 'message' => 'Face enrollment gagal: ' . $errorDetail], 422);
+                if ($aiResponse->status() === 503) {
+                    $errorDetail = $aiResponse->json('detail') ?? 'AI Engine belum siap.';
+                    DB::rollBack();
+                    return response()->json(['status' => 'error', 'message' => 'AI Engine belum siap: ' . $errorDetail], 503);
+                }
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                // Jika AI Engine tidak bisa dihubungi, foto tetap tersimpan.
+                // Face embedding akan absen (tidak memblokir onboarding).
+                Log::warning("AI Engine tidak terjangkau saat enrollment Player {$player->id}: " . $e->getMessage());
             }
 
             DB::commit();
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Foto profil berhasil diunggah dan vektor wajah berhasil diregistrasi.',
+                'message' => 'Foto profil berhasil diunggah. Vektor wajah sedang diproses.',
                 'data'    => [
                     'player_id' => $player->id,
                     'photo_url' => $imageUrl,
-                    'ai_result' => $aiResponse->json(),
                 ],
             ]);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            DB::rollBack();
-            Log::error("Koneksi ke AI Engine gagal: " . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => 'Gagal terhubung ke AI Engine. Pastikan service berjalan.'], 502);
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error("Face enrollment error: " . $e->getMessage());

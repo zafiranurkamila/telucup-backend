@@ -28,14 +28,20 @@
                 {{-- Profile card --}}
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                     {{-- Top gradient bar --}}
-                    <div class="h-20 bg-gradient-to-r from-[#8a1519] to-[#c21e24]"></div>
+                    <div class="h-24 bg-gradient-to-r from-[#8a1519] to-[#c21e24]"></div>
 
                     <div class="px-6 pb-6">
                         {{-- Avatar --}}
-                        <div class="flex justify-center -mt-10 mb-4">
-                            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#a81d22] to-[#e53935] flex items-center justify-center text-white text-3xl font-extrabold shadow-md border-4 border-white">
+                        <div class="flex justify-center -mt-16 mb-4">
+                            @if($user->player?->photo_path)
+                            <div class="w-32 h-32 rounded-2xl shadow-lg border-4 border-white overflow-hidden bg-gray-100 flex items-center justify-center">
+                                <img src="{{ $user->player->photo_path }}" alt="{{ $user->name }}" class="w-full h-full object-contain">
+                            </div>
+                            @else
+                            <div class="w-32 h-32 rounded-2xl bg-gradient-to-br from-[#a81d22] to-[#e53935] flex items-center justify-center text-white text-4xl font-extrabold shadow-lg border-4 border-white">
                                 {{ strtoupper(substr($user->name, 0, 1)) }}
                             </div>
+                            @endif
                         </div>
 
                         <div class="text-center">

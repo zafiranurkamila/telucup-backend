@@ -10,6 +10,7 @@
         x-data="accountSetupForm({
             nextUrl: @js($nextUrl),
             hasPhoto: @js(filled($profilePhoto)),
+            initialPhotoUrl: @js($profilePhoto),
             initialIsKacamata: @js((bool) $user->is_kacamata)
         })"
     >
@@ -91,15 +92,16 @@
                     <h2 class="mb-3 text-sm font-bold text-gray-800">Enroll Face</h2>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                         <div class="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
-                            @if($profilePhoto)
-                                <img src="{{ $profilePhoto }}" alt="Foto profil saat ini" class="h-full w-full object-cover">
-                            @else
+                            <template x-if="photoPreviewUrl">
+                                <img :src="photoPreviewUrl" alt="Foto wajah" class="h-full w-full object-cover">
+                            </template>
+                            <template x-if="!photoPreviewUrl">
                                 <div class="flex h-full w-full items-center justify-center text-gray-400">
                                     <svg class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                     </svg>
                                 </div>
-                            @endif
+                            </template>
                         </div>
                         <div class="flex-1">
                             <label for="photo" class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-gray-500">
@@ -109,11 +111,13 @@
                                 id="photo"
                                 type="file"
                                 accept="image/jpeg,image/png,image/jpg"
-                                @change="form.photo = $event.target.files[0] || null"
+                                @change="handlePhotoChange($event)"
                                 :required="!hasPhoto"
                                 class="block w-full cursor-pointer rounded-lg border border-gray-200 bg-white text-sm text-gray-600 file:mr-4 file:border-0 file:bg-[#B41F2A] file:px-4 file:py-2.5 file:text-sm file:font-bold file:text-white hover:file:bg-[#8A1520]"
                             >
                             <p class="mt-2 text-xs leading-5 text-gray-500">Gunakan foto wajah yang jelas. Format JPG atau PNG, maksimal 5MB.</p>
+                            <p x-show="hasPhoto && !form.photo" class="mt-1 text-xs font-semibold text-emerald-600">Foto wajah sudah tersimpan.</p>
+                            <p x-show="form.photo" class="mt-1 text-xs font-semibold text-emerald-600">Preview foto siap diupload.</p>
                             <p x-show="errors.photo" class="mt-1 text-xs text-red-600" x-text="errors.photo"></p>
                         </div>
                     </div>
@@ -152,7 +156,7 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                         </svg>
-                        <span x-text="isSubmitting ? 'Memproses...' : 'Simpan dan Lanjutkan'"></span>
+                        <span x-text="submitLabel"></span>
                     </button>
                 </div>
             </form>
@@ -170,12 +174,13 @@
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
-                        <span class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full {{ $profilePhoto ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                            @if($profilePhoto)
+                        <span class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full" :class="hasPhoto ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
+                            <template x-if="hasPhoto">
                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                            @else
+                            </template>
+                            <template x-if="!hasPhoto">
                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4m0 4h.01"/></svg>
-                            @endif
+                            </template>
                         </span>
                         <div>
                             <p class="text-sm font-semibold text-gray-800">Enroll face</p>
@@ -199,9 +204,11 @@
     @push('scripts')
     <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('accountSetupForm', ({ nextUrl, hasPhoto, initialIsKacamata }) => ({
+        Alpine.data('accountSetupForm', ({ nextUrl, hasPhoto, initialPhotoUrl, initialIsKacamata }) => ({
             nextUrl,
             hasPhoto,
+            photoPreviewUrl: initialPhotoUrl || '',
+            temporaryPhotoPreviewUrl: '',
             isSubmitting: false,
             message: '',
             messageType: 'success',
@@ -217,30 +224,57 @@
                 photo: null,
             },
 
+            submitLabel: 'Simpan dan Lanjutkan',
+
             async submit() {
                 this.isSubmitting = true;
                 this.message = '';
                 this.errors = {};
 
                 try {
+                    this.submitLabel = 'Menyimpan data...';
                     await this.updateProfile();
 
                     if (this.form.photo) {
+                        this.submitLabel = 'Mengunggah foto...';
                         await this.enrollFace();
                     } else if (!this.hasPhoto) {
                         throw new Error('Foto wajah wajib diunggah untuk enroll face.');
                     }
 
+                    this.submitLabel = 'Berhasil!';
                     this.messageType = 'success';
-                    this.message = 'Data akun berhasil disimpan. Mengarahkan ke tahap berikutnya...';
-                    window.location.href = this.nextUrl;
+                    this.message = 'Data akun dan foto wajah berhasil disimpan. Mengarahkan ke tahap berikutnya...';
+                    setTimeout(() => {
+                        window.location.href = this.nextUrl;
+                    }, 700);
                 } catch (error) {
                     this.messageType = 'error';
                     this.message = error.message || 'Gagal menyimpan data akun.';
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                    this.submitLabel = 'Simpan dan Lanjutkan';
                 } finally {
                     this.isSubmitting = false;
                 }
+            },
+
+            handlePhotoChange(event) {
+                const file = event.target.files[0] || null;
+                this.form.photo = file;
+                this.errors.photo = '';
+
+                if (this.temporaryPhotoPreviewUrl) {
+                    URL.revokeObjectURL(this.temporaryPhotoPreviewUrl);
+                    this.temporaryPhotoPreviewUrl = '';
+                }
+
+                if (!file) {
+                    this.photoPreviewUrl = this.hasPhoto ? initialPhotoUrl || '' : '';
+                    return;
+                }
+
+                this.temporaryPhotoPreviewUrl = URL.createObjectURL(file);
+                this.photoPreviewUrl = this.temporaryPhotoPreviewUrl;
             },
 
             async updateProfile() {
@@ -283,8 +317,19 @@
                     body: payload,
                 });
 
-                await this.handleResponse(response);
+                const result = await this.handleResponse(response);
+                const uploadedPhotoUrl = result?.data?.photo_url;
+
+                if (uploadedPhotoUrl) {
+                    if (this.temporaryPhotoPreviewUrl) {
+                        URL.revokeObjectURL(this.temporaryPhotoPreviewUrl);
+                        this.temporaryPhotoPreviewUrl = '';
+                    }
+                    this.photoPreviewUrl = uploadedPhotoUrl;
+                }
+
                 this.hasPhoto = true;
+                this.form.photo = null;
             },
 
             async handleResponse(response) {
