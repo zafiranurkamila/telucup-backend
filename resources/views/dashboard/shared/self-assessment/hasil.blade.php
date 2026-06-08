@@ -89,8 +89,6 @@
                     :validUntil="$data['valid_until']" 
                     :questionnaireVersion="$data['questionnaire_version']" 
                     :algorithmVersion="$data['algorithm_version']" />
-
-                <x-self-assessment-result.medical-review :medicalReview="$data['medical_review']" />
             </div>
         </div>
     </div>

@@ -9,8 +9,8 @@
         <div class="space-y-3">
             @foreach($redFlags as $flag)
                 <div class="rounded-lg border border-red-100 bg-white p-4">
-                    <p class="text-sm font-bold text-gray-800">{{ $flag['text'] }}</p>
-                    @if(!empty($flag['reason']))
+                    <p class="text-sm font-bold text-gray-800">{{ is_string($flag) ? $flag : ($flag['text'] ?? '') }}</p>
+                    @if(is_array($flag) && !empty($flag['reason']))
                         <p class="mt-1 text-xs leading-relaxed text-[#B41F2A]">{{ $flag['reason'] }}</p>
                     @endif
                 </div>
@@ -28,8 +28,8 @@
         <div class="space-y-3">
             @foreach($yellowFlags as $flag)
                 <div class="rounded-lg border border-amber-100 bg-white p-4">
-                    <p class="text-sm font-bold text-gray-800">{{ $flag['text'] }}</p>
-                    @if(!empty($flag['reason']))
+                    <p class="text-sm font-bold text-gray-800">{{ is_string($flag) ? $flag : ($flag['text'] ?? '') }}</p>
+                    @if(is_array($flag) && !empty($flag['reason']))
                         <p class="mt-1 text-xs leading-relaxed text-amber-700">{{ $flag['reason'] }}</p>
                     @endif
                 </div>

@@ -22,6 +22,12 @@ class SelfAssessmentController extends Controller
         $user = $request->user();
         $player = $user->player;
 
+        if ($player && SelfAssessment::where('player_id', $player->id)->exists() && !$request->has('re-assess')) {
+            return redirect()->route(
+                $user->role === 'player' ? 'dashboard.player.self-assessment.hasil' : 'dashboard.pic.self-assessment.hasil'
+            );
+        }
+
         $questionnaire = $this->questionBank->getQuestionnaire();
 
         $activePosters = SportsmanshipPoster::where('is_active', true)

@@ -274,8 +274,8 @@
                         <div class="space-y-2">
                             @foreach($redFlags as $f)
                             <div class="bg-white rounded-lg border border-red-100 px-3 py-2">
-                                <p class="text-xs font-bold text-gray-800">{{ $f['text'] ?? '' }}</p>
-                                @if(!empty($f['reason']))
+                                <p class="text-xs font-bold text-gray-800">{{ is_string($f) ? $f : ($f['text'] ?? '') }}</p>
+                                @if(is_array($f) && !empty($f['reason']))
                                 <p class="text-xs text-[#B41F2A] mt-0.5">{{ $f['reason'] }}</p>
                                 @endif
                             </div>
@@ -293,8 +293,8 @@
                         <div class="space-y-2">
                             @foreach($yellowFlags as $f)
                             <div class="bg-white rounded-lg border border-amber-100 px-3 py-2">
-                                <p class="text-xs font-bold text-gray-800">{{ $f['text'] ?? '' }}</p>
-                                @if(!empty($f['reason']))
+                                <p class="text-xs font-bold text-gray-800">{{ is_string($f) ? $f : ($f['text'] ?? '') }}</p>
+                                @if(is_array($f) && !empty($f['reason']))
                                 <p class="text-xs text-amber-700 mt-0.5">{{ $f['reason'] }}</p>
                                 @endif
                             </div>

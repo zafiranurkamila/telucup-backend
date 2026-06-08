@@ -183,7 +183,7 @@
                             href="{{ route('dashboard.player.profil.edit') }}"
                             class="inline-flex items-center gap-1.5 text-xs font-bold text-[#b71c1c] hover:underline"
                         >
-                            ✎ Edit Profil →
+                            Edit Profil →
                         </a>
                     </div>
                 </div>
