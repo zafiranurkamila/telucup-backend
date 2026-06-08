@@ -17,6 +17,7 @@ use App\Http\Controllers\Web\PicKontingen\RegistrasiController;
 use App\Http\Controllers\Web\PicKontingen\JadwalController;
 use App\Http\Controllers\Web\PicKontingen\DokumentasiController;
 use App\Http\Controllers\Web\PicKontingen\ProfileController;
+use App\Http\Controllers\Web\Player\GaleriController as PlayerGaleriController;
 
 // ====================================================================
 // PUBLIC ROUTES
@@ -82,12 +83,12 @@ Route::prefix('dashboard/player')
     ->name('dashboard.player.')
     ->group(function () {
         Route::get('/', [PlayerDashboard::class, 'index'])->name('index');
-
         // Tahap 5+: halaman fitur player akan ditambahkan di sini
-        // Route::get('/profil', [ProfileController::class, 'show'])->name('profil.show');
-        // Route::get('/edit-profil', [ProfileController::class, 'edit'])->name('profil.edit');
-        // Route::put('/profil', [ProfileController::class, 'update'])->name('profil.update');
-        // Route::get('/galeri', [GalleryController::class, 'index'])->name('galeri.index');
+        Route::get('/profil', [ProfileController::class, 'show'])->name('profil.show');
+        Route::get('/edit-profil', [ProfileController::class, 'edit'])->name('profil.edit');
+        Route::put('/profil', [ProfileController::class, 'update'])->name('profil.update');
+        Route::get('/galeri', [PlayerGaleriController::class, 'index'])->name('galeri.index');
+        Route::get('/self-assessment', [PlayerDashboard::class, 'selfAssessment'])->name('self-assessment');
     });
 
 // ====================================================================
