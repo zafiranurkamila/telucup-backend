@@ -19,7 +19,7 @@
                 <div class="min-w-0">
                     <p class="text-xs font-bold uppercase tracking-wide text-[#B41F2A]">Pesan Sportivitas</p>
                     <h2 class="text-lg font-black leading-tight text-gray-950 sm:text-xl">Jaga fair play sampai pertandingan selesai</h2>
-                    <p class="mt-1 text-sm leading-relaxed text-gray-500">Baca pesan berikut sebelum melihat hasil self-assessment.</p>
+                    <p class="mt-1 text-sm leading-relaxed text-gray-500">Baca pesan berikut sebelum kembali ke dashboard.</p>
                 </div>
             </div>
         </div>
@@ -64,15 +64,15 @@
 
         <!-- Actions -->
         <div class="border-t border-gray-100 bg-white px-5 py-4 sm:px-6">
-            <button type="button" @click="goToResultPage()" 
+            <button type="button" @click="goToDashboardPage()" 
                     :disabled="!hasReachedEnd"
                     class="flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-sm font-bold shadow-sm transition-all"
                     :class="hasReachedEnd ? 'bg-[#B41F2A] text-white hover:bg-[#8A1520] hover:shadow-md' : 'cursor-not-allowed bg-gray-200 text-gray-400'">
-                <span>Lanjutkan ke Hasil</span>
+                <span>Masuk ke Dashboard</span>
                 <svg x-show="hasReachedEnd" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </button>
             <p x-show="!hasReachedEnd" class="mt-3 text-center text-xs text-gray-500">
-                Silakan lihat semua poster pesan sportivitas untuk melanjutkan.
+                Silakan lihat semua poster pesan sportivitas untuk masuk ke dashboard.
             </p>
         </div>
     </div>

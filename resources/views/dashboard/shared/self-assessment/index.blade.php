@@ -1,12 +1,13 @@
 @php
     $isPlayer = request()->user()->role === 'player';
     $roleLabel = $isPlayer ? 'Player' : 'PIC Kontingen';
+    $dashboardUrl = $isPlayer ? route('dashboard.player.index') : route('dashboard.pic.index');
 @endphp
 
 <x-layouts.onboarding>
     <x-slot:title>Self Assessment</x-slot:title>
 
-<section class="min-h-screen bg-white" x-data="selfAssessmentForm(@js($questionnaire), @js($activePosters))" x-cloak>
+<section class="min-h-screen bg-white" x-data="selfAssessmentForm(@js($questionnaire), @js($activePosters), @js($dashboardUrl))" x-cloak>
     <div class="mx-auto max-w-5xl px-5 py-10 sm:px-8 lg:py-16">
         <button type="button" @click="window.history.back()" class="mb-12 inline-flex items-center gap-2 text-sm font-semibold text-gray-500 transition-colors hover:text-[#B41F2A]">
             <span class="text-lg leading-none">&larr;</span> Kembali
@@ -65,7 +66,6 @@
             <x-self-assessment.form-actions />
         </form>
 
-        <x-self-assessment.modals.announcement />
         <x-self-assessment.modals.sportsmanship-reminder />
     </div>
 </section>
@@ -73,12 +73,11 @@
 @push('scripts')
 <script>
 document.addEventListener('alpine:init', () => {
-    Alpine.data('selfAssessmentForm', (questionnaire, activePosters) => ({
+    Alpine.data('selfAssessmentForm', (questionnaire, activePosters, dashboardUrl) => ({
         answers: {},
         unansweredCodes: [],
         isSubmitting: false,
         submitError: null,
-        showAnnouncementModal: false,
         showReminderModal: false,
         posters: activePosters || [],
         currentPosterIndex: 0,
@@ -172,7 +171,14 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.submittedId = result.data.id;
-                this.showAnnouncementModal = true;
+                this.currentPosterIndex = 0;
+                this.hasReachedEnd = this.posters.length <= 1;
+
+                if (this.posters.length > 0) {
+                    this.showReminderModal = true;
+                } else {
+                    this.goToDashboardPage();
+                }
             } catch (error) {
                 this.submitError = error.message;
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -181,17 +187,8 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        proceedToResult() {
-            this.showAnnouncementModal = false;
-            if (this.posters.length > 0) {
-                this.showReminderModal = true;
-            } else {
-                this.goToResultPage();
-            }
-        },
-
-        goToResultPage() {
-            window.location.href = window.location.pathname + '/hasil' + (this.submittedId ? '?id=' + this.submittedId : '');
+        goToDashboardPage() {
+            window.location.href = dashboardUrl;
         },
 
         nextPoster() {
