@@ -40,7 +40,7 @@ class SelfAssessmentController extends Controller
         $assessmentId = $request->query('id');
 
         if ($assessmentId && is_numeric($assessmentId)) {
-            $assessment = SelfAssessment::with(['player.user', 'player.sport', 'player.contingent'])->find($assessmentId);
+            $assessment = SelfAssessment::with(['player.user', 'player.contingent'])->find($assessmentId);
 
             if (!$assessment) {
                 return redirect()->route(
@@ -64,7 +64,7 @@ class SelfAssessmentController extends Controller
                 }
             }
         } else {
-            $assessment = $player ? SelfAssessment::with(['player.user', 'player.sport', 'player.contingent'])
+            $assessment = $player ? SelfAssessment::with(['player.user', 'player.contingent'])
                 ->where('player_id', $player->id)
                 ->latest()
                 ->first() : null;
@@ -85,7 +85,7 @@ class SelfAssessmentController extends Controller
             'id'                    => $a->id,
             'player_id'             => $a->player_id,
             'player_name'           => $a->player?->name,
-            'sport_branch'          => $a->sport_branch_snapshot ?? $a->player?->sport?->name,
+            'sport_branch'          => $a->sport_branch_snapshot,
             'contingent'            => $a->player?->contingent?->name,
             'snapshot' => [
                 'age'         => $a->age_snapshot,

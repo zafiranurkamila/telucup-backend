@@ -407,7 +407,7 @@ class SelfAssessmentController extends Controller
             $query->where('risk_label', $risk);
         }
         if ($sport = $request->query('sport_branch')) {
-            $query->whereHas('player.sport', fn($q) => $q->where('name', 'like', "%{$sport}%"));
+            $query->where('sport_branch_snapshot', 'like', "%{$sport}%");
         }
         if ($cont = $request->query('contingent')) {
             $query->whereHas('player.contingent', fn($q) => $q->where('name', 'like', "%{$cont}%"));
@@ -708,7 +708,7 @@ class SelfAssessmentController extends Controller
             'id'                    => $a->id,
             'player_id'             => $a->player_id,
             'player_name'           => $a->player?->name,
-            'sport_branch'          => $a->sport_branch_snapshot ?? $a->player?->sport?->name,
+            'sport_branch'          => $a->sport_branch_snapshot,
             'contingent'            => $a->player?->contingent?->name,
             'snapshot' => [
                 'age'         => $a->age_snapshot,
