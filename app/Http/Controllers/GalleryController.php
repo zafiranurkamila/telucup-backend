@@ -22,7 +22,7 @@ class GalleryController extends Controller
         in: "query",
         required: false,
         description: "Filter berdasarkan status validasi pemain",
-        schema: new OA\Schema(type: "string", enum: ["pending", "accepted", "rejected"])
+        schema: new OA\Schema(type: "string", enum: ["pending", "needs_review", "accepted", "rejected"])
     )]
     #[OA\Parameter(
         name: "folder_id",
@@ -46,7 +46,7 @@ class GalleryController extends Controller
                             new OA\Property(property: "event_photo_id",    type: "integer", example: 15),
                             new OA\Property(property: "matched_player_id", type: "integer", example: 7),
                             new OA\Property(property: "validation_status", type: "string",
-                                enum: ["pending", "accepted", "rejected"], example: "pending"),
+                                enum: ["pending", "needs_review", "accepted", "rejected"], example: "pending"),
                             new OA\Property(property: "similarity_score",  type: "number", format: "float",
                                 example: 0.924, description: "Skor kemiripan wajah (0–1) dari model AdaFace"),
                             new OA\Property(property: "bounding_box",      type: "object", nullable: true,
@@ -97,7 +97,7 @@ class GalleryController extends Controller
         $query = PhotoFace::where('matched_player_id', $player->id)
             ->with(['eventPhoto:id,image_url,cloudinary_public_id,gallery_folder_id,created_at']);
 
-        if ($request->has('status') && in_array($request->status, ['pending', 'accepted', 'rejected'])) {
+        if ($request->has('status') && in_array($request->status, ['pending', 'needs_review', 'accepted', 'rejected'], true)) {
             $query->where('validation_status', $request->status);
         }
 

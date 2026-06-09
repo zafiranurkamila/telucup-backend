@@ -223,8 +223,8 @@
                                         ></span>
                                     </div>
 
-                                    {{-- Pending dot --}}
-                                    <template x-if="photo.validation_status === 'pending'">
+                                    {{-- Review dot --}}
+                                    <template x-if="['pending', 'needs_review'].includes(photo.validation_status)">
                                         <span class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-amber-400 shadow ring-2 ring-white block"></span>
                                     </template>
                                 </div>
@@ -288,7 +288,7 @@
                                             <p class="text-[10px] font-bold uppercase tracking-wide text-gray-400">Kemiripan</p>
                                             <p
                                                 class="text-sm font-bold"
-                                                :class="selectedPhoto.similarity_score >= 0.85 ? 'text-green-700' : selectedPhoto.similarity_score >= 0.70 ? 'text-amber-600' : 'text-red-600'"
+                                                :class="selectedPhoto.similarity_score >= 0.40 ? 'text-green-700' : selectedPhoto.similarity_score >= 0.25 ? 'text-amber-600' : 'text-red-600'"
                                                 x-text="selectedPhoto.similarity_score ? (selectedPhoto.similarity_score * 100).toFixed(1) + '%' : '—'"
                                             ></p>
                                         </div>
@@ -310,7 +310,7 @@
                                 </div>
 
                                 {{-- Action: Pending --}}
-                                <template x-if="selectedPhoto.validation_status === 'pending'">
+                                <template x-if="['pending', 'needs_review'].includes(selectedPhoto.validation_status)">
                                     <div class="border-t border-gray-100 pt-4">
                                         <p class="text-xs text-gray-500 mb-3 font-medium">Apakah wajah yang terdeteksi AI di foto ini adalah kamu?</p>
                                         <div class="flex gap-3">
@@ -376,6 +376,7 @@ document.addEventListener('alpine:init', () => {
         filterCfg: {
             all:      { label: 'Semua',   active: 'bg-gray-900 text-white' },
             pending:  { label: 'Pending', active: 'bg-amber-500 text-white' },
+            needs_review: { label: 'Perlu Review', active: 'bg-orange-500 text-white' },
             accepted: { label: 'Diterima',active: 'bg-green-600 text-white' },
             rejected: { label: 'Ditolak', active: 'bg-red-600 text-white'   },
         },
@@ -389,6 +390,7 @@ document.addEventListener('alpine:init', () => {
             return {
                 all:      this.photos.length,
                 pending:  this.photos.filter(p => p.validation_status === 'pending').length,
+                needs_review: this.photos.filter(p => p.validation_status === 'needs_review').length,
                 accepted: this.photos.filter(p => p.validation_status === 'accepted').length,
                 rejected: this.photos.filter(p => p.validation_status === 'rejected').length,
             };
@@ -479,14 +481,15 @@ document.addEventListener('alpine:init', () => {
 
         similarityClass(score) {
             if (!score) return 'bg-gray-100 text-gray-400 border-gray-200';
-            if (score >= 0.85) return 'bg-green-100 text-green-700 border-green-200';
-            if (score >= 0.70) return 'bg-amber-100 text-amber-700 border-amber-200';
+            if (score >= 0.40) return 'bg-green-100 text-green-700 border-green-200';
+            if (score >= 0.25) return 'bg-amber-100 text-amber-700 border-amber-200';
             return 'bg-red-100 text-red-600 border-red-200';
         },
 
         statusClass(status) {
             const m = {
                 pending:  'bg-amber-100 text-amber-700 border-amber-200',
+                needs_review: 'bg-orange-100 text-orange-700 border-orange-200',
                 accepted: 'bg-green-100 text-green-700 border-green-200',
                 rejected: 'bg-gray-100 text-gray-500 border-gray-200',
             };
@@ -494,7 +497,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         statusLabel(status) {
-            const m = { pending: 'Pending', accepted: 'Diterima', rejected: 'Ditolak' };
+            const m = { pending: 'Pending', needs_review: 'Perlu Review', accepted: 'Diterima', rejected: 'Ditolak' };
             return m[status] ?? status;
         },
 

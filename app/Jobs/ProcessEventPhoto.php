@@ -37,15 +37,22 @@ class ProcessEventPhoto implements ShouldQueue
         try {
             // Mengirim request ke FastAPI
             // Kita mengirimkan ID foto dan URL Cloudinary-nya
-            $response = Http::timeout(60)->post($fastApiUrl, [
+            $response = Http::timeout(300)->post($fastApiUrl, [
                 'event_photo_id' => $this->eventPhoto->id,
                 'image_url'      => $this->eventPhoto->image_url,
             ]);
 
             if ($response->successful()) {
-                Log::info("Berhasil mengirim EventPhoto ID {$this->eventPhoto->id} ke FastAPI.");
+                Log::info("Berhasil memproses EventPhoto ID {$this->eventPhoto->id} melalui FastAPI.", [
+                    'fastapi_url' => $fastApiUrl,
+                    'response' => $response->json(),
+                ]);
             } else {
-                Log::error("Gagal mengirim EventPhoto ID {$this->eventPhoto->id} ke FastAPI. Status: " . $response->status());
+                Log::error("Gagal memproses EventPhoto ID {$this->eventPhoto->id} melalui FastAPI.", [
+                    'fastapi_url' => $fastApiUrl,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
                 // Anda bisa mengaktifkan mekanisme retry di sini jika diperlukan
                 $this->release(10); // Coba lagi dalam 10 detik
             }

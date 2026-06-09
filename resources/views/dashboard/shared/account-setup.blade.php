@@ -1,5 +1,6 @@
 @php
     $profilePhoto = $player?->photo_path;
+    $hasFaceEnrollment = $hasFaceEnrollment ?? false;
 @endphp
 
 <x-layouts.onboarding>
@@ -9,7 +10,7 @@
         class="mx-auto max-w-5xl space-y-6 pb-10"
         x-data="accountSetupForm({
             nextUrl: @js($nextUrl),
-            hasPhoto: @js(filled($profilePhoto)),
+            hasPhoto: @js($hasFaceEnrollment),
             initialPhotoUrl: @js($profilePhoto),
             initialIsKacamata: @js((bool) $user->is_kacamata)
         })"
@@ -89,37 +90,66 @@
                 </div>
 
                 <div class="border-t border-gray-100 pt-5">
-                    <h2 class="mb-3 text-sm font-bold text-gray-800">Enroll Face</h2>
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-                        <div class="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
-                            <template x-if="photoPreviewUrl">
-                                <img :src="photoPreviewUrl" alt="Foto wajah" class="h-full w-full object-cover">
-                            </template>
-                            <template x-if="!photoPreviewUrl">
-                                <div class="flex h-full w-full items-center justify-center text-gray-400">
-                                    <svg class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                    </svg>
+                    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h2 class="text-sm font-bold text-gray-800">Enroll Face</h2>
+                            <p class="mt-1 max-w-2xl text-xs leading-5 text-gray-500">Upload minimal 2 angle wajah. Prioritaskan tampak depan, miring kiri, dan miring kanan dengan pencahayaan cukup.</p>
+                        </div>
+                        <div class="rounded-lg border px-3 py-2 text-xs font-semibold" :class="selectedPhotoCount >= 2 || hasPhoto ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'">
+                            <span x-text="selectedPhotoCount > 0 ? selectedPhotoCount + '/5 foto dipilih' : (hasPhoto ? 'Embedding tersimpan' : 'Belum lengkap')"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        <template x-for="(slot, index) in angleSlots" :key="slot.key">
+                            <div class="overflow-hidden rounded-lg border bg-white transition" :class="angleSlotFilled(slot) ? 'border-emerald-200 shadow-sm' : 'border-gray-200'">
+                                <div class="aspect-[4/3] bg-gray-50">
+                                    <template x-if="slot.previewUrl">
+                                        <img :src="slot.previewUrl" :alt="'Foto ' + slot.label" class="h-full w-full object-cover">
+                                    </template>
+                                    <template x-if="!slot.previewUrl">
+                                        <div class="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-gray-400">
+                                            <svg class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                            </svg>
+                                            <span class="text-xs font-semibold" x-text="slot.required ? 'Direkomendasikan' : 'Opsional'"></span>
+                                        </div>
+                                    </template>
                                 </div>
-                            </template>
-                        </div>
-                        <div class="flex-1">
-                            <label for="photo" class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-gray-500">
-                                Foto Wajah {{ $profilePhoto ? '(opsional jika tidak ingin mengganti)' : '' }}
-                            </label>
-                            <input
-                                id="photo"
-                                type="file"
-                                accept="image/jpeg,image/png,image/jpg"
-                                @change="handlePhotoChange($event)"
-                                :required="!hasPhoto"
-                                class="block w-full cursor-pointer rounded-lg border border-gray-200 bg-white text-sm text-gray-600 file:mr-4 file:border-0 file:bg-[#B41F2A] file:px-4 file:py-2.5 file:text-sm file:font-bold file:text-white hover:file:bg-[#8A1520]"
-                            >
-                            <p class="mt-2 text-xs leading-5 text-gray-500">Gunakan foto wajah yang jelas. Format JPG atau PNG, maksimal 5MB.</p>
-                            <p x-show="hasPhoto && !form.photo" class="mt-1 text-xs font-semibold text-emerald-600">Foto wajah sudah tersimpan.</p>
-                            <p x-show="form.photo" class="mt-1 text-xs font-semibold text-emerald-600">Preview foto siap diupload.</p>
-                            <p x-show="errors.photo" class="mt-1 text-xs text-red-600" x-text="errors.photo"></p>
-                        </div>
+
+                                <div class="space-y-3 p-3">
+                                    <div>
+                                        <div class="flex items-start justify-between gap-2">
+                                            <p class="text-sm font-bold text-gray-800" x-text="slot.label"></p>
+                                            <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" :class="angleSlotFilled(slot) ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'" x-text="angleSlotFilled(slot) ? 'Terisi' : 'Kosong'"></span>
+                                        </div>
+                                        <p class="mt-1 text-xs leading-5 text-gray-500" x-text="slot.hint"></p>
+                                    </div>
+
+                                    <input
+                                        :id="'face-angle-' + slot.key"
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg"
+                                        class="sr-only"
+                                        @change="handleAnglePhotoChange(index, $event)"
+                                    >
+                                    <label
+                                        :for="'face-angle-' + slot.key"
+                                        class="flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold transition"
+                                        :class="angleSlotFilled(slot) ? 'border-gray-200 text-gray-600 hover:bg-gray-50' : 'border-[#B41F2A] bg-red-50 text-[#B41F2A] hover:bg-red-100'"
+                                        x-text="angleSlotFilled(slot) ? 'Ganti Foto' : 'Pilih Foto'"
+                                    ></label>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="mt-3 flex flex-col gap-1">
+                        <p class="text-xs leading-5 text-gray-500">Format JPG/PNG, maksimal 5MB per foto. Hindari masker, wajah terlalu jauh, blur, dan cahaya dari belakang.</p>
+                        <p x-show="hasPhoto && selectedPhotoCount === 0" class="text-xs font-semibold text-emerald-600">Embedding wajah sudah tersimpan. Upload ulang hanya jika ingin mengganti data wajah.</p>
+                        <p x-show="!hasPhoto && existingProfilePreview && selectedPhotoCount === 0" class="text-xs font-semibold text-amber-600">Foto profil ada, tetapi embedding belum tersedia. Upload ulang minimal 2 angle wajah.</p>
+                        <p x-show="selectedPhotoCount > 0" class="text-xs font-semibold" :class="selectedPhotoCount >= 2 ? 'text-emerald-600' : 'text-amber-600'" x-text="selectedPhotoCount >= 2 ? selectedPhotoCount + ' foto siap diupload.' : 'Tambahkan minimal 1 angle lagi agar AI lebih stabil.'"></p>
+                        <p x-show="errors.photo || errors.photos" class="text-xs text-red-600" x-text="errors.photo || errors.photos"></p>
                     </div>
                 </div>
 
@@ -207,8 +237,59 @@
         Alpine.data('accountSetupForm', ({ nextUrl, hasPhoto, initialPhotoUrl, initialIsKacamata }) => ({
             nextUrl,
             hasPhoto,
-            photoPreviewUrl: initialPhotoUrl || '',
-            temporaryPhotoPreviewUrl: '',
+            existingProfilePreview: initialPhotoUrl || '',
+            angleSlots: [
+                {
+                    key: 'front',
+                    label: 'Tampak depan',
+                    hint: 'Wajah lurus ke kamera, mata terbuka, ekspresi netral.',
+                    required: true,
+                    file: null,
+                    previewUrl: initialPhotoUrl || '',
+                    saved: hasPhoto && Boolean(initialPhotoUrl),
+                    objectUrl: null,
+                },
+                {
+                    key: 'left',
+                    label: 'Miring kiri',
+                    hint: 'Putar wajah sekitar 30 derajat ke kiri, tetap lihat kamera.',
+                    required: true,
+                    file: null,
+                    previewUrl: '',
+                    saved: false,
+                    objectUrl: null,
+                },
+                {
+                    key: 'right',
+                    label: 'Miring kanan',
+                    hint: 'Putar wajah sekitar 30 derajat ke kanan, jangan terlalu menunduk.',
+                    required: true,
+                    file: null,
+                    previewUrl: '',
+                    saved: false,
+                    objectUrl: null,
+                },
+                {
+                    key: 'slightly-up',
+                    label: 'Sedikit atas',
+                    hint: 'Kamera sedikit lebih tinggi, wajah tetap terlihat penuh.',
+                    required: false,
+                    file: null,
+                    previewUrl: '',
+                    saved: false,
+                    objectUrl: null,
+                },
+                {
+                    key: 'glasses',
+                    label: 'Kondisi asli',
+                    hint: 'Jika biasa berkacamata, gunakan kacamata. Jika tidak, pakai foto normal.',
+                    required: false,
+                    file: null,
+                    previewUrl: '',
+                    saved: false,
+                    objectUrl: null,
+                },
+            ],
             isSubmitting: false,
             message: '',
             messageType: 'success',
@@ -221,10 +302,18 @@
                 current_password: '',
                 password: '',
                 password_confirmation: '',
-                photo: null,
+                photos: [],
             },
 
             submitLabel: 'Simpan dan Lanjutkan',
+
+            get selectedPhotoCount() {
+                return this.form.photos.length;
+            },
+
+            angleSlotFilled(slot) {
+                return Boolean(slot.file || slot.saved);
+            },
 
             async submit() {
                 this.isSubmitting = true;
@@ -235,8 +324,12 @@
                     this.submitLabel = 'Menyimpan data...';
                     await this.updateProfile();
 
-                    if (this.form.photo) {
-                        this.submitLabel = 'Mengunggah foto...';
+                    if (this.form.photos.length > 0) {
+                        if (this.form.photos.length < 2) {
+                            throw new Error('Upload minimal 2 angle wajah agar AI punya referensi yang cukup.');
+                        }
+
+                        this.submitLabel = 'Mengunggah foto wajah...';
                         await this.enrollFace();
                     } else if (!this.hasPhoto) {
                         throw new Error('Foto wajah wajib diunggah untuk enroll face.');
@@ -258,23 +351,52 @@
                 }
             },
 
-            handlePhotoChange(event) {
-                const file = event.target.files[0] || null;
-                this.form.photo = file;
+            handleAnglePhotoChange(index, event) {
+                const file = event.target.files?.[0] || null;
                 this.errors.photo = '';
+                this.errors.photos = '';
 
-                if (this.temporaryPhotoPreviewUrl) {
-                    URL.revokeObjectURL(this.temporaryPhotoPreviewUrl);
-                    this.temporaryPhotoPreviewUrl = '';
+                const slot = this.angleSlots[index];
+                if (!slot) return;
+
+                if (slot.objectUrl) {
+                    URL.revokeObjectURL(slot.objectUrl);
+                    slot.objectUrl = null;
                 }
 
                 if (!file) {
-                    this.photoPreviewUrl = this.hasPhoto ? initialPhotoUrl || '' : '';
+                    slot.file = null;
+                    slot.previewUrl = slot.saved && index === 0 ? this.existingProfilePreview : '';
+                    this.syncSelectedPhotos();
                     return;
                 }
 
-                this.temporaryPhotoPreviewUrl = URL.createObjectURL(file);
-                this.photoPreviewUrl = this.temporaryPhotoPreviewUrl;
+                slot.file = file;
+                slot.saved = false;
+                slot.objectUrl = URL.createObjectURL(file);
+                slot.previewUrl = slot.objectUrl;
+                this.syncSelectedPhotos();
+            },
+
+            syncSelectedPhotos() {
+                this.form.photos = this.angleSlots
+                    .map((slot) => slot.file)
+                    .filter(Boolean);
+            },
+
+            resetAngleInputs() {
+                this.angleSlots.forEach((slot) => {
+                    if (slot.objectUrl) {
+                        URL.revokeObjectURL(slot.objectUrl);
+                    }
+                    slot.objectUrl = null;
+                    slot.file = null;
+                    const input = document.getElementById('face-angle-' + slot.key);
+                    if (input) {
+                        input.value = '';
+                    }
+                });
+                this.form.photos = [];
             },
 
             async updateProfile() {
@@ -306,7 +428,7 @@
 
             async enrollFace() {
                 const payload = new FormData();
-                payload.append('photo', this.form.photo);
+                this.form.photos.forEach((photo) => payload.append('photos[]', photo));
 
                 const response = await fetch('/api/players/enroll-face', {
                     method: 'POST',
@@ -318,18 +440,20 @@
                 });
 
                 const result = await this.handleResponse(response);
-                const uploadedPhotoUrl = result?.data?.photo_url;
+                const uploadedPhotoUrls = result?.data?.photo_urls || [];
+                const uploadedPhotoUrl = result?.data?.photo_url || uploadedPhotoUrls[0];
 
                 if (uploadedPhotoUrl) {
-                    if (this.temporaryPhotoPreviewUrl) {
-                        URL.revokeObjectURL(this.temporaryPhotoPreviewUrl);
-                        this.temporaryPhotoPreviewUrl = '';
-                    }
-                    this.photoPreviewUrl = uploadedPhotoUrl;
+                    this.resetAngleInputs();
+                    this.angleSlots.forEach((slot, index) => {
+                        const url = uploadedPhotoUrls[index] || (index === 0 ? uploadedPhotoUrl : '');
+                        slot.previewUrl = url;
+                        slot.saved = Boolean(url);
+                    });
+                    this.existingProfilePreview = uploadedPhotoUrl;
                 }
 
                 this.hasPhoto = true;
-                this.form.photo = null;
             },
 
             async handleResponse(response) {
@@ -343,6 +467,12 @@
                     this.errors = Object.fromEntries(
                         Object.entries(result.errors).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value])
                     );
+
+                    const photoFieldError = Object.entries(this.errors)
+                        .find(([key]) => key.startsWith('photos.'));
+                    if (!this.errors.photos && photoFieldError) {
+                        this.errors.photos = photoFieldError[1];
+                    }
                 }
 
                 throw new Error(result.message || 'Terjadi kesalahan saat memproses data.');

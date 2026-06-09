@@ -24,6 +24,7 @@ class AccountSetupController extends Controller
         return view('dashboard.shared.account-setup', [
             'user' => $user,
             'player' => $user->player,
+            'hasFaceEnrollment' => (bool) $user->player?->faceEmbeddings()->exists(),
             'isPlayer' => $isPlayer,
             'roleLabel' => $isPlayer ? 'Player' : 'PIC Kontingen',
             'nextUrl' => $nextUrl,

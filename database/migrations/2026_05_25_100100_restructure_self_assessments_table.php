@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -101,9 +102,9 @@ return new class extends Migration
         // Skema lama menggunakan 'moderate', kita pertahankan untuk backward compat
         // tapi tambahkan 'medium' sebagai alias yang dipakai sistem baru.
         // PostgreSQL ENUM perlu ditangani via raw SQL.
-        if (Schema::hasColumn('self_assessments', 'risk_label')) {
+        if (DB::getDriverName() === 'mysql' && Schema::hasColumn('self_assessments', 'risk_label')) {
             // MySQL: ubah enum menjadi low, medium, high
-            \DB::statement("ALTER TABLE self_assessments MODIFY COLUMN risk_label ENUM('low', 'medium', 'high') DEFAULT 'low'");
+            DB::statement("ALTER TABLE self_assessments MODIFY COLUMN risk_label ENUM('low', 'medium', 'high') DEFAULT 'low'");
         }
     }
 
@@ -125,8 +126,8 @@ return new class extends Migration
         });
 
         // Kembalikan risk_label ke enum lama (MySQL)
-        if (Schema::hasColumn('self_assessments', 'risk_label')) {
-            \DB::statement("ALTER TABLE self_assessments MODIFY COLUMN risk_label ENUM('low', 'moderate', 'high') DEFAULT 'low'");
+        if (DB::getDriverName() === 'mysql' && Schema::hasColumn('self_assessments', 'risk_label')) {
+            DB::statement("ALTER TABLE self_assessments MODIFY COLUMN risk_label ENUM('low', 'moderate', 'high') DEFAULT 'low'");
         }
     }
 };

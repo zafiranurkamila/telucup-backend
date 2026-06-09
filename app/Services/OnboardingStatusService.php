@@ -23,7 +23,8 @@ class OnboardingStatusService
         return filled($player->nim_nip)
             && filled($player->employee_status)
             && filled($player->work_location)
-            && filled($player->photo_path);
+            && filled($player->photo_path)
+            && $player->faceEmbeddings()->exists();
     }
 
     public function hasSelfAssessment(User $user): bool

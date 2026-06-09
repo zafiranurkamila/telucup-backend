@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Player extends Model
@@ -30,9 +30,14 @@ class Player extends Model
         return $this->hasOne(SelfAssessment::class);
     }
 
+    public function faceEmbeddings(): HasMany
+    {
+        return $this->hasMany(FaceEmbedding::class);
+    }
+
     public function faceEmbedding(): HasOne
     {
-        return $this->hasOne(FaceEmbedding::class);
+        return $this->hasOne(FaceEmbedding::class)->latestOfMany();
     }
 
     public function photoFaces(): HasMany

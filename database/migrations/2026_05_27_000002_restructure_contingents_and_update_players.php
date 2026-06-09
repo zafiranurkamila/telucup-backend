@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,6 +12,16 @@ return new class extends Migration
         // 1. Restrukturisasi tabel contingents:
         //    - Hapus external_id dan faculty_name (tidak diperlukan)
         //    - Tambah pic_user_id sebagai referensi ke User yang menjadi PIC
+        if (Schema::hasColumn('contingents', 'external_id')) {
+            if (DB::getDriverName() === 'sqlite') {
+                DB::statement('DROP INDEX IF EXISTS contingents_external_id_unique');
+            } else {
+                Schema::table('contingents', function (Blueprint $table) {
+                    $table->dropUnique('contingents_external_id_unique');
+                });
+            }
+        }
+
         Schema::table('contingents', function (Blueprint $table) {
             $table->dropColumn(['external_id', 'faculty_name']);
             $table->foreignId('pic_user_id')

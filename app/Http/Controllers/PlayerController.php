@@ -454,7 +454,9 @@ class PlayerController extends Controller
     public function enrollFace(Request $request)
     {
         $request->validate([
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+            'photo'    => 'nullable|required_without:photos|image|mimes:jpeg,png,jpg|max:5120',
+            'photos'   => 'nullable|required_without:photo|array|min:1|max:5',
+            'photos.*' => 'image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
         $user   = $request->user();
@@ -470,56 +472,83 @@ class PlayerController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            $photos = $this->enrollmentPhotos($request);
+            $cloudinary = new Cloudinary(env('CLOUDINARY_URL'));
+            $imageUrls = [];
 
-            $cloudinary   = new Cloudinary(env('CLOUDINARY_URL'));
-            $uploadResult = $cloudinary->uploadApi()->upload($request->file('photo')->getRealPath(), [
-                'folder'    => 'telucup/player_profiles',
-                'public_id' => 'player_' . $player->id,
-                'overwrite' => true,
-            ]);
+            foreach ($photos as $index => $photo) {
+                $publicId = count($photos) === 1
+                    ? 'player_' . $player->id
+                    : 'player_' . $player->id . '_face_' . ($index + 1);
 
-            $imageUrl = $uploadResult['secure_url'];
-            $player->update(['photo_path' => $imageUrl]);
+                $uploadResult = $cloudinary->uploadApi()->upload($photo->getRealPath(), [
+                    'folder'    => 'telucup/player_profiles',
+                    'public_id' => $publicId,
+                    'overwrite' => true,
+                ]);
+
+                $imageUrls[] = $uploadResult['secure_url'];
+            }
 
             $fastApiBaseUrl = rtrim(config('services.fastapi.url', 'http://127.0.0.1:8001'), '/');
             $registerUrl    = $fastApiBaseUrl . '/api/register-face';
 
-            Log::info("Mengirim face enrollment untuk Player ID {$player->id} ke {$registerUrl}");
+            Log::info("Mengirim " . count($imageUrls) . " foto face enrollment untuk Player ID {$player->id} ke {$registerUrl}");
 
-            // FastAPI sekarang memproses embedding secara async (background task),
-            // sehingga response kembali segera. Timeout 10 detik cukup.
             try {
-                $aiResponse = Http::timeout(10)->post($registerUrl, [
-                    'player_id' => $player->id,
-                    'image_url' => $imageUrl,
+                $aiResponse = Http::timeout(120)->post($registerUrl, [
+                    'player_id'   => $player->id,
+                    'image_urls'  => $imageUrls,
+                    'replace'     => true,
                 ]);
-
-                if ($aiResponse->status() === 503) {
-                    $errorDetail = $aiResponse->json('detail') ?? 'AI Engine belum siap.';
-                    DB::rollBack();
-                    return response()->json(['status' => 'error', 'message' => 'AI Engine belum siap: ' . $errorDetail], 503);
-                }
             } catch (\Illuminate\Http\Client\ConnectionException $e) {
-                // Jika AI Engine tidak bisa dihubungi, foto tetap tersimpan.
-                // Face embedding akan absen (tidak memblokir onboarding).
                 Log::warning("AI Engine tidak terjangkau saat enrollment Player {$player->id}: " . $e->getMessage());
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'AI Engine tidak terjangkau. Jalankan service AI lalu coba upload foto wajah lagi.',
+                ], 502);
             }
 
-            DB::commit();
+            if (!$aiResponse->successful()) {
+                $errorDetail = $aiResponse->json('detail') ?? $aiResponse->body();
+                if (!$errorDetail) {
+                    $errorDetail = 'AI Engine gagal memproses foto wajah.';
+                }
+                Log::warning("Face enrollment gagal untuk Player {$player->id}. Status {$aiResponse->status()}: " . (is_string($errorDetail) ? $errorDetail : json_encode($errorDetail)));
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => is_string($errorDetail) ? $errorDetail : 'AI Engine gagal memproses foto wajah.',
+                ], $aiResponse->status() === 422 ? 422 : 502);
+            }
+
+            $player->update(['photo_path' => $imageUrls[0]]);
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Foto profil berhasil diunggah. Vektor wajah sedang diproses.',
+                'message' => 'Foto profil dan embedding wajah berhasil disimpan.',
                 'data'    => [
-                    'player_id' => $player->id,
-                    'photo_url' => $imageUrl,
+                    'player_id'         => $player->id,
+                    'photo_url'         => $imageUrls[0],
+                    'photo_urls'        => $imageUrls,
+                    'embeddings_saved'  => $aiResponse->json('data.embeddings_saved'),
+                    'failed_photos'     => $aiResponse->json('data.failed_photos'),
                 ],
             ]);
         } catch (\Throwable $e) {
-            DB::rollBack();
             Log::error("Face enrollment error: " . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => 'Gagal memproses face enrollment: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function enrollmentPhotos(Request $request): array
+    {
+        $photos = $request->file('photos', []);
+
+        if ($request->hasFile('photo')) {
+            array_unshift($photos, $request->file('photo'));
+        }
+
+        return array_values($photos);
     }
 }
