@@ -110,6 +110,7 @@ class SelfAssessmentController extends Controller
             ],
             'red_flags'     => $a->red_flags ?? [],
             'yellow_flags'  => $a->yellow_flags ?? [],
+            'injury_history'=> $a->injury_history ?: ($a->form_responses['B7_injury_history_description'] ?? 'Tidak ada riwayat'),
             'recommendation'   => $a->recommendation,
             'panitia_summary'  => $a->panitia_summary,
             'questionnaire_version' => $a->questionnaire_version,

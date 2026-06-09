@@ -13,15 +13,9 @@ class DashboardController extends Controller
     /**
      * Player dashboard — profil singkat dan quick links.
      */
-    public function index(Request $request): View
+    public function index(Request $request)
     {
-        $user = Auth::user();
-        $player = $user->player;
-
-        return view('dashboard.player.index', [
-            'user'   => $user,
-            'player' => $player,
-        ]);
+        return redirect()->route('dashboard.player.profil.show');
     }
 
     public function profil(Request $request): View
