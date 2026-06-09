@@ -133,6 +133,16 @@
             <svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
         </div>
         <h3 class="text-lg font-medium text-gray-800">Tidak ada tim yang ditemukan</h3>
-        <p class="text-gray-500 text-sm mt-1">Belum ada tim yang didaftarkan untuk kontingen ini.</p>
+        <p class="text-gray-500 text-sm mt-1 mb-6">Pilih cabang olahraga dan buat draft tim untuk memulai proses registrasi.</p>
+        <button 
+            @click="availableSports.length > 0 ? openModal('createTeamModal') : null" 
+            :disabled="availableSports.length === 0"
+            :class="availableSports.length === 0 ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-brand hover:bg-red-700 shadow-sm'"
+            class="inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-xl transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            <span x-text="availableSports.length > 0 ? 'Buat Draft Tim Pertama' : 'Semua Cabang Terdaftar'"></span>
+        </button>
     </div>
 </template>

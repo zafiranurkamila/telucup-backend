@@ -252,7 +252,7 @@
                 @endphp
 
                 @if(count($redFlags) > 0 || count($yellowFlags) > 0)
-                <div class="grid sm:grid-cols-2 gap-4">
+                <div class="grid {{ (count($redFlags) > 0 && count($yellowFlags) > 0) ? 'sm:grid-cols-2' : 'grid-cols-1' }} gap-4">
                     {{-- Red flags --}}
                     @if(count($redFlags) > 0)
                     <div class="bg-red-50 border border-red-200 rounded-2xl p-5">

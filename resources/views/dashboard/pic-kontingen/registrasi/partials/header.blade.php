@@ -4,10 +4,13 @@
         <p class="text-gray-500 text-sm mt-1">Daftarkan tim kontingen Anda ke cabang olahraga yang tersedia.</p>
     </div>
     <button 
-        @click="isRegisterModalOpen = true"
-        class="flex items-center justify-center gap-2 px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-    >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Daftarkan Tim Baru
+        @click="availableSports.length > 0 ? openModal('createTeamModal') : null" 
+        :disabled="availableSports.length === 0"
+        :class="availableSports.length === 0 ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-brand hover:bg-red-700 shadow-sm shadow-red-200'"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-white text-sm font-medium rounded-xl transition-colors">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+        </svg>
+        Buat Draft Tim Baru
     </button>
 </div>

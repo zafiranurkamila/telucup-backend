@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+use App\Models\Sport;
+
 class VerifikasiTimController extends Controller
 {
     /**
@@ -16,6 +18,7 @@ class VerifikasiTimController extends Controller
      */
     public function index(Request $request): View
     {
-        return view('dashboard.panitia.verifikasi-tim');
+        $sports = Sport::orderBy('name')->get();
+        return view('dashboard.panitia.verifikasi-tim', compact('sports'));
     }
 }

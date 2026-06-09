@@ -20,7 +20,7 @@ document.addEventListener('alpine:init', () => {
         assignPicContingentData: null,
         assignPlayerToPicData: null,
         assignContingentToPlayerData: null,
-        detailContingentId: null,
+        detailContingentData: null,
 
         // Forms state
         contingentForm: { name: '', image: null },

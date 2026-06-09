@@ -57,16 +57,28 @@
                     </button>
                 </div>
 
-                <div class="relative w-full sm:w-64 shrink-0">
-                    <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <div class="flex items-center gap-3 w-full sm:w-auto shrink-0 flex-col sm:flex-row">
+                    <select
+                        x-model="filterSport"
+                        class="w-full sm:w-48 pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a81d22]/20 focus:border-[#a81d22] bg-white text-gray-700"
+                    >
+                        <option value="">Semua Cabang Olahraga</option>
+                        @foreach($sports as $sport)
+                            <option value="{{ $sport->id }}">{{ $sport->name }}</option>
+                        @endforeach
+                    </select>
+
+                    <div class="relative w-full sm:w-64 shrink-0">
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            x-model="searchQuery"
+                            placeholder="Cari kontingen, cabang..." 
+                            class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a81d22]/20 focus:border-[#a81d22]"
+                        />
                     </div>
-                    <input 
-                        type="text" 
-                        x-model="searchQuery"
-                        placeholder="Cari kontingen, cabang..." 
-                        class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a81d22]/20 focus:border-[#a81d22]"
-                    />
                 </div>
             </div>
 
@@ -509,6 +521,7 @@
         Alpine.data('verifikasiTimManager', () => ({
             registrations: [],
             filterStatus: 'all',
+            filterSport: '',
             searchQuery: '',
             selectedReg: null,
             actionModal: null, // { type: 'verify'|'reject', reg: null }
@@ -526,6 +539,7 @@
             init() {
                 this.fetchRegistrations();
                 this.$watch('filterStatus', () => { this.page = 1; this.fetchRegistrations(); });
+                this.$watch('filterSport', () => { this.page = 1; this.fetchRegistrations(); });
                 this.$watch('page', () => { this.fetchRegistrations(); });
             },
 
@@ -573,6 +587,9 @@
                     let url = `/api/registrations?page=${this.page}`;
                     if (this.filterStatus !== 'all') {
                         url += `&status=${this.filterStatus}`;
+                    }
+                    if (this.filterSport) {
+                        url += `&sport_id=${this.filterSport}`;
                     }
                     const res = await this.api('GET', url);
                     if (res.status === 'success') {

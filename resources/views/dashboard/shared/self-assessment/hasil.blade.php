@@ -137,12 +137,12 @@
                             <p class="text-sm font-bold text-gray-900">{{ $data['snapshot']['age'] ?? '21' }} Tahun</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-1.5">Posisi</p>
-                            <p class="text-sm font-bold text-gray-900">-</p>
+                            <p class="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-1.5">Kondisi Saat Ini</p>
+                            <p class="text-sm font-bold text-gray-900 truncate" title="{{ $data['current_condition'] ?? 'Tidak ada' }}">{{ \Illuminate\Support\Str::limit($data['current_condition'] ?? 'Tidak ada', 20) }}</p>
                         </div>
                         <div>
-                            <p class="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-1.5">Terakhir Latihan</p>
-                            <p class="text-sm font-bold text-[#B41F2A]">-</p>
+                            <p class="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-1.5">Skor Nyeri</p>
+                            <p class="text-sm font-bold text-[#B41F2A]">{{ $data['pain_score'] ?? 0 }} / 10</p>
                         </div>
                         <div class="text-right">
                             <p class="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-1.5">Riwayat Cedera</p>

@@ -43,7 +43,7 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
                 <template x-for="member in filteredMembers" :key="member.id">
-                    <tr class="hover:bg-gray-50/50 transition-colors">
+                    <tr class="hover:bg-gray-50/50 transition-colors cursor-pointer" @click="window.location.href = '/dashboard/pic-kontingen/anggota/' + member.id">
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-4">
                                 <div class="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0 overflow-hidden">
@@ -93,16 +93,12 @@
                                         Data Belum Lengkap
                                     </span>
                                 </template>
-                                
-                                <a :href="'/dashboard/pic-kontingen/anggota/' + member.id" class="text-[10px] text-blue-600 hover:underline font-medium uppercase tracking-wider w-fit">
-                                    Lihat Detail Data
-                                </a>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <button 
-                                    @click="handleRemoveMember(member.id)"
+                                    @click.stop="handleRemoveMember(member.id)"
                                     class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                     title="Hapus dari kontingen"
                                 >

@@ -73,7 +73,7 @@
                     </button>
                     <button 
                         type="submit"
-                        :disabled="isSubmitting"
+                        :disabled="isSubmitting || !selectedSport || (selectedSportObj && selectedSportObj.categories && selectedSportObj.categories.length > 0 && !selectedCategory)"
                         class="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-hover disabled:opacity-50"
                     >
                         <span x-show="!isSubmitting">Buat Draft Tim</span>

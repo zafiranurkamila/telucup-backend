@@ -400,7 +400,7 @@ class SelfAssessmentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = SelfAssessment::query()
-            ->with(['player.user'])
+            ->with(['player.user', 'player.contingent'])
             ->latest();
 
         if ($risk = $request->query('risk_label')) {
@@ -421,6 +421,8 @@ class SelfAssessmentController extends Controller
 
         $perPage = min(100, max(5, (int) $request->query('per_page', 20)));
         $paginated = $query->paginate($perPage);
+        
+        $paginated->through(fn($a) => $this->formatAssessmentResponse($a));
 
         return response()->json([
             'status' => 'success',
@@ -580,17 +582,12 @@ class SelfAssessmentController extends Controller
             'reviewed_at'        => now(),
         ]);
 
+        $assessment->load(['player.user', 'player.contingent']);
+
         return response()->json([
             'status'  => 'success',
             'message' => 'Review medis berhasil disimpan.',
-            'data'    => [
-                'id'              => $assessment->id,
-                'is_allowed_to_play' => $assessment->is_allowed_to_play,
-                'status_label'    => $assessment->is_allowed_to_play
-                    ? 'Diizinkan Bermain'
-                    : 'Tidak Diizinkan / Istirahat',
-                'reviewed_at'     => $assessment->reviewed_at,
-            ],
+            'data'    => $this->formatAssessmentResponse($assessment, true),
         ]);
     }
 
