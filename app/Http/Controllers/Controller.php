@@ -69,6 +69,9 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: "image_url",            type: "string",  example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/event_photos/abc123.jpg"),
         new OA\Property(property: "uploaded_by",          type: "integer", nullable: true, example: 2),
         new OA\Property(property: "gallery_folder_id",    type: "integer", nullable: true, example: 3),
+        new OA\Property(property: "ai_status",            type: "string",  enum: ["pending", "processing", "completed", "failed"], example: "completed"),
+        new OA\Property(property: "faces_detected",       type: "integer", nullable: true, example: 4),
+        new OA\Property(property: "ai_processed_at",      type: "string",  format: "date-time", nullable: true),
         new OA\Property(property: "created_at",           type: "string",  format: "date-time"),
         new OA\Property(property: "updated_at",           type: "string",  format: "date-time"),
     ]

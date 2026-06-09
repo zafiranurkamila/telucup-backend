@@ -33,6 +33,9 @@ class EventPhotoController extends Controller
                         new OA\Property(property: "cloudinary_public_id", type: "string", example: "telucup/event_photos/abc123"),
                         new OA\Property(property: "image_url", type: "string", example: "https://res.cloudinary.com/demo/image/upload/v1/telucup/event_photos/abc123.jpg"),
                         new OA\Property(property: "uploaded_by", type: "integer", example: 2),
+                        new OA\Property(property: "ai_status", type: "string", enum: ["pending", "processing", "completed", "failed"], example: "completed"),
+                        new OA\Property(property: "faces_detected", type: "integer", nullable: true, example: 4),
+                        new OA\Property(property: "ai_processed_at", type: "string", format: "date-time", nullable: true),
                         new OA\Property(property: "created_at", type: "string", format: "date-time"),
                         new OA\Property(property: "updated_at", type: "string", format: "date-time")
                     ]
@@ -51,6 +54,10 @@ class EventPhotoController extends Controller
             } else {
                 $query->where('gallery_folder_id', (int) $folderId);
             }
+        }
+
+        if ($request->filled('ai_status')) {
+            $query->where('ai_status', $request->input('ai_status'));
         }
 
         return response()->json([
@@ -226,6 +233,84 @@ class EventPhotoController extends Controller
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Gagal menghapus foto: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    #[OA\Post(
+        path: "/api/event-photos/{id}/reprocess",
+        operationId: "reprocessEventPhoto",
+        tags: ["Event Photo"],
+        summary: "Proses ulang AI untuk satu foto event",
+        description: "Panitia menjadwalkan ulang AI processing untuk satu foto. Hasil deteksi wajah lama dihapus sebelum job baru dikirim ke queue.",
+        security: [["bearerAuth" => []]]
+    )]
+    #[OA\Parameter(
+        name: "id",
+        description: "ID foto event",
+        required: true,
+        in: "path",
+        schema: new OA\Schema(type: "integer")
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Foto berhasil dijadwalkan untuk diproses ulang",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status",  type: "string", example: "success"),
+                new OA\Property(property: "message", type: "string", example: "Foto event berhasil dijadwalkan untuk diproses ulang."),
+                new OA\Property(property: "data",    ref: "#/components/schemas/EventPhotoObject"),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: "Foto tidak ditemukan",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    #[OA\Response(
+        response: 500,
+        description: "Gagal menjadwalkan reprocess foto",
+        content: new OA\JsonContent(ref: "#/components/schemas/ErrorResponse")
+    )]
+    public function reprocess($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $eventPhoto = EventPhoto::find($id);
+
+            if (!$eventPhoto) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Foto event tidak ditemukan.',
+                ], 404);
+            }
+
+            $eventPhoto->photoFaces()->delete();
+            $eventPhoto->update([
+                'ai_status'       => 'pending',
+                'faces_detected'  => null,
+                'ai_processed_at' => null,
+            ]);
+
+            DB::commit();
+
+            ProcessEventPhoto::dispatch($eventPhoto->fresh());
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Foto event berhasil dijadwalkan untuk diproses ulang.',
+                'data'    => $eventPhoto->fresh(),
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menjadwalkan reprocess foto: ' . $e->getMessage(),
             ], 500);
         }
     }

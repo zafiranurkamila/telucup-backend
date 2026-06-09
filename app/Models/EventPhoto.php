@@ -13,6 +13,14 @@ class EventPhoto extends Model
         'image_url',
         'uploaded_by',
         'gallery_folder_id',
+        'ai_status',
+        'faces_detected',
+        'ai_processed_at',
+    ];
+
+    protected $casts = [
+        'ai_processed_at' => 'datetime',
+        'faces_detected' => 'integer',
     ];
 
     public function uploader(): BelongsTo

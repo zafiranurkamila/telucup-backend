@@ -199,6 +199,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Panitia: Upload, Ambil & Hapus foto event
         Route::post('/event-photos', [EventPhotoController::class, 'store']);
+        Route::post('/event-photos/{id}/reprocess', [EventPhotoController::class, 'reprocess'])->whereNumber('id');
         Route::delete('/event-photos/{id}', [EventPhotoController::class, 'destroy']);
         Route::patch('/event-photos/{id}/move-folder', [EventPhotoController::class, 'moveFolder']);
 

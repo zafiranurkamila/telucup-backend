@@ -10,12 +10,17 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
+use Throwable;
 
 class ProcessEventPhoto implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $eventPhoto;
+    public $tries = 5;
+    public $backoff = [10, 30, 60, 120, 300];
+    public $timeout = 120;
 
     /**
      * Create a new job instance.
@@ -30,28 +35,73 @@ class ProcessEventPhoto implements ShouldQueue
      */
     public function handle(): void
     {
-        // Asumsi: URL FastAPI Anda berjalan di port 8000
         $fastApiBaseUrl = rtrim(config('services.fastapi.url', 'http://127.0.0.1:8001'), '/');
         $fastApiUrl = $fastApiBaseUrl . '/api/process-photo';
 
-        try {
-            // Mengirim request ke FastAPI
-            // Kita mengirimkan ID foto dan URL Cloudinary-nya
-            $response = Http::timeout(60)->post($fastApiUrl, [
-                'event_photo_id' => $this->eventPhoto->id,
-                'image_url'      => $this->eventPhoto->image_url,
-            ]);
+        $this->eventPhoto->update([
+            'ai_status' => 'processing',
+        ]);
 
-            if ($response->successful()) {
-                Log::info("Berhasil mengirim EventPhoto ID {$this->eventPhoto->id} ke FastAPI.");
-            } else {
-                Log::error("Gagal mengirim EventPhoto ID {$this->eventPhoto->id} ke FastAPI. Status: " . $response->status());
-                // Anda bisa mengaktifkan mekanisme retry di sini jika diperlukan
-                $this->release(10); // Coba lagi dalam 10 detik
-            }
-        } catch (\Exception $e) {
-            Log::error("Koneksi ke FastAPI terputus: " . $e->getMessage());
-            $this->release(10); 
+        $optimizedUrl = $this->optimizedImageUrl($this->eventPhoto->image_url);
+
+        $response = Http::timeout($this->timeout)->post($fastApiUrl, [
+            'event_photo_id' => $this->eventPhoto->id,
+            'image_url'      => $optimizedUrl,
+        ]);
+
+        if (!$response->successful()) {
+            Log::warning("Gagal mengirim EventPhoto ID {$this->eventPhoto->id} ke FastAPI. Status: " . $response->status());
+
+            throw new RuntimeException("FastAPI process-photo gagal dengan status {$response->status()}.");
         }
+
+        $responseData = $response->json();
+
+        $this->eventPhoto->update([
+            'ai_status'       => 'completed',
+            'faces_detected'  => $this->facesDetectedFromResponse(is_array($responseData) ? $responseData : []),
+            'ai_processed_at' => now(),
+        ]);
+
+        Log::info("Berhasil memproses EventPhoto ID {$this->eventPhoto->id} melalui FastAPI.");
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        EventPhoto::whereKey($this->eventPhoto->id)->update([
+            'ai_status' => 'failed',
+        ]);
+
+        Log::error("ProcessEventPhoto FINAL FAIL untuk ID {$this->eventPhoto->id}: " . $exception->getMessage());
+    }
+
+    private function optimizedImageUrl(string $imageUrl): string
+    {
+        if (!str_contains($imageUrl, '/upload/')) {
+            return $imageUrl;
+        }
+
+        if (str_contains($imageUrl, '/upload/w_2048,c_limit,q_95,f_jpg/')) {
+            return $imageUrl;
+        }
+
+        return str_replace('/upload/', '/upload/w_2048,c_limit,q_95,f_jpg/', $imageUrl);
+    }
+
+    private function facesDetectedFromResponse(?array $responseData): int
+    {
+        $responseData ??= [];
+
+        foreach (['faces_detected', 'face_count', 'faces_count', 'detected_faces_count'] as $key) {
+            if (isset($responseData[$key]) && is_numeric($responseData[$key])) {
+                return (int) $responseData[$key];
+            }
+        }
+
+        if (isset($responseData['faces']) && is_array($responseData['faces'])) {
+            return count($responseData['faces']);
+        }
+
+        return $this->eventPhoto->photoFaces()->count();
     }
 }
