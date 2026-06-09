@@ -131,6 +131,7 @@
                         </h3>
                         <div class="grid grid-cols-2 gap-3">
                             <div><p class="text-[10px] font-bold uppercase text-gray-400 mb-0.5">Nama</p><p class="text-xs font-semibold text-gray-800" x-text="selectedAssessment.player_name || '—'"></p></div>
+                            <div><p class="text-[10px] font-bold uppercase text-gray-400 mb-0.5">NIM/NIP</p><p class="text-xs font-semibold text-gray-800" x-text="selectedAssessment.nim_nip || '—'"></p></div>
                             <div><p class="text-[10px] font-bold uppercase text-gray-400 mb-0.5">Kontingen</p><p class="text-xs font-semibold text-gray-800" x-text="selectedAssessment.contingent || '—'"></p></div>
                             <div><p class="text-[10px] font-bold uppercase text-gray-400 mb-0.5">Cabang Olahraga</p><p class="text-xs font-semibold text-gray-800" x-text="selectedAssessment.sport_branch || '—'"></p></div>
                             <div><p class="text-[10px] font-bold uppercase text-gray-400 mb-0.5">Usia</p><p class="text-xs font-semibold text-gray-800" x-text="selectedAssessment.snapshot?.age ? `${selectedAssessment.snapshot.age} tahun` : '—'"></p></div>

@@ -15,6 +15,14 @@
             <option value="low">Low Risk</option>
         </select>
         
+        <!-- Sport Filter -->
+        <select x-model="sportFilter" class="w-full sm:w-48 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#B41F2A] bg-white text-gray-700">
+            <option value="">Semua Cabang Olahraga</option>
+            <template x-for="s in sportSummary" :key="s.sport_branch">
+                <option :value="s.sport_branch" x-text="s.sport_branch"></option>
+            </template>
+        </select>
+        
         <!-- Clearance Filter -->
         <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-600 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors">
             <input type="checkbox" x-model="clearanceFilter" class="rounded text-[#B41F2A] focus:ring-[#B41F2A]">
@@ -23,8 +31,8 @@
     </div>
     
     <!-- Clear Filters -->
-    <template x-if="searchQuery || riskFilter || clearanceFilter">
-        <button @click="searchQuery = ''; riskFilter = ''; clearanceFilter = false;" class="text-sm text-gray-500 hover:text-red-600 transition-colors flex items-center gap-1 font-medium">
+    <template x-if="searchQuery || riskFilter || clearanceFilter || sportFilter">
+        <button @click="searchQuery = ''; riskFilter = ''; clearanceFilter = false; sportFilter = '';" class="text-sm text-gray-500 hover:text-red-600 transition-colors flex items-center gap-1 font-medium">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             Reset Filter
         </button>
@@ -57,7 +65,9 @@
                         <td class="p-4 text-center font-medium text-gray-400 text-xs" x-text="'#' + assessment.id"></td>
                         <td class="p-4">
                             <p class="font-bold text-gray-800" x-text="assessment.player_name || 'Tidak diketahui'"></p>
-                            <p class="text-xs text-gray-500 mt-0.5" x-text="formatDateShort(assessment.created_at)"></p>
+                            <p class="text-[11px] text-gray-500 mt-0.5">
+                                <span x-text="assessment.nim_nip || 'NIM/NIP: -'"></span> &bull; <span x-text="formatDateShort(assessment.created_at)"></span>
+                            </p>
                         </td>
                         <td class="p-4">
                             <p class="font-semibold text-gray-700" x-text="assessment.contingent || '-'"></p>

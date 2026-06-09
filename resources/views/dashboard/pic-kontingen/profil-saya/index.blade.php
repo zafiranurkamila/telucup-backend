@@ -215,29 +215,32 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
                         @php
                             $domains = [
-                                ['label' => 'Kardiovaskular', 'weight' => '35%', 'score' => $assessment->score_cardiovascular ?? 0],
-                                ['label' => 'Muskuloskeletal', 'weight' => '30%', 'score' => $assessment->score_musculoskeletal ?? 0],
-                                ['label' => 'Kesiapan Akut', 'weight' => '20%', 'score' => $assessment->score_acute_readiness ?? 0],
-                                ['label' => 'Psikososial', 'weight' => '15%', 'score' => $assessment->score_psychosocial ?? 0],
+                                ['label' => 'Kardiovaskular', 'weight' => '35%', 'score' => $assessment->score_cardiovascular ?? 0, 'desc' => 'Kesehatan jantung dan paru-paru'],
+                                ['label' => 'Muskuloskeletal', 'weight' => '30%', 'score' => $assessment->score_musculoskeletal ?? 0, 'desc' => 'Kondisi otot, tulang, dan sendi'],
+                                ['label' => 'Kesiapan Akut', 'weight' => '20%', 'score' => $assessment->score_acute_readiness ?? 0, 'desc' => 'Kesiapan fisik harian dan hidrasi'],
+                                ['label' => 'Psikososial', 'weight' => '15%', 'score' => $assessment->score_psychosocial ?? 0, 'desc' => 'Tingkat stres dan kesehatan mental'],
                             ];
                         @endphp
                         
                         @foreach($domains as $domain)
                         <div>
-                            <div class="flex items-center justify-between mb-1.5">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="text-xs font-medium text-gray-600">{{ $domain['label'] }}</span>
-                                    <span class="text-[10px] text-gray-400">({{ $domain['weight'] }})</span>
+                            <div class="flex items-start justify-between mb-1.5">
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-xs font-medium text-gray-600">{{ $domain['label'] }}</span>
+                                        <span class="text-[10px] text-gray-400">({{ $domain['weight'] }})</span>
+                                    </div>
+                                    <span class="text-[9px] text-gray-400 mt-0.5 leading-tight">{{ $domain['desc'] }}</span>
                                 </div>
-                                <span class="text-xs font-bold text-gray-700">{{ number_format($domain['score'], 1) }}</span>
+                                <span class="text-xs font-bold text-gray-700 mt-0.5">{{ number_format($domain['score'], 1) }}</span>
                             </div>
-                            <div class="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                            <div class="h-2 w-full rounded-full bg-gray-100 overflow-hidden mt-1">
                                 <div class="h-full rounded-full {{ getDomainColor($domain['score']) }}" style="width: {{ min($domain['score'], 100) }}%"></div>
                             </div>
                         </div>
                         @endforeach
                     </div>
-                    <p class="mt-3 text-[10px] text-gray-400">
+                    <p class="mt-3 text-[10px] text-gray-400 border-t border-gray-100 pt-3">
                         Interpretasi: 0–25 Rendah &middot; 26–50 Sedang &middot; 51–100 Tinggi
                     </p>
                 </div>
@@ -368,9 +371,7 @@
                     <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                         <svg class="w-4 h-4 text-[#b71c1c]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg> Rekomendasi Sistem
                     </h3>
-                    <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        {{ $assessment->recommendation }}
-                    </p>
+                    <p class="text-sm text-gray-600 leading-normal whitespace-pre-line bg-gray-50 rounded-xl p-4 border border-gray-100">{{ trim($assessment->recommendation) }}</p>
                 </div>
                 @endif
 

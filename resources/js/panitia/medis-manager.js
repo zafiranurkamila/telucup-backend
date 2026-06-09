@@ -9,6 +9,7 @@ document.addEventListener('alpine:init', () => {
         
         // Filters
         riskFilter: '',
+        sportFilter: '',
         clearanceFilter: false,
         searchQuery: '',
         
@@ -35,6 +36,7 @@ document.addEventListener('alpine:init', () => {
             
             this.$watch('page', () => this.fetchAssessments());
             this.$watch('riskFilter', () => { this.page = 1; this.fetchAssessments(); });
+            this.$watch('sportFilter', () => { this.page = 1; this.fetchAssessments(); });
             this.$watch('clearanceFilter', () => { this.page = 1; this.fetchAssessments(); });
         },
         
@@ -68,6 +70,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 const params = new URLSearchParams({ page: this.page, per_page: 20 });
                 if (this.riskFilter) params.set('risk_label', this.riskFilter);
+                if (this.sportFilter) params.set('sport_branch', this.sportFilter);
                 if (this.clearanceFilter) params.set('requires_clearance', 'true');
                 
                 const json = await this.api(`/api/self-assessment?${params}`);

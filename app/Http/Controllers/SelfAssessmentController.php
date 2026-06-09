@@ -707,7 +707,8 @@ class SelfAssessmentController extends Controller
         $base = [
             'id'                    => $a->id,
             'player_id'             => $a->player_id,
-            'player_name'           => $a->player?->name,
+            'player_name'           => $a->player?->name ?? $a->player?->user?->name,
+            'nim_nip'               => $a->player?->nim_nip,
             'sport_branch'          => $a->sport_branch_snapshot,
             'contingent'            => $a->player?->contingent?->name,
             'snapshot' => [

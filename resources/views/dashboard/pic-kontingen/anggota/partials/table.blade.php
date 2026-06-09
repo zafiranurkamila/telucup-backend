@@ -94,9 +94,8 @@
                                     </span>
                                 </template>
                                 
-                                {{-- Currently Next.js links to /player/{id}. In Laravel we might just point there if route exists, or # for now. --}}
-                                <a :href="'/dashboard/player/'" class="text-[10px] text-blue-600 hover:underline font-medium uppercase tracking-wider w-fit">
-                                    Lihat / Lengkapi Data
+                                <a :href="'/dashboard/pic-kontingen/anggota/' + member.id" class="text-[10px] text-blue-600 hover:underline font-medium uppercase tracking-wider w-fit">
+                                    Lihat Detail Data
                                 </a>
                             </div>
                         </td>

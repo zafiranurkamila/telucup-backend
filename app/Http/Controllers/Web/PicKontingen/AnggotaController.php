@@ -15,4 +15,18 @@ class AnggotaController extends Controller
     {
         return view('dashboard.pic-kontingen.anggota.index');
     }
+
+    public function show($id): View
+    {
+        $member = \App\Models\Player::with(['user', 'contingent', 'selfAssessment'])->findOrFail($id);
+        
+        $picKontingen = auth()->user()->picKontingen;
+        if (!$picKontingen || $member->contingent_id !== $picKontingen->contingent_id) {
+            abort(403, 'Anda tidak berhak melihat data anggota ini.');
+        }
+
+        $assessment = \App\Models\SelfAssessment::where('player_id', $member->id)->latest()->first();
+
+        return view('dashboard.pic-kontingen.anggota.show', compact('member', 'assessment'));
+    }
 }

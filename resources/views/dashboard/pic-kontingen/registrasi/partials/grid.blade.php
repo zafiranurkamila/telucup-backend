@@ -1,12 +1,33 @@
 <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gray-50/50">
-    <div class="relative w-full sm:w-64">
-        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <input 
-            type="text" 
-            placeholder="Cari cabang olahraga..."
-            class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-shadow"
-            x-model="searchTerm"
-        />
+    <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+        <div class="relative w-full sm:w-64">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input 
+                type="text" 
+                placeholder="Cari cabang olahraga..."
+                class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-shadow"
+                x-model="searchTerm"
+            />
+        </div>
+        <select 
+            x-model="sportFilter"
+            class="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-shadow text-gray-600"
+        >
+            <option value="">Semua Cabang Olahraga</option>
+            <template x-for="sport in availableSports" :key="sport.id">
+                <option :value="sport.id" x-text="sport.name"></option>
+            </template>
+        </select>
+        <select 
+            x-model="statusFilter"
+            class="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-shadow text-gray-600"
+        >
+            <option value="">Semua Status</option>
+            <option value="draft">Draft</option>
+            <option value="submitted">Menunggu Verifikasi</option>
+            <option value="verified">Terverifikasi</option>
+            <option value="rejected">Ditolak</option>
+        </select>
     </div>
 </div>
 

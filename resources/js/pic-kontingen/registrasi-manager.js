@@ -7,6 +7,8 @@ document.addEventListener('alpine:init', () => {
         isLoading: true,
         isSubmitting: false,
         searchTerm: '',
+        statusFilter: '',
+        sportFilter: '',
         
         // Modal States
         isRegisterModalOpen: false,
@@ -71,7 +73,11 @@ document.addEventListener('alpine:init', () => {
                 const sportName = team.sport?.name || "";
                 const catName = team.sport_category?.name || "";
                 const fullName = `${sportName} ${catName}`.toLowerCase();
-                return fullName.includes(this.searchTerm.toLowerCase());
+                const matchSearch = fullName.includes(this.searchTerm.toLowerCase());
+                
+                const matchStatus = this.statusFilter ? team.status === this.statusFilter : true;
+                const matchSport = this.sportFilter ? team.sport?.id == this.sportFilter : true;
+                return matchSearch && matchStatus && matchSport;
             });
         },
 
@@ -80,7 +86,29 @@ document.addEventListener('alpine:init', () => {
         },
 
         get selectedSportObj() {
-            return this.availableSports.find(s => s.id === parseInt(this.selectedSport));
+            return this.unregisteredSports.find(s => s.id === parseInt(this.selectedSport));
+        },
+
+        get unregisteredSports() {
+            return this.availableSports.filter(sport => {
+                const registeredTeamsForSport = this.teams.filter(t => t.sport?.id === sport.id);
+                if (!sport.categories || sport.categories.length === 0) {
+                    return registeredTeamsForSport.length === 0;
+                } else {
+                    return registeredTeamsForSport.length < sport.categories.length;
+                }
+            }).map(sport => {
+                if (sport.categories && sport.categories.length > 0) {
+                    const registeredCategoryIds = this.teams
+                        .filter(t => t.sport?.id === sport.id)
+                        .map(t => t.sport_category?.id);
+                    return {
+                        ...sport,
+                        categories: sport.categories.filter(cat => !registeredCategoryIds.includes(cat.id))
+                    };
+                }
+                return sport;
+            });
         },
 
         get availablePlayers() {

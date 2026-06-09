@@ -111,6 +111,7 @@ Route::prefix('dashboard/pic-kontingen')
         Route::middleware('player.onboarding')->group(function () {
             Route::get('/', [PicDashboard::class, 'index'])->name('index');
             Route::get('/anggota', [AnggotaController::class, 'index'])->name('anggota');
+            Route::get('/anggota/{id}', [AnggotaController::class, 'show'])->name('anggota.show');
             Route::get('/registrasi', [RegistrasiController::class, 'index'])->name('registrasi');
 
             // Tahap 5+: halaman fitur PIC akan ditambahkan di sini

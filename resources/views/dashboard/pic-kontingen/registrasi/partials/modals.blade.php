@@ -32,7 +32,7 @@
                             class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400"
                         >
                             <option value="" disabled>-- Pilih Cabang Olahraga --</option>
-                            <template x-for="sport in availableSports" :key="sport.id">
+                            <template x-for="sport in unregisteredSports" :key="sport.id">
                                 <option :value="sport.id" x-text="sport.name"></option>
                             </template>
                         </select>

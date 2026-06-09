@@ -87,18 +87,21 @@
                     <div class="space-y-6">
                         @php
                             $domains = [
-                                ['key' => 'cardiovascular', 'label' => 'Kardiovaskular'],
-                                ['key' => 'musculoskeletal', 'label' => 'Muskuloskeletal'],
-                                ['key' => 'acute_readiness', 'label' => 'Kesiapan Akut'],
-                                ['key' => 'psychosocial', 'label' => 'Psikososial'],
+                                ['key' => 'cardiovascular', 'label' => 'Kardiovaskular', 'desc' => 'Kesehatan jantung dan paru-paru'],
+                                ['key' => 'musculoskeletal', 'label' => 'Muskuloskeletal', 'desc' => 'Kondisi otot, tulang, dan sendi'],
+                                ['key' => 'acute_readiness', 'label' => 'Kesiapan Akut', 'desc' => 'Kesiapan fisik harian dan hidrasi'],
+                                ['key' => 'psychosocial', 'label' => 'Psikososial', 'desc' => 'Tingkat stres dan kesehatan mental'],
                             ];
                         @endphp
                         @foreach($domains as $domain)
                             @php $score = $data['domain_scores'][$domain['key']] ?? 0; @endphp
                             <div>
                                 <div class="flex justify-between text-sm font-bold text-gray-800 mb-2.5">
-                                    <span>{{ $domain['label'] }}</span>
-                                    <span class="text-gray-500">{{ number_format($score, 1) }} / 100</span>
+                                    <div class="flex flex-col">
+                                        <span>{{ $domain['label'] }}</span>
+                                        <span class="text-[10px] text-gray-400 font-normal leading-tight mt-0.5">{{ $domain['desc'] }}</span>
+                                    </div>
+                                    <span class="text-gray-500 mt-1">{{ number_format($score, 1) }} / 100</span>
                                 </div>
                                 <div class="w-full bg-gray-100 rounded-full h-2">
                                     <div class="h-2 rounded-full transition-all duration-1000 {{ $score >= 80 ? 'bg-green-500' : ($score >= 50 ? 'bg-amber-500' : 'bg-[#B41F2A]') }}" style="width: {{ $score }}%"></div>
@@ -107,9 +110,7 @@
                         @endforeach
                     </div>
                     
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-2 gap-3 border-t border-gray-100 mt-6 pt-4">
-                        <span class="text-xs text-gray-400 italic font-medium">Model Confidence: <strong class="text-gray-600 font-bold">{{ $data['confidence_score'] ?? 87 }}%</strong> (Kualitas data: Tinggi)</span>
-                    </div>
+                    
                 </div>
 
             </div>
