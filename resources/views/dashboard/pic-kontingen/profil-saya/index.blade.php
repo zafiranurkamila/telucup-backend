@@ -174,25 +174,10 @@
                     <div class="h-1.5 {{ $risk['headerBar'] }}"></div>
                     <div class="p-6">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                            {{-- Confidence circle --}}
-                            <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-[7px] {{ $risk['border'] }} bg-white">
-                                <div class="text-center">
-                                    <p class="text-lg font-extrabold text-gray-900 leading-tight">
-                                        {{ round($assessment->confidence_score ?? 0) }}%
-                                    </p>
-                                    <p class="text-[9px] font-bold uppercase text-gray-400 leading-none">
-                                        Conf.
-                                    </p>
-                                </div>
-                            </div>
-
                             <div class="flex-1">
                                 <div class="flex flex-wrap items-center gap-3 mb-2">
                                     <span class="rounded-full px-5 py-1.5 text-sm font-extrabold {{ $risk['badge'] }}">
                                         {{ $risk['label'] }}
-                                    </span>
-                                    <span class="text-sm font-bold {{ $risk['text'] }}">
-                                        Skor: {{ number_format($assessment->total_score ?? 0, 1) }} / 100
                                     </span>
                                 </div>
 

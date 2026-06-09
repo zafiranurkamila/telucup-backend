@@ -26,16 +26,9 @@
                     <div class="rounded-xl border border-gray-100 bg-white p-5 overflow-hidden relative shadow-sm">
                         <div class="absolute inset-x-0 top-0 h-1" :class="selectedAssessment.risk_label === 'high' ? 'bg-[#B41F2A]' : (selectedAssessment.risk_label === 'medium' ? 'bg-amber-500' : 'bg-green-600')"></div>
                         <div class="flex items-center gap-4 mt-1">
-                            <div class="w-16 h-16 shrink-0 rounded-full border-[6px] flex items-center justify-center bg-white" :class="selectedAssessment.risk_label === 'high' ? 'border-[#B41F2A]' : (selectedAssessment.risk_label === 'medium' ? 'border-amber-500' : 'border-green-600')">
-                                <div class="text-center">
-                                    <p class="text-base font-extrabold text-gray-800 leading-tight" x-text="Math.round(selectedAssessment.confidence_score || 0) + '%'"></p>
-                                    <p class="text-[9px] font-bold uppercase text-gray-400 leading-none">Conf.</p>
-                                </div>
-                            </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex flex-wrap items-center gap-2 mb-1.5">
                                     <span :class="getRiskBadgeClass(selectedAssessment.risk_label)" class="px-2.5 py-1 rounded-full text-xs font-bold border" x-text="getRiskLabel(selectedAssessment.risk_label)"></span>
-                                    <span class="text-sm font-bold" :class="selectedAssessment.risk_label === 'high' ? 'text-[#B41F2A]' : (selectedAssessment.risk_label === 'medium' ? 'text-amber-600' : 'text-green-700')" x-text="`Skor: ${selectedAssessment.total_score ? selectedAssessment.total_score.toFixed(1) : '-'}`"></span>
                                 </div>
                                 <template x-if="selectedAssessment.requires_clearance">
                                     <div class="inline-flex items-center gap-1.5 text-xs font-bold text-[#B41F2A] bg-red-50 border border-red-200 rounded-lg px-2.5 py-1">
