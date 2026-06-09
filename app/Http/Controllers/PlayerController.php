@@ -473,6 +473,7 @@ class PlayerController extends Controller
             DB::beginTransaction();
 
             $cloudinary   = new Cloudinary(env('CLOUDINARY_URL'));
+            $uploadedPublicId = null;
             $uploadResult = $cloudinary->uploadApi()->upload($request->file('photo')->getRealPath(), [
                 'folder'    => 'telucup/player_profiles',
                 'public_id' => 'player_' . $player->id,
@@ -480,6 +481,7 @@ class PlayerController extends Controller
             ]);
 
             $imageUrl = $uploadResult['secure_url'];
+            $uploadedPublicId = $uploadResult['public_id'] ?? null;
             $player->update(['photo_path' => $imageUrl]);
 
             $fastApiBaseUrl = rtrim(config('services.fastapi.url', 'http://127.0.0.1:8001'), '/');
@@ -487,39 +489,68 @@ class PlayerController extends Controller
 
             Log::info("Mengirim face enrollment untuk Player ID {$player->id} ke {$registerUrl}");
 
-            // FastAPI sekarang memproses embedding secara async (background task),
-            // sehingga response kembali segera. Timeout 10 detik cukup.
+            $aiResult = null;
+
             try {
                 $aiResponse = Http::timeout(10)->post($registerUrl, [
                     'player_id' => $player->id,
                     'image_url' => $imageUrl,
                 ]);
 
-                if ($aiResponse->status() === 503) {
-                    $errorDetail = $aiResponse->json('detail') ?? 'AI Engine belum siap.';
+                if (!$aiResponse->successful()) {
+                    $errorDetail = $aiResponse->json('detail') ?? $aiResponse->body() ?: 'AI Engine gagal memproses foto.';
+                    $statusCode = in_array($aiResponse->status(), [422, 503], true) ? $aiResponse->status() : 502;
+
                     DB::rollBack();
-                    return response()->json(['status' => 'error', 'message' => 'AI Engine belum siap: ' . $errorDetail], 503);
+                    $this->deleteUploadedFacePhoto($cloudinary, $uploadedPublicId);
+
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'Face enrollment gagal: ' . $errorDetail,
+                    ], $statusCode);
                 }
+
+                $aiResult = $aiResponse->json();
             } catch (\Illuminate\Http\Client\ConnectionException $e) {
-                // Jika AI Engine tidak bisa dihubungi, foto tetap tersimpan.
-                // Face embedding akan absen (tidak memblokir onboarding).
+                DB::rollBack();
+                $this->deleteUploadedFacePhoto($cloudinary, $uploadedPublicId);
+
                 Log::warning("AI Engine tidak terjangkau saat enrollment Player {$player->id}: " . $e->getMessage());
+
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'AI Engine tidak terjangkau saat face enrollment.',
+                ], 502);
             }
 
             DB::commit();
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Foto profil berhasil diunggah. Vektor wajah sedang diproses.',
+                'message' => 'Foto profil berhasil diunggah dan vektor wajah berhasil diregistrasi.',
                 'data'    => [
                     'player_id' => $player->id,
                     'photo_url' => $imageUrl,
+                    'ai_result' => $aiResult,
                 ],
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error("Face enrollment error: " . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => 'Gagal memproses face enrollment: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function deleteUploadedFacePhoto(Cloudinary $cloudinary, ?string $publicId): void
+    {
+        if (!$publicId) {
+            return;
+        }
+
+        try {
+            $cloudinary->uploadApi()->destroy($publicId);
+        } catch (\Throwable $e) {
+            Log::warning("Gagal menghapus foto enroll face {$publicId} dari Cloudinary setelah AI gagal: " . $e->getMessage());
         }
     }
 }

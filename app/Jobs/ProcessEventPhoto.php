@@ -50,7 +50,7 @@ class ProcessEventPhoto implements ShouldQueue
         ]);
 
         if (!$response->successful()) {
-            Log::warning("Gagal mengirim EventPhoto ID {$this->eventPhoto->id} ke FastAPI. Status: " . $response->status());
+            Log::warning("Gagal memproses EventPhoto ID {$this->eventPhoto->id} di FastAPI. Status: {$response->status()}. Body: {$response->body()}");
 
             throw new RuntimeException("FastAPI process-photo gagal dengan status {$response->status()}.");
         }
@@ -91,6 +91,14 @@ class ProcessEventPhoto implements ShouldQueue
     private function facesDetectedFromResponse(?array $responseData): int
     {
         $responseData ??= [];
+
+        if (isset($responseData['data']) && is_array($responseData['data'])) {
+            $nestedCount = $this->facesDetectedFromResponse($responseData['data']);
+
+            if ($nestedCount > 0) {
+                return $nestedCount;
+            }
+        }
 
         foreach (['faces_detected', 'face_count', 'faces_count', 'detected_faces_count'] as $key) {
             if (isset($responseData[$key]) && is_numeric($responseData[$key])) {

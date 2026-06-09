@@ -9,6 +9,7 @@ import './panitia/kontingen-manager';
 import './panitia/sports-manager';
 import './pic-kontingen/anggota-manager';
 import './pic-kontingen/registrasi-manager';
+import './components/foto-saya-gallery';
 import './components/bracket-manager';
 
 // Dispatch alpine:init to allow inline scripts to register components
