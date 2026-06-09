@@ -482,7 +482,7 @@ class PlayerController extends Controller
             $imageUrl = $uploadResult['secure_url'];
             $player->update(['photo_path' => $imageUrl]);
 
-            $fastApiBaseUrl = rtrim(env('FASTAPI_URL', 'http://127.0.0.1:8001'), '/');
+            $fastApiBaseUrl = rtrim(config('services.fastapi.url', 'http://127.0.0.1:8001'), '/');
             $registerUrl    = $fastApiBaseUrl . '/api/register-face';
 
             Log::info("Mengirim face enrollment untuk Player ID {$player->id} ke {$registerUrl}");
