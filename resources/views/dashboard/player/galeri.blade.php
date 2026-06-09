@@ -17,8 +17,9 @@
             </p>
         </div>
 
-        {{-- Custom Tabs --}}
-        <div class="bg-white p-1 rounded-xl border border-gray-200 shadow-sm inline-flex flex-wrap gap-1">
+        {{-- Custom Tabs & Toolbar --}}
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="bg-white p-1 rounded-xl border border-gray-200 shadow-sm inline-flex flex-wrap gap-1">
             <button
                 @click="activeTab = 'semua'"
                 :class="activeTab === 'semua' ? 'bg-red-50 text-red-700 shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
@@ -34,6 +35,20 @@
             >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 Foto Saya
+            </button>
+            </div>
+
+            {{-- Refresh Button (Only visible on Foto Saya tab) --}}
+            <button
+                x-show="activeTab === 'foto-saya'"
+                @click="$dispatch('fs:refresh')"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 font-bold transition-colors hover:bg-gray-50 shadow-sm"
+                style="display: none;"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Refresh
             </button>
         </div>
 
@@ -84,7 +99,7 @@
                         </template>
 
                         <template x-if="!loading">
-                            <div class="mt-6 space-y-10">
+                            <div :class="currentFolderId !== null ? 'mt-6 flex flex-col gap-6' : 'flex flex-col gap-6'">
                                 
                                 <template x-if="filteredFolders.length > 0 || (!searchQuery && folders.length === 0)">
                                     @include('components.gallery.folder-grid')
@@ -118,33 +133,10 @@
                 x-transition:enter-end="opacity-100 transform translate-y-0"
                 x-data="fotoSayaGallery()"
                 @fs:load.window="if (!loaded) fetchPhotos()"
+                @fs:refresh.window="fetchPhotos()"
                 style="display: none;"
             >
-                {{-- Toolbar: Status Filter + Refresh --}}
-                <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
-                    <div class="flex flex-wrap gap-2">
-                        <template x-for="(cfg, key) in filterCfg" :key="key">
-                            <button
-                                @click="statusFilter = key"
-                                :class="statusFilter === key ? cfg.active : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'"
-                                class="px-4 py-1.5 rounded-full text-xs font-bold transition-all"
-                            >
-                                <span x-text="cfg.label"></span>
-                                <span class="opacity-70 ml-0.5" x-text="'(' + counts[key] + ')'"></span>
-                            </button>
-                        </template>
-                    </div>
-                    <button
-                        @click="fetchPhotos()"
-                        :disabled="loading"
-                        class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-600 font-medium transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                    >
-                        <svg class="w-4 h-4" :class="loading && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Refresh
-                    </button>
-                </div>
+
 
                 {{-- Content Area --}}
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 min-h-[50vh]">

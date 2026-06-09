@@ -4,14 +4,14 @@
     </div>
 
     <template x-if="folders.length === 0">
-        <div class="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-gray-50/50">
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+        <div class="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center bg-gray-50/50">
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
             </div>
-            <h3 class="text-gray-900 font-medium mb-1">Belum ada folder</h3>
-            <p class="text-gray-500 text-sm mb-4">Buat folder baru untuk mengorganisir foto event Anda.</p>
+            <h3 class="text-gray-900 font-medium text-sm mb-0.5">Belum ada folder</h3>
+            <p class="text-gray-500 text-xs mb-3" x-text="isViewer ? 'Belum ada folder dokumentasi dari panitia.' : 'Buat folder baru untuk mengorganisir foto event Anda.'"></p>
             <template x-if="!isViewer">
-                <button @click="openFolderModal()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold shadow-sm hover:bg-gray-50 transition-colors">
+                <button @click="openFolderModal()" class="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold shadow-sm hover:bg-gray-50 transition-colors">
                     + Buat Folder
                 </button>
             </template>
