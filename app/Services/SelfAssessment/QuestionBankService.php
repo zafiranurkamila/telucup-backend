@@ -12,7 +12,7 @@ namespace App\Services\SelfAssessment;
  *   3. Update pertanyaan hanya 1 tempat → tidak ada drift.
  *   4. Versioning kuesioner ter-track (untuk audit & reproducibility).
  *
- * LANDASAN ILMIAH (singkat — detail lengkap di README.md):
+ * LANDASAN ILMIAH (singkat):
  *   - Domain A (Kardiovaskular & Medis): adaptasi PAR-Q+ 2024 oleh
  *     Warburton et al., plus AHA/ACC 14-point pre-participation screening.
  *   - Domain B (Muskuloskeletal): literatur menunjukkan riwayat cedera

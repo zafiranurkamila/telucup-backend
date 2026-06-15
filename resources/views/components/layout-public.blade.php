@@ -31,6 +31,7 @@
                     <a href="/bagan" class="text-white hover:text-gray-200 font-medium {{ request()->is('bagan') ? 'text-[#ed1e28]' : '' }}">Bagan</a>
                     <a href="/participants" class="text-white hover:text-gray-200 font-medium {{ request()->is('participants') ? 'text-[#ed1e28]' : '' }}">Peserta</a>
                     <a href="/galeri" class="text-white hover:text-gray-200 font-medium">Galeri</a>
+                    <a href="{{ route('public.chatbot') }}" class="text-white hover:text-gray-200 font-medium {{ request()->is('asisten') ? 'text-[#ed1e28]' : '' }}">AI Assistant</a>
                     
                     @auth
                         @php
@@ -67,6 +68,7 @@
                 <a href="/bagan" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-white hover:bg-[#851a1e]">Bagan</a>
                 <a href="/participants" class="block pl-3 pr-4 py-2 border-l-4 {{ request()->is('participants') ? 'border-[#ed1e28] text-white bg-[#851a1e]' : 'border-transparent text-white hover:bg-[#851a1e]' }} text-base font-medium">Peserta</a>
                 <a href="/galeri" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-white hover:bg-[#851a1e]">Galeri</a>
+                <a href="{{ route('public.chatbot') }}" class="block pl-3 pr-4 py-2 border-l-4 {{ request()->is('asisten') ? 'border-[#ed1e28] text-white bg-[#851a1e]' : 'border-transparent text-white hover:bg-[#851a1e]' }} text-base font-medium">AI Assistant</a>
                 @auth
                     <a href="{{ $dashPath ?? '/' }}" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-white hover:bg-[#851a1e]">Dashboard</a>
                 @else

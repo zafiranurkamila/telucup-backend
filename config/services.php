@@ -43,4 +43,9 @@ return [
         'url' => env('FASTAPI_URL', 'http://127.0.0.1:8001'),
     ],
 
+    'chatbot' => [
+        'ai_service_url' => env('AI_SERVICE_BASE_URL', 'http://localhost:8001'),
+        'internal_secret' => env('CHATBOT_INTERNAL_SECRET'),
+    ],
+
 ];

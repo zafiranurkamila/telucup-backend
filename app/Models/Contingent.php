@@ -19,4 +19,9 @@ class Contingent extends Model
     {
         return $this->hasMany(Player::class);
     }
+
+    public function registrations(): HasMany
+    {
+        return $this->hasMany(Registration::class);
+    }
 }

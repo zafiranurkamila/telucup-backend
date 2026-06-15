@@ -21,6 +21,7 @@ use App\Http\Controllers\Web\PicKontingen\KontingenController as PicKontingenCon
 use App\Http\Controllers\Web\AccountSetupController;
 use App\Http\Controllers\Web\SelfAssessmentController;
 use App\Http\Controllers\Web\Player\GaleriController as PlayerGaleriController;
+use App\Http\Controllers\Web\PublicChatbotController;
 
 // ====================================================================
 // PUBLIC ROUTES
@@ -32,6 +33,7 @@ Route::get('/participants', [App\Http\Controllers\Web\HomeController::class, 'pa
 Route::get('/participants/{name}', [App\Http\Controllers\Web\HomeController::class, 'participantDetail'])->name('participants.detail');
 Route::get('/galeri', [App\Http\Controllers\Web\HomeController::class, 'galeri'])->name('galeri.public');
 Route::get('/matches', [HomeController::class, 'pertandingan'])->name('matches');
+Route::get('/asisten', [PublicChatbotController::class, 'index'])->name('public.chatbot');
 // ====================================================================
 // AUTH ROUTES (dari Breeze)
 // ====================================================================

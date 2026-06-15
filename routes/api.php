@@ -17,11 +17,30 @@ use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\BracketController;
 use App\Http\Controllers\GalleryFolderController;
 use App\Http\Controllers\SportsmanshipPosterController;
+use App\Http\Controllers\Api\Public\PublicChatbotController as ApiPublicChatbotController;
+use App\Http\Controllers\Api\Public\PublicTournamentController;
 
 // Auth Routes (API)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+
+Route::prefix('public')->group(function () {
+    Route::get('/sports', [PublicTournamentController::class, 'sports']);
+    Route::get('/contingents', [PublicTournamentController::class, 'contingents']);
+    Route::get('/teams', [PublicTournamentController::class, 'teams']);
+    Route::get('/matches/schedule', [PublicTournamentController::class, 'schedule']);
+    Route::get('/matches/results', [PublicTournamentController::class, 'results']);
+    Route::get('/matches/{id}', [PublicTournamentController::class, 'match'])->whereNumber('id');
+    Route::get('/brackets', [PublicTournamentController::class, 'brackets']);
+    Route::get('/venues', [PublicTournamentController::class, 'venues']);
+
+    Route::middleware(['throttle:chatbot'])
+        ->prefix('chatbot')
+        ->group(function () {
+            Route::post('/ask', [ApiPublicChatbotController::class, 'ask']);
+        });
+});
 
 // ====================================================================
 // SPORTS — Publik (baca)
